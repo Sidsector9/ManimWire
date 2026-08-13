@@ -1,0 +1,29 @@
+/* Workspace chrome tokens, lifted from the Claude Design canvas (dark instrument direction). */
+:root {
+  --bg: #08090b;
+  --panel: #0d0f12;
+  --surface: #15191f;
+  --surface-hover: #1a1e24;
+  --border: #262c34;
+  --border-strong: #3a424c;
+  --text: #e6e9ee;
+  --text-secondary: #8b939f;
+  --text-muted: #5f6773;
+
+  /* Manim value types, from Manim's own palette (design.md section 5.3). */
+  --type-mobject: #58c4dd;
+  --type-coordinate-system: #5cd0b3;
+  --type-number: #f7d96f;
+  --type-live-number: #f0ac5f;
+  --type-vector: #83c167;
+  --type-color: #d147bd;
+  --type-function: #9a72ac;
+  --type-animation: #ff862f;
+  --type-text: #c55f73;
+  --type-boolean: #bbbbbb;
+  --type-config: #888888;
+  --error: #fc6255;
+
+  --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+}

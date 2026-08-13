@@ -1,0 +1,32 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Manim output
+media/
+*.log
+
+# Node and Electron
+node_modules/
+app/out/
+app/dist/
+app/release/
+*.tsbuildinfo
+
+# Editors and OS
+.claude/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+docs/

@@ -1,0 +1,24 @@
+[project]
+name = "manim-node-workflow"
+version = "0.0.0"
+description = "Workspace root for the Manim visual programming environment."
+requires-python = ">=3.12"
+dependencies = []
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["engine", "manim"]
+
+[tool.uv.sources]
+manim = { workspace = true }
+engine = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "engine",
+    "pytest>=9",
+    "ruff>=0.16",
+    "mypy>=2",
+]

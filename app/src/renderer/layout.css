@@ -1,0 +1,119 @@
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font: 12px/1.4 var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+.workspace {
+  display: grid;
+  height: 100%;
+  grid-template-rows: 40px minmax(0, 1fr) 200px 24px;
+  grid-template-columns: 240px minmax(0, 1fr) 280px;
+  grid-template-areas:
+    'title title title'
+    'library center inspector'
+    'timeline timeline timeline'
+    'status status status';
+}
+
+.title {
+  grid-area: title;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.title .project {
+  font-weight: 600;
+}
+
+.library {
+  grid-area: library;
+  border-right: 1px solid var(--border);
+}
+
+.center {
+  grid-area: center;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) 6px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.canvas {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  container-type: size;
+}
+
+.frame {
+  height: min(88cqh, calc(92cqw * 9 / 16));
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border: 1px solid var(--border);
+}
+
+.divider {
+  background: var(--border);
+  cursor: row-resize;
+}
+
+.inspector {
+  grid-area: inspector;
+  border-left: 1px solid var(--border);
+}
+
+.timeline {
+  grid-area: timeline;
+  border-top: 1px solid var(--border);
+}
+
+.panel {
+  background: var(--panel);
+  overflow: hidden;
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.status {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+
+.status .dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
