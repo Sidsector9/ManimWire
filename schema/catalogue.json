@@ -1,0 +1,286 @@
+{
+  "$defs": {
+    "ColorEntry": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "hex": {
+          "title": "Hex",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "hex"
+      ],
+      "title": "ColorEntry",
+      "type": "object"
+    },
+    "Descriptor": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "qualname": {
+          "title": "Qualname",
+          "type": "string"
+        },
+        "module": {
+          "title": "Module",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "class",
+            "method",
+            "function"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "owner": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Owner"
+        },
+        "bases": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Bases",
+          "type": "array"
+        },
+        "parameters": {
+          "items": {
+            "$ref": "#/$defs/Parameter"
+          },
+          "title": "Parameters",
+          "type": "array"
+        },
+        "accepts_kwargs": {
+          "default": false,
+          "title": "Accepts Kwargs",
+          "type": "boolean"
+        },
+        "returns": {
+          "$ref": "#/$defs/TypeRef"
+        },
+        "doc": {
+          "default": "",
+          "title": "Doc",
+          "type": "string"
+        },
+        "is_vmobject": {
+          "default": false,
+          "title": "Is Vmobject",
+          "type": "boolean"
+        },
+        "hidden": {
+          "default": false,
+          "title": "Hidden",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "qualname",
+        "module",
+        "kind",
+        "category",
+        "parameters",
+        "returns"
+      ],
+      "title": "Descriptor",
+      "type": "object"
+    },
+    "Parameter": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/TypeRef"
+        },
+        "kind": {
+          "default": "positional",
+          "enum": [
+            "positional",
+            "keyword_only",
+            "var_positional"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "default": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Default"
+        },
+        "display": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Display"
+        },
+        "owner": {
+          "title": "Owner",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "owner"
+      ],
+      "title": "Parameter",
+      "type": "object"
+    },
+    "PortType": {
+      "enum": [
+        "mobject",
+        "coordinate_system",
+        "number",
+        "live_number",
+        "vector",
+        "color",
+        "function",
+        "animation",
+        "text",
+        "boolean",
+        "config",
+        "scene",
+        "none",
+        "any"
+      ],
+      "title": "PortType",
+      "type": "string"
+    },
+    "TypeRef": {
+      "description": "A port type derived from an annotation.",
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/PortType"
+        },
+        "annotation": {
+          "title": "Annotation",
+          "type": "string"
+        },
+        "optional": {
+          "default": false,
+          "title": "Optional",
+          "type": "boolean"
+        },
+        "collection": {
+          "default": false,
+          "title": "Collection",
+          "type": "boolean"
+        },
+        "accepts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/PortType"
+          },
+          "title": "Accepts",
+          "type": "array"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signature"
+        },
+        "choices": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Choices"
+        }
+      },
+      "required": [
+        "type",
+        "annotation"
+      ],
+      "title": "TypeRef",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "manim_version": {
+      "title": "Manim Version",
+      "type": "string"
+    },
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/Descriptor"
+      },
+      "title": "Entries",
+      "type": "array"
+    },
+    "colors": {
+      "items": {
+        "$ref": "#/$defs/ColorEntry"
+      },
+      "title": "Colors",
+      "type": "array"
+    },
+    "unknown_annotations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unknown Annotations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "manim_version",
+    "entries",
+    "colors",
+    "unknown_annotations"
+  ],
+  "title": "Catalogue",
+  "type": "object"
+}

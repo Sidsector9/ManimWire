@@ -1,0 +1,28 @@
+{
+  "properties": {
+    "python": {
+      "title": "Python",
+      "type": "string"
+    },
+    "manim": {
+      "title": "Manim",
+      "type": "string"
+    },
+    "latex": {
+      "title": "Latex",
+      "type": "boolean"
+    },
+    "dvisvgm": {
+      "title": "Dvisvgm",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "python",
+    "manim",
+    "latex",
+    "dvisvgm"
+  ],
+  "title": "EngineInfo",
+  "type": "object"
+}

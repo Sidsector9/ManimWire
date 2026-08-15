@@ -117,3 +117,93 @@ body,
 .mono {
   font-family: var(--font-mono);
 }
+
+.library {
+  display: flex;
+  flex-direction: column;
+}
+
+.library-search {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.library-search input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font: 12px var(--font-ui);
+  outline: none;
+}
+
+.library-search input:focus {
+  border-color: var(--border-strong);
+}
+
+.library-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.library-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  height: 24px;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  font: 600 11px var(--font-ui);
+  text-align: left;
+  cursor: pointer;
+}
+
+.library-group .caret {
+  width: 10px;
+  color: var(--text-muted);
+}
+
+.library-group .count {
+  margin-left: auto;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.library-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  padding: 0 10px 0 22px;
+  white-space: nowrap;
+}
+
+.library-entry:hover {
+  background: var(--surface-hover);
+}
+
+.library-entry .dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.library-entry .hint {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+
+.library-error {
+  padding: 10px;
+  color: var(--error);
+}

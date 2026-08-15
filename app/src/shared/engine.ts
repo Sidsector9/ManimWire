@@ -1,12 +1,10 @@
 // Types shared by the main process, the preload bridge, and the renderer.
-// From phase 1 on, message types are generated from the engine's JSON Schema.
+// Message payload types are generated from the engine's JSON Schema (pnpm generate).
 
-export interface EngineInfo {
-  python: string
-  manim: string
-  latex: boolean
-  dvisvgm: boolean
-}
+import type { EngineInfo } from './generated/engine_info'
+
+export type { Catalogue, ColorEntry, Descriptor, Parameter, PortType, TypeRef } from './generated/catalogue'
+export type { EngineInfo }
 
 export type EngineState = 'starting' | 'ready' | 'restarting' | 'stopped'
 

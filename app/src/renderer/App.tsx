@@ -1,5 +1,7 @@
 import { useEffect } from 'react'
+import { Library } from './components/Library'
 import { StatusBar } from './components/StatusBar'
+import { useCatalogueStore } from './store/catalogue'
 import { useEngineStore } from './store/engine'
 
 function Panel({ title, className }: { title: string; className: string }) {
@@ -14,11 +16,17 @@ function Panel({ title, className }: { title: string; className: string }) {
 
 export function App() {
   const setStatus = useEngineStore((s) => s.setStatus)
+  const state = useEngineStore((s) => s.status.state)
+  const loadCatalogue = useCatalogueStore((s) => s.load)
 
   useEffect(() => {
     void window.engine.status().then(setStatus)
     return window.engine.onStatus(setStatus)
   }, [setStatus])
+
+  useEffect(() => {
+    if (state === 'ready') void loadCatalogue()
+  }, [state, loadCatalogue])
 
   return (
     <div className="workspace">
@@ -28,7 +36,7 @@ export function App() {
           Scene
         </span>
       </header>
-      <Panel title="Library" className="library" />
+      <Library />
       <div className="center">
         <section className="panel canvas">
           <div className="frame" />
