@@ -14,7 +14,7 @@ import numpy as np
 from manim import constants
 from manim.utils.color import ManimColor, manim_colors
 
-_DIRECTION_NAMES = [
+DIRECTION_NAMES = [
     "ORIGIN",
     "UP",
     "DOWN",
@@ -30,7 +30,7 @@ _DIRECTION_NAMES = [
     "Y_AXIS",
     "Z_AXIS",
 ]
-_DIRECTIONS = [(name, getattr(constants, name)) for name in _DIRECTION_NAMES]
+_DIRECTIONS = [(name, getattr(constants, name)) for name in DIRECTION_NAMES]
 
 _ANGLES = [
     ("TAU", math.tau),

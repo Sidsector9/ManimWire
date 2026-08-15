@@ -1,0 +1,315 @@
+{
+  "$defs": {
+    "AddStep": {
+      "properties": {
+        "kind": {
+          "const": "add",
+          "default": "add",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mobjects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mobjects",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mobjects"
+      ],
+      "title": "AddStep",
+      "type": "object"
+    },
+    "Edge": {
+      "properties": {
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        },
+        "port": {
+          "title": "Port",
+          "type": "string"
+        },
+        "live": {
+          "default": false,
+          "title": "Live",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "source",
+        "target",
+        "port"
+      ],
+      "title": "Edge",
+      "type": "object"
+    },
+    "Node": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "catalogue": {
+          "title": "Catalogue",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "default": {},
+          "title": "Values",
+          "type": "object"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "position": {
+          "default": [
+            0.0,
+            0.0
+          ],
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Position",
+          "type": "array"
+        },
+        "collapsed": {
+          "default": true,
+          "title": "Collapsed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "catalogue"
+      ],
+      "title": "Node",
+      "type": "object"
+    },
+    "PlayStep": {
+      "properties": {
+        "kind": {
+          "const": "play",
+          "default": "play",
+          "title": "Kind",
+          "type": "string"
+        },
+        "animations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Animations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "animations"
+      ],
+      "title": "PlayStep",
+      "type": "object"
+    },
+    "RemoveStep": {
+      "properties": {
+        "kind": {
+          "const": "remove",
+          "default": "remove",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mobjects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mobjects",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mobjects"
+      ],
+      "title": "RemoveStep",
+      "type": "object"
+    },
+    "SceneDocument": {
+      "properties": {
+        "name": {
+          "default": "Scene1",
+          "title": "Name",
+          "type": "string"
+        },
+        "nodes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Node"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "edges": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Edge"
+          },
+          "title": "Edges",
+          "type": "array"
+        },
+        "steps": {
+          "default": [],
+          "items": {
+            "discriminator": {
+              "mapping": {
+                "add": "#/$defs/AddStep",
+                "play": "#/$defs/PlayStep",
+                "remove": "#/$defs/RemoveStep",
+                "wait": "#/$defs/WaitStep"
+              },
+              "propertyName": "kind"
+            },
+            "oneOf": [
+              {
+                "$ref": "#/$defs/PlayStep"
+              },
+              {
+                "$ref": "#/$defs/WaitStep"
+              },
+              {
+                "$ref": "#/$defs/AddStep"
+              },
+              {
+                "$ref": "#/$defs/RemoveStep"
+              }
+            ]
+          },
+          "title": "Steps",
+          "type": "array"
+        }
+      },
+      "title": "SceneDocument",
+      "type": "object"
+    },
+    "Settings": {
+      "properties": {
+        "pixel_width": {
+          "default": 1920,
+          "title": "Pixel Width",
+          "type": "integer"
+        },
+        "pixel_height": {
+          "default": 1080,
+          "title": "Pixel Height",
+          "type": "integer"
+        },
+        "frame_rate": {
+          "default": 60,
+          "title": "Frame Rate",
+          "type": "number"
+        },
+        "background_color": {
+          "default": "BLACK",
+          "title": "Background Color",
+          "type": "string"
+        }
+      },
+      "title": "Settings",
+      "type": "object"
+    },
+    "WaitStep": {
+      "properties": {
+        "kind": {
+          "const": "wait",
+          "default": "wait",
+          "title": "Kind",
+          "type": "string"
+        },
+        "duration": {
+          "default": 1.0,
+          "title": "Duration",
+          "type": "number"
+        }
+      },
+      "title": "WaitStep",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "version": {
+      "const": 1,
+      "default": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "settings": {
+      "$ref": "#/$defs/Settings",
+      "default": {
+        "pixel_width": 1920,
+        "pixel_height": 1080,
+        "frame_rate": 60.0,
+        "background_color": "BLACK"
+      }
+    },
+    "scenes": {
+      "default": [
+        {
+          "name": "Scene1",
+          "nodes": [],
+          "edges": [],
+          "steps": []
+        }
+      ],
+      "items": {
+        "$ref": "#/$defs/SceneDocument"
+      },
+      "title": "Scenes",
+      "type": "array"
+    }
+  },
+  "title": "Document",
+  "type": "object"
+}

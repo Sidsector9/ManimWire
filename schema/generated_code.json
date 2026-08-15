@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "SourceMap": {
+      "description": "1-based line numbers of the generated code, by node id and by step index.",
+      "properties": {
+        "nodes": {
+          "additionalProperties": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "default": {},
+          "title": "Nodes",
+          "type": "object"
+        },
+        "steps": {
+          "additionalProperties": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array"
+          },
+          "default": {},
+          "title": "Steps",
+          "type": "object"
+        }
+      },
+      "title": "SourceMap",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "code": {
+      "title": "Code",
+      "type": "string"
+    },
+    "source_map": {
+      "$ref": "#/$defs/SourceMap"
+    }
+  },
+  "required": [
+    "code",
+    "source_map"
+  ],
+  "title": "GeneratedCode",
+  "type": "object"
+}

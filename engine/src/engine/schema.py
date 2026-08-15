@@ -9,11 +9,16 @@ from pathlib import Path
 from pydantic import BaseModel
 
 from engine.catalogue.model import Catalogue
+from engine.codegen import GeneratedCode
+from engine.document import Document, Issue
 from engine.info import EngineInfo
 
 MODELS: dict[str, type[BaseModel]] = {
     "catalogue": Catalogue,
     "engine_info": EngineInfo,
+    "document": Document,
+    "issue": Issue,
+    "generated_code": GeneratedCode,
 }
 
 
