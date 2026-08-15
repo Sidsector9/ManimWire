@@ -5,7 +5,7 @@ from __future__ import annotations
 import inspect
 import re
 from collections.abc import Callable
-from typing import Any
+from typing import Any, Literal
 
 from engine.catalogue.annotations import TypeContext, map_annotation
 from engine.catalogue.defaults import format_default
@@ -50,7 +50,7 @@ def _parameters(
             accepts_kwargs = True
             continue
         seen.add(name)
-        kind: str
+        kind: Literal["positional", "keyword_only", "var_positional"]
         if param.kind is inspect.Parameter.VAR_POSITIONAL:
             kind = "var_positional"
         elif param.kind is inspect.Parameter.KEYWORD_ONLY:
@@ -64,7 +64,7 @@ def _parameters(
                 type=map_annotation(
                     _annotation_text(param.annotation), context, self_type
                 ),
-                kind=kind,  # type: ignore[arg-type]
+                kind=kind,
                 default=default,
                 display=display,
                 owner=owner,

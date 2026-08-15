@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from engine.__main__ import build_dispatcher
-from engine.catalogue import Catalogue, Descriptor, PortType, get_catalogue
+from engine.catalogue import Catalogue, Descriptor, Parameter, PortType, get_catalogue
 from engine.catalogue.build import category_for
 
 
@@ -18,7 +18,7 @@ def entry(catalogue: Catalogue, qualname: str) -> Descriptor:
     return matches[0]
 
 
-def param(descriptor: Descriptor, name: str):  # type: ignore[no-untyped-def]
+def param(descriptor: Descriptor, name: str) -> Parameter:
     matches = [p for p in descriptor.parameters if p.name == name]
     assert len(matches) == 1, name
     return matches[0]
