@@ -1,8 +1,9 @@
-import type { EngineApi, EngineStatus } from '../shared/engine'
+import type { EngineApi, FilesApi } from '../shared/engine'
 
 declare global {
   interface Window {
-    engine: EngineApi & { status(): Promise<EngineStatus> }
+    engine: EngineApi
+    files: FilesApi
   }
 }
 

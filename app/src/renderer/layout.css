@@ -207,3 +207,641 @@ body,
   padding: 10px;
   color: var(--error);
 }
+
+/* Title bar */
+.title .spacer {
+  flex: 1;
+}
+
+.title .dirty {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-left: 6px;
+  border-radius: 50%;
+  background: var(--type-number);
+  vertical-align: middle;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+  margin-left: 12px;
+}
+
+.tab {
+  height: 24px;
+  padding: 0 10px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  font: 12px var(--font-ui);
+  cursor: pointer;
+}
+
+.tab.active {
+  color: var(--text);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+.button {
+  height: 24px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  font: 12px var(--font-ui);
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--surface-hover);
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.button.small {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.button.danger {
+  color: var(--error);
+}
+
+.link {
+  padding: 0;
+  color: var(--type-mobject);
+  background: none;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+.muted {
+  color: var(--text-muted);
+}
+
+/* Canvas */
+.canvas {
+  position: relative;
+  grid-template-rows: minmax(0, 1fr) 22px;
+  place-items: stretch;
+}
+
+.canvas .frame {
+  position: relative;
+  justify-self: center;
+  align-self: center;
+  overflow: hidden;
+}
+
+.canvas .frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.canvas .frame.failed img {
+  opacity: 0.4;
+}
+
+.progress-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 40%;
+  background: var(--type-mobject);
+  animation: slide 1s linear infinite;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.canvas-note {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+}
+
+.canvas-foot {
+  display: flex;
+  justify-content: space-between;
+  padding: 0 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.error-card {
+  position: absolute;
+  right: 12px;
+  bottom: 30px;
+  max-width: 420px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--error);
+  border-radius: 4px;
+}
+
+.error-title {
+  margin-bottom: 4px;
+  font-weight: 600;
+  color: var(--error);
+}
+
+.error-message {
+  font-size: 11px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-message .link {
+  margin-left: 8px;
+}
+
+/* Code view */
+.code {
+  display: flex;
+  flex-direction: column;
+}
+
+.code-lines {
+  flex: 1;
+  margin: 0;
+  padding: 8px 0;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.code-line {
+  display: flex;
+  gap: 12px;
+  padding: 0 12px;
+  white-space: pre;
+}
+
+.code-line.linked {
+  cursor: pointer;
+}
+
+.code-line.linked:hover {
+  background: var(--surface-hover);
+}
+
+.code-line.highlight {
+  background: #152028;
+  box-shadow: inset 2px 0 0 var(--type-mobject);
+}
+
+.code-line.error {
+  box-shadow: inset 2px 0 0 var(--error);
+}
+
+.line-number {
+  width: 24px;
+  color: var(--text-muted);
+  text-align: right;
+  user-select: none;
+}
+
+/* Graph and nodes */
+.graph {
+  position: relative;
+  height: 100%;
+  outline: none;
+}
+
+.graph-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.graph-empty .button {
+  pointer-events: auto;
+}
+
+.react-flow {
+  background: var(--panel);
+}
+
+.react-flow__node {
+  font: 12px var(--font-ui);
+}
+
+.node {
+  width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--border-strong);
+  border-radius: 4px;
+  color: var(--text);
+}
+
+.react-flow__node.selected .node {
+  border-color: var(--type-mobject);
+  border-left-color: inherit;
+}
+
+.node.has-issue {
+  border-color: var(--error);
+}
+
+.node-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 25px;
+  padding: 0 10px 0 8px;
+}
+
+.node-title {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-sub {
+  padding: 0 8px 2px;
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.node-badge {
+  margin-left: auto;
+  padding: 0 5px;
+  border-radius: 8px;
+  background: var(--error);
+  color: #fff;
+  font-size: 10px;
+}
+
+.node-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 8px;
+}
+
+.node-label {
+  flex: 1;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-value {
+  display: flex;
+  justify-content: flex-end;
+  max-width: 96px;
+  font-size: 11px;
+}
+
+.node-value .port-input {
+  width: 56px;
+  text-align: right;
+}
+
+.node-value .port-select {
+  max-width: 96px;
+}
+
+.port-connected {
+  font-size: 10px;
+}
+
+.node-more {
+  display: block;
+  width: 100%;
+  height: 18px;
+  color: var(--text-muted);
+  background: transparent;
+  border: 0;
+  border-top: 1px solid var(--border);
+  font: 10px var(--font-mono);
+  cursor: pointer;
+}
+
+.node-more:hover {
+  color: var(--text);
+}
+
+.react-flow__handle.socket {
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 50%;
+  background: var(--panel);
+}
+
+.react-flow__handle.socket.out {
+  right: -5px;
+}
+
+.react-flow__handle.socket.hollow {
+  background: var(--surface) !important;
+}
+
+.react-flow__handle-left.socket {
+  left: -5px;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__connection-path {
+  stroke: var(--text-secondary);
+  stroke-width: 2;
+}
+
+/* Inline editors */
+.port-input,
+.port-select {
+  height: 18px;
+  padding: 0 4px;
+  color: var(--text);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font: 11px var(--font-ui);
+  outline: none;
+}
+
+.port-input:focus,
+.port-select:focus {
+  border-color: var(--border-strong);
+}
+
+.port-input.mono,
+.port-select.mono {
+  font-family: var(--font-mono);
+}
+
+.port-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 2px;
+}
+
+.port-connect {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Quick add */
+.quick-add {
+  position: fixed;
+  z-index: 20;
+  width: 360px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 50%);
+}
+
+.quick-add input {
+  width: 100%;
+  box-sizing: border-box;
+  height: 30px;
+  padding: 0 10px;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  font: 12px var(--font-ui);
+  outline: none;
+}
+
+.quick-add-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.quick-add-row {
+  display: grid;
+  grid-template-columns: 8px minmax(80px, auto) auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.quick-add-row.active,
+.quick-add-row:hover {
+  background: var(--surface-hover);
+}
+
+.quick-add-row .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.quick-add-row .cat {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.quick-add-row .desc {
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-add-hint {
+  padding: 4px 10px;
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Inspector */
+.inspector {
+  display: flex;
+  flex-direction: column;
+}
+
+.inspector-body {
+  flex: 1;
+  padding: 8px 10px;
+  overflow-y: auto;
+}
+
+.inspector-empty {
+  padding: 10px;
+  color: var(--text-muted);
+}
+
+.inspector-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.inspector-title .port-input {
+  height: 24px;
+  font-weight: 600;
+}
+
+.inspector-doc {
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.inspector-issue {
+  margin-bottom: 6px;
+  padding: 4px 6px;
+  border-left: 2px solid var(--error);
+  font-size: 11px;
+}
+
+.group-head {
+  margin: 10px 0 4px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) 56px;
+  gap: 6px;
+  align-items: center;
+  min-height: 24px;
+}
+
+.field-label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  overflow: hidden;
+  font-size: 11px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.field-label .dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.field-value .port-input,
+.field-value .port-select {
+  width: 100%;
+  box-sizing: border-box;
+  height: 22px;
+}
+
+.field-default {
+  overflow: hidden;
+  font-size: 10px;
+  color: var(--text-muted);
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inspector-code {
+  margin: 0;
+  padding: 6px 8px;
+  overflow-x: auto;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.inspector .button {
+  margin: 8px 0;
+}
+
+/* Steps */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+}
+
+.step {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.step-play {
+  border-color: #6b3a16;
+  background: #3b2110;
+  color: #ffd3ae;
+}
+
+.step-index {
+  color: var(--text-muted);
+}
+
+.step .port-input {
+  width: 48px;
+}
+
+.steps-empty {
+  padding: 4px 0;
+}
+
+.status-message {
+  margin-left: auto;
+  color: var(--text);
+}

@@ -175,3 +175,22 @@ def test_rpc_generate_and_validate(simple_scene: SceneDocument) -> None:
         }
     )
     assert checked is not None and checked["result"] == []
+
+
+def test_rpc_generate_reports_document_level_issues(
+    simple_scene: SceneDocument,
+) -> None:
+    dispatcher = build_dispatcher()
+    document = Document(scenes=[simple_scene]).model_dump()
+    document["settings"]["background_color"] = "BLUEISH"
+    response = dispatcher.handle(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "document.generate",
+            "params": {"document": document, "scene": "BlueCircle"},
+        }
+    )
+    assert response is not None
+    assert response["result"]["code"] == ""
+    assert [i["code"] for i in response["result"]["issues"]] == ["bad_setting"]

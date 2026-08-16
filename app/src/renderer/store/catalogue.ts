@@ -1,19 +1,32 @@
 import { create } from 'zustand'
 import type { Catalogue, Descriptor, PortType } from '../../shared/engine'
+import { call } from '../engine/client'
+import { indexDescriptors, type DescriptorIndex } from '../model/types'
 
 interface CatalogueStore {
   catalogue: Catalogue | null
+  /** Descriptors by qualname, built once per catalogue load. */
+  index: DescriptorIndex
   error: string | null
   load(): Promise<void>
 }
 
+const NO_ENTRIES: Descriptor[] = []
+const NO_COLORS: Catalogue['colors'] = []
+
+/** Selectors must return stable references; these avoid a fresh [] per render. */
+export const selectEntries = (s: CatalogueStore): Descriptor[] => s.catalogue?.entries ?? NO_ENTRIES
+export const selectColors = (s: CatalogueStore): Catalogue['colors'] => s.catalogue?.colors ?? NO_COLORS
+export const selectIndex = (s: CatalogueStore): DescriptorIndex => s.index
+
 export const useCatalogueStore = create<CatalogueStore>((set) => ({
   catalogue: null,
+  index: new Map(),
   error: null,
   load: async () => {
     try {
-      const catalogue = (await window.engine.call('catalogue.list')) as Catalogue
-      set({ catalogue, error: null })
+      const catalogue = await call<Catalogue>('catalogue.list')
+      set({ catalogue, index: indexDescriptors(catalogue.entries), error: null })
     } catch (error) {
       set({ error: String(error) })
     }

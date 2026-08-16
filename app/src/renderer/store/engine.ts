@@ -3,12 +3,17 @@ import type { EngineStatus } from '../../shared/engine'
 
 interface EngineStore {
   status: EngineStatus
+  /** A transient line for the status bar, for example export progress. */
+  message: string
   setStatus(status: EngineStatus): void
+  setMessage(message: string): void
 }
 
 export const useEngineStore = create<EngineStore>((set) => ({
   status: { state: 'stopped', attempt: 0 },
-  setStatus: (status) => set({ status })
+  message: '',
+  setStatus: (status) => set({ status }),
+  setMessage: (message) => set({ message })
 }))
 
 /** One line for the status bar, derived from the engine status. */

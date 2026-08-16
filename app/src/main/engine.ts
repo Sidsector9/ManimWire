@@ -41,6 +41,7 @@ export class EngineSupervisor {
   private process: EngineProcess | null = null
   private status: EngineStatus = { state: 'stopped', attempt: 0 }
   private listeners = new Set<(status: EngineStatus) => void>()
+  private notificationListeners = new Set<(method: string, params: unknown) => void>()
   private stopped = true
   private attempt = 0
   private restartTimer: ReturnType<typeof setTimeout> | null = null
@@ -79,6 +80,12 @@ export class EngineSupervisor {
     return () => this.listeners.delete(listener)
   }
 
+  /** Server notifications, for example render.progress. */
+  onNotification(listener: (method: string, params: unknown) => void): () => void {
+    this.notificationListeners.add(listener)
+    return () => this.notificationListeners.delete(listener)
+  }
+
   async call(method: string, params?: unknown): Promise<unknown> {
     if (!this.connection) throw new Error(`engine is ${this.status.state}`)
     return params === undefined
@@ -103,6 +110,9 @@ export class EngineSupervisor {
       new StreamMessageReader(child.stdout),
       new StreamMessageWriter(child.stdin)
     )
+    connection.onNotification((method, params) => {
+      for (const listener of this.notificationListeners) listener(method, params)
+    })
     connection.listen()
     this.connection = connection
     child.onExit((code) => {

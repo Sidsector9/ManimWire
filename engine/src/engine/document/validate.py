@@ -46,12 +46,17 @@ def receiver_type(descriptor: Descriptor, index: dict[str, Descriptor]) -> TypeR
 
 
 def validate_document(document: Document, catalogue: Catalogue) -> list[Issue]:
-    issues: list[Issue] = []
+    issues = document_issues(document, catalogue)
+    for scene in document.scenes:
+        issues.extend(validate_scene(scene, catalogue))
+    return issues
+
+
+def document_issues(document: Document, catalogue: Catalogue) -> list[Issue]:
+    """Settings and scene name problems, independent of any scene's graph."""
     reserved = {e.name for e in catalogue.entries if e.kind != "method"}
     reserved |= {c.name for c in catalogue.colors} | set(DIRECTION_NAMES) | {"Scene"}
-    issues.extend(
-        _settings_issues(document.settings, {c.name for c in catalogue.colors})
-    )
+    issues = _settings_issues(document.settings, {c.name for c in catalogue.colors})
     for scene in document.scenes:
         if not scene.name.isidentifier() or scene.name in reserved:
             issues.append(
@@ -60,7 +65,6 @@ def validate_document(document: Document, catalogue: Catalogue) -> list[Issue]:
                     message=f"{scene.name!r} is not a usable scene name",
                 )
             )
-        issues.extend(validate_scene(scene, catalogue))
     return issues
 
 

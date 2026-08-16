@@ -9,6 +9,7 @@ const dotColor: Record<string, string> = {
 
 export function StatusBar() {
   const status = useEngineStore((s) => s.status)
+  const message = useEngineStore((s) => s.message)
   return (
     <footer className="status">
       <span>
@@ -17,6 +18,7 @@ export function StatusBar() {
       </span>
       <span>{describeLatex(status)}</span>
       {status.message && <span style={{ color: 'var(--text-muted)' }}>{status.message}</span>}
+      {message && <span className="status-message">{message}</span>}
     </footer>
   )
 }

@@ -1,9 +1,14 @@
 import { useMemo, useState } from 'react'
-import { groupLibrary, TYPE_COLOR, useCatalogueStore } from '../store/catalogue'
+import { nextPosition } from '../model/document'
+import { groupLibrary, selectIndex, TYPE_COLOR, useCatalogueStore } from '../store/catalogue'
+import { currentScene, useDocumentStore } from '../store/document'
 
 export function Library() {
   const catalogue = useCatalogueStore((s) => s.catalogue)
   const error = useCatalogueStore((s) => s.error)
+  const index = useCatalogueStore(selectIndex)
+  const scene = useDocumentStore(currentScene)
+  const addCatalogueNode = useDocumentStore((s) => s.addCatalogueNode)
   const [query, setQuery] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const groups = useMemo(() => groupLibrary(catalogue?.entries ?? [], query), [catalogue, query])
@@ -42,7 +47,12 @@ export function Library() {
               </button>
               {!isCollapsed &&
                 group.entries.map((entry) => (
-                  <div key={entry.qualname} className="library-entry" title={entry.doc || entry.qualname}>
+                  <div
+                    key={entry.qualname}
+                    className="library-entry"
+                    title={entry.doc || entry.qualname}
+                    onClick={() => addCatalogueNode(entry, nextPosition(scene), index)}
+                  >
                     <span className="dot" style={{ background: TYPE_COLOR[entry.returns.type] }} />
                     <span className={entry.kind === 'function' ? 'mono' : ''}>{entry.name}</span>
                     <span className="hint">{entry.doc}</span>

@@ -8,8 +8,13 @@ from pathlib import Path
 from typing import Any
 
 from engine.catalogue import get_catalogue
-from engine.codegen import ManimCodeGenerator
-from engine.document import Document, SceneDocument, validate_document
+from engine.codegen import GeneratedCode, ManimCodeGenerator, SourceMap
+from engine.document import (
+    Document,
+    SceneDocument,
+    document_issues,
+    validate_document,
+)
 from engine.info import engine_info
 from engine.render import RENDER_ERROR, CairoRenderService, RenderError
 from engine.rpc import Dispatcher, Notify, RpcError, serve
@@ -54,7 +59,13 @@ def _document_validate(document: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _document_generate(document: dict[str, Any], scene: str) -> dict[str, Any]:
     parsed = Document.model_validate(document)
-    generated = ManimCodeGenerator().generate(_scene(parsed, scene), get_catalogue())
+    catalogue = get_catalogue()
+    generated = ManimCodeGenerator().generate(_scene(parsed, scene), catalogue)
+    issues = document_issues(parsed, catalogue)
+    if issues:
+        generated = GeneratedCode(
+            code="", source_map=SourceMap(), issues=issues + generated.issues
+        )
     return generated.model_dump()
 
 

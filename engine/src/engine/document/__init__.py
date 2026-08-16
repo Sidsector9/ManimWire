@@ -12,7 +12,12 @@ from engine.document.model import (
     Step,
     WaitStep,
 )
-from engine.document.validate import Issue, validate_document, validate_scene
+from engine.document.validate import (
+    Issue,
+    document_issues,
+    validate_document,
+    validate_scene,
+)
 
 __all__ = [
     "SELF_PORT",
@@ -28,6 +33,7 @@ __all__ = [
     "Settings",
     "Step",
     "WaitStep",
+    "document_issues",
     "validate_document",
     "validate_scene",
 ]

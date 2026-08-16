@@ -1,23 +1,28 @@
-import { useEffect } from 'react'
+import { ReactFlowProvider } from '@xyflow/react'
+import { useEffect, useState } from 'react'
+import { Canvas } from './components/Canvas'
+import { CodeView } from './components/CodeView'
+import { Graph } from './components/Graph'
+import { Inspector } from './components/Inspector'
 import { Library } from './components/Library'
 import { StatusBar } from './components/StatusBar'
+import { Steps } from './components/Steps'
+import { useEngineSync } from './engine/useEngineSync'
+import { useFiles } from './engine/useFiles'
 import { useCatalogueStore } from './store/catalogue'
+import { useDocumentStore } from './store/document'
 import { useEngineStore } from './store/engine'
-
-function Panel({ title, className }: { title: string; className: string }) {
-  return (
-    <section className={`panel ${className}`}>
-      <div className="panel-head">
-        <span>{title}</span>
-      </div>
-    </section>
-  )
-}
 
 export function App() {
   const setStatus = useEngineStore((s) => s.setStatus)
   const state = useEngineStore((s) => s.status.state)
   const loadCatalogue = useCatalogueStore((s) => s.load)
+  const filePath = useDocumentStore((s) => s.filePath)
+  const dirty = useDocumentStore((s) => s.dirty)
+  const sceneName = useDocumentStore((s) => s.doc.scenes[s.sceneIndex]?.name ?? '')
+  const [tab, setTab] = useState<'canvas' | 'code'>('canvas')
+  const files = useFiles()
+  useEngineSync()
 
   useEffect(() => {
     void window.engine.status().then(setStatus)
@@ -28,24 +33,41 @@ export function App() {
     if (state === 'ready') void loadCatalogue()
   }, [state, loadCatalogue])
 
+  const projectName = filePath ? filePath.replace(/^.*[/\\]/, '').replace(/\.mnw$/, '') : 'untitled project'
+
   return (
     <div className="workspace">
       <header className="title">
-        <span className="project">untitled project</span>
-        <span className="mono" style={{ color: 'var(--text-secondary)' }}>
-          Scene
+        <span className="project">
+          {projectName}
+          {dirty && <span className="dirty" title="Unsaved changes" />}
         </span>
+        <span className="mono" style={{ color: 'var(--text-secondary)' }}>
+          {sceneName}
+        </span>
+        <span className="tabs">
+          <button className={`tab${tab === 'canvas' ? ' active' : ''}`} onClick={() => setTab('canvas')}>
+            Canvas
+          </button>
+          <button className={`tab${tab === 'code' ? ' active' : ''}`} onClick={() => setTab('code')}>
+            Code
+          </button>
+        </span>
+        <span className="spacer" />
+        <button className="button" onClick={() => void files.exportVideo()} disabled={state !== 'ready'}>
+          Export
+        </button>
       </header>
       <Library />
       <div className="center">
-        <section className="panel canvas">
-          <div className="frame" />
-        </section>
+        {tab === 'canvas' ? <Canvas /> : <CodeView />}
         <div className="divider" />
-        <Panel title="Graph" className="graph" />
+        <ReactFlowProvider>
+          <Graph />
+        </ReactFlowProvider>
       </div>
-      <Panel title="Inspector" className="inspector" />
-      <Panel title="Timeline" className="timeline" />
+      <Inspector />
+      <Steps />
       <StatusBar />
     </div>
   )
