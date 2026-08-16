@@ -26,6 +26,7 @@ class SourceMap(BaseModel):
 
     nodes: dict[str, list[int]] = {}
     steps: dict[int, list[int]] = {}
+    variables: dict[str, str] = {}
 
 
 class GeneratedCode(BaseModel):
@@ -197,4 +198,5 @@ class _Build:
         body = [f"        {text}" for text in self.body] or ["        pass"]
         self.map.nodes = {k: [n + offset for n in v] for k, v in self.map.nodes.items()}
         self.map.steps = {k: [n + offset for n in v] for k, v in self.map.steps.items()}
+        self.map.variables = dict(self.variables)
         return GeneratedCode(code="\n".join(header + body) + "\n", source_map=self.map)

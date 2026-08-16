@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 from pydantic import BaseModel
 
 from engine.catalogue.defaults import DIRECTION_NAMES
@@ -11,6 +13,7 @@ from engine.document.model import (
     Document,
     PlayStep,
     SceneDocument,
+    Settings,
 )
 
 # A value of the key type may be connected to a port of any listed type.
@@ -46,6 +49,9 @@ def validate_document(document: Document, catalogue: Catalogue) -> list[Issue]:
     issues: list[Issue] = []
     reserved = {e.name for e in catalogue.entries if e.kind != "method"}
     reserved |= {c.name for c in catalogue.colors} | set(DIRECTION_NAMES) | {"Scene"}
+    issues.extend(
+        _settings_issues(document.settings, {c.name for c in catalogue.colors})
+    )
     for scene in document.scenes:
         if not scene.name.isidentifier() or scene.name in reserved:
             issues.append(
@@ -225,6 +231,23 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                         step=position,
                     )
                 )
+    return issues
+
+
+_HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+
+
+def _settings_issues(settings: Settings, colors: set[str]) -> list[Issue]:
+    issues: list[Issue] = []
+    color = settings.background_color
+    if color not in colors and not _HEX_COLOR.match(color):
+        issues.append(
+            Issue(code="bad_setting", message=f"unknown background colour {color}")
+        )
+    if settings.pixel_width <= 0 or settings.pixel_height <= 0:
+        issues.append(Issue(code="bad_setting", message="resolution must be positive"))
+    if settings.frame_rate <= 0:
+        issues.append(Issue(code="bad_setting", message="frame rate must be positive"))
     return issues
 
 

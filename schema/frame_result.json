@@ -1,0 +1,71 @@
+{
+  "$defs": {
+    "Bounds": {
+      "properties": {
+        "node": {
+          "title": "Node",
+          "type": "string"
+        },
+        "center": {
+          "maxItems": 2,
+          "minItems": 2,
+          "prefixItems": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "number"
+            }
+          ],
+          "title": "Center",
+          "type": "array"
+        },
+        "width": {
+          "title": "Width",
+          "type": "number"
+        },
+        "height": {
+          "title": "Height",
+          "type": "number"
+        },
+        "on_screen": {
+          "title": "On Screen",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "node",
+        "center",
+        "width",
+        "height",
+        "on_screen"
+      ],
+      "title": "Bounds",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "time": {
+      "title": "Time",
+      "type": "number"
+    },
+    "bounds": {
+      "items": {
+        "$ref": "#/$defs/Bounds"
+      },
+      "title": "Bounds",
+      "type": "array"
+    }
+  },
+  "required": [
+    "path",
+    "time",
+    "bounds"
+  ],
+  "title": "FrameResult",
+  "type": "object"
+}

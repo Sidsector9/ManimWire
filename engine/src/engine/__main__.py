@@ -1,16 +1,25 @@
 from __future__ import annotations
 
+import atexit
+import shutil
 import sys
+import tempfile
+from pathlib import Path
 from typing import Any
 
 from engine.catalogue import get_catalogue
 from engine.codegen import ManimCodeGenerator
-from engine.document import Document, validate_document
+from engine.document import Document, SceneDocument, validate_document
 from engine.info import engine_info
-from engine.rpc import Dispatcher, serve
+from engine.render import RENDER_ERROR, CairoRenderService, RenderError
+from engine.rpc import Dispatcher, Notify, RpcError, serve
 
 
-def build_dispatcher() -> Dispatcher:
+def build_dispatcher(cache_dir: Path | None = None) -> Dispatcher:
+    if cache_dir is None:
+        cache_dir = Path(tempfile.mkdtemp(prefix="mnw-"))
+        atexit.register(shutil.rmtree, cache_dir, True)
+    render = _RenderMethods(CairoRenderService(cache_dir))
     dispatcher = Dispatcher()
     dispatcher.register("ping", lambda: "pong")
     dispatcher.register("engine.info", _info)
@@ -18,6 +27,8 @@ def build_dispatcher() -> Dispatcher:
     dispatcher.register("catalogue.get", _catalogue_get)
     dispatcher.register("document.validate", _document_validate)
     dispatcher.register("document.generate", _document_generate)
+    dispatcher.register("render.frame", render.frame)
+    dispatcher.register("render.export", render.export, notifies=True)
     return dispatcher
 
 
@@ -43,12 +54,66 @@ def _document_validate(document: dict[str, Any]) -> list[dict[str, Any]]:
 
 def _document_generate(document: dict[str, Any], scene: str) -> dict[str, Any]:
     parsed = Document.model_validate(document)
-    for candidate in parsed.scenes:
-        if candidate.name == scene:
-            return (
-                ManimCodeGenerator().generate(candidate, get_catalogue()).model_dump()
+    generated = ManimCodeGenerator().generate(_scene(parsed, scene), get_catalogue())
+    return generated.model_dump()
+
+
+def _scene(document: Document, name: str) -> SceneDocument:
+    for candidate in document.scenes:
+        if candidate.name == name:
+            return candidate
+    raise KeyError(f"no scene named {name}")
+
+
+class _RenderMethods:
+    def __init__(self, service: CairoRenderService) -> None:
+        self.service = service
+
+    def frame(
+        self,
+        document: dict[str, Any],
+        scene: str,
+        time: float,
+        width: int | None = None,
+    ) -> dict[str, Any]:
+        parsed = Document.model_validate(document)
+        try:
+            result = self.service.frame(
+                _scene(parsed, scene), get_catalogue(), parsed.settings, time, width
             )
-    raise KeyError(f"no scene named {scene}")
+        except RenderError as exc:
+            raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc
+        return result.model_dump()
+
+    def export(
+        self,
+        document: dict[str, Any],
+        scene: str,
+        directory: str,
+        format: str = "mp4",
+        notify: Notify = lambda method, params: None,
+    ) -> dict[str, Any]:
+        parsed = Document.model_validate(document)
+        last = -1.0
+
+        def progress(time: float) -> None:
+            nonlocal last
+            if time - last >= 0.5:
+                last = time
+                notify("render.progress", {"scene": scene, "time": time})
+
+        try:
+            result = self.service.export(
+                _scene(parsed, scene),
+                get_catalogue(),
+                parsed.settings,
+                Path(directory),
+                format,
+                progress,
+            )
+        except RenderError as exc:
+            raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc
+        return result.model_dump()
 
 
 def main() -> None:

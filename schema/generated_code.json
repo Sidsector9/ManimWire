@@ -78,6 +78,14 @@
           "default": {},
           "title": "Steps",
           "type": "object"
+        },
+        "variables": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Variables",
+          "type": "object"
         }
       },
       "title": "SourceMap",

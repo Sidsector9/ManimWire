@@ -19,14 +19,17 @@ INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
 
 Method = Callable[..., Any]
+Notify = Callable[[str, Any], None]
 
 
 class Dispatcher:
     def __init__(self) -> None:
-        self._methods: dict[str, Method] = {}
+        self._methods: dict[str, tuple[Method, bool]] = {}
+        self.notify: Notify = lambda method, params: None
 
-    def register(self, name: str, method: Method) -> None:
-        self._methods[name] = method
+    def register(self, name: str, method: Method, notifies: bool = False) -> None:
+        """Register a method. With ``notifies`` it receives ``notify`` as a keyword."""
+        self._methods[name] = (method, notifies)
 
     def handle(self, request: Any) -> dict[str, Any] | None:
         """Return the response for a request, or None for a notification."""
@@ -41,29 +44,43 @@ class Dispatcher:
         method_name = request.get("method")
         if not isinstance(method_name, str):
             return _error(request_id, INVALID_REQUEST, "method must be a string")
-        method = self._methods.get(method_name)
-        if method is None:
+        registered = self._methods.get(method_name)
+        if registered is None:
             return _error(request_id, METHOD_NOT_FOUND, f"unknown method {method_name}")
+        method, notifies = registered
         params = request.get("params", {})
         if isinstance(params, list):
             args, kwargs = params, {}
         elif isinstance(params, dict):
-            args, kwargs = [], params
+            args, kwargs = [], dict(params)
         else:
             return _error(request_id, INVALID_PARAMS, "params must be a list or object")
+        if notifies:
+            kwargs["notify"] = self.notify
         try:
             inspect.signature(method).bind(*args, **kwargs)
         except TypeError as exc:
             return _error(request_id, INVALID_PARAMS, str(exc))
         try:
             result = method(*args, **kwargs)
+        except RpcError as exc:
+            return _error(request_id, exc.code, str(exc), exc.data)
         except Exception as exc:
             return _error(request_id, INTERNAL_ERROR, str(exc), traceback.format_exc())
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
+class RpcError(Exception):
+    """An error with a code and structured data the client can act on."""
+
+    def __init__(self, code: int, message: str, data: Any = None) -> None:
+        super().__init__(message)
+        self.code = code
+        self.data = data
+
+
 def _error(
-    request_id: Any, code: int, message: str, data: str | None = None
+    request_id: Any, code: int, message: str, data: Any = None
 ) -> dict[str, Any]:
     error: dict[str, Any] = {"code": code, "message": message}
     if data is not None:
@@ -98,6 +115,11 @@ def write_message(stream: BinaryIO, message: Any) -> None:
 
 def serve(dispatcher: Dispatcher, stdin: BinaryIO, stdout: BinaryIO) -> None:
     """Answer requests until the input stream closes."""
+
+    def notify(method: str, params: Any) -> None:
+        write_message(stdout, {"jsonrpc": "2.0", "method": method, "params": params})
+
+    dispatcher.notify = notify
     while True:
         try:
             request = read_message(stdin)

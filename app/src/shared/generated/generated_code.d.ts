@@ -23,6 +23,7 @@ export interface GeneratedCode {
 export interface SourceMap {
   nodes?: Nodes;
   steps?: Steps;
+  variables?: Variables;
   [k: string]: unknown;
 }
 export interface Nodes {
@@ -30,6 +31,9 @@ export interface Nodes {
 }
 export interface Steps {
   [k: string]: number[];
+}
+export interface Variables {
+  [k: string]: string;
 }
 export interface Issue {
   code: Code1;

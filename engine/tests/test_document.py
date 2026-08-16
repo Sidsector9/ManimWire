@@ -9,6 +9,7 @@ from engine.document import (
     Node,
     PlayStep,
     SceneDocument,
+    Settings,
     validate_document,
     validate_scene,
 )
@@ -119,3 +120,14 @@ def test_scene_name_must_be_an_identifier_and_not_scene(catalogue: Catalogue) ->
         "bad_scene_name",
         "bad_scene_name",
     ]
+
+
+def test_settings_are_checked(catalogue: Catalogue) -> None:
+    document = Document(
+        settings=Settings(background_color="BLUEISH", pixel_width=0, frame_rate=-1)
+    )
+    assert [i.code for i in validate_document(document, catalogue)] == [
+        "bad_setting"
+    ] * 3
+    fine = Document(settings=Settings(background_color="#102030"))
+    assert validate_document(fine, catalogue) == []

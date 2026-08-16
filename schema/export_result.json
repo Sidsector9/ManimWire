@@ -1,0 +1,18 @@
+{
+  "properties": {
+    "path": {
+      "title": "Path",
+      "type": "string"
+    },
+    "duration": {
+      "title": "Duration",
+      "type": "number"
+    }
+  },
+  "required": [
+    "path",
+    "duration"
+  ],
+  "title": "ExportResult",
+  "type": "object"
+}
