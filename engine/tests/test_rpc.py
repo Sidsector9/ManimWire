@@ -7,6 +7,7 @@ from engine.rpc import (
     INTERNAL_ERROR,
     INVALID_PARAMS,
     METHOD_NOT_FOUND,
+    PARSE_ERROR,
     Dispatcher,
     read_message,
     serve,
@@ -25,11 +26,16 @@ def make_dispatcher() -> Dispatcher:
     dispatcher = Dispatcher()
     dispatcher.register("add", lambda a, b: a + b)
     dispatcher.register("boom", _boom)
+    dispatcher.register("bad_inside", _bad_inside)
     return dispatcher
 
 
 def _boom() -> None:
     raise RuntimeError("exploded")
+
+
+def _bad_inside(x: int) -> int:
+    return x + "1"  # type: ignore[operator]
 
 
 def test_positional_and_keyword_params() -> None:
@@ -66,10 +72,30 @@ def test_exception_is_internal_error_with_traceback() -> None:
     assert "RuntimeError" in response["error"]["data"]
 
 
-def test_notification_has_no_response() -> None:
+def test_type_error_inside_the_method_is_internal() -> None:
+    response = make_dispatcher().handle(request("bad_inside", [1]))
+    assert response is not None
+    assert response["error"]["code"] == INTERNAL_ERROR
+
+
+def test_notification_has_no_response_even_on_error() -> None:
     message = request("add", [1, 2])
     del message["id"]
     assert make_dispatcher().handle(message) is None
+    unknown = request("nope")
+    del unknown["id"]
+    assert make_dispatcher().handle(unknown) is None
+
+
+def test_serve_stops_after_a_framing_error() -> None:
+    stdin = io.BytesIO(b"Content-Type: text\r\n\r\n{}")
+    stdout = io.BytesIO()
+    serve(make_dispatcher(), stdin, stdout)
+    stdout.seek(0)
+    response = read_message(stdout)
+    assert response is not None
+    assert response["error"]["code"] == PARSE_ERROR
+    assert read_message(stdout) is None
 
 
 def test_framing_round_trip() -> None:

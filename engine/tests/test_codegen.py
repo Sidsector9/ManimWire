@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from typing import Any
 
-import pytest
 from manim import config, tempconfig
 
 from engine.__main__ import build_dispatcher
-from engine.catalogue import Catalogue, get_catalogue
+from engine.catalogue import Catalogue
 from engine.codegen import ManimCodeGenerator
 from engine.codegen.generator import snake_case
 from engine.document import (
@@ -18,13 +17,6 @@ from engine.document import (
     SceneDocument,
     WaitStep,
 )
-from tests.test_document import simple_scene
-
-
-@pytest.fixture(scope="module")
-def catalogue() -> Catalogue:
-    return get_catalogue()
-
 
 EXPECTED = """\
 from manim import *
@@ -38,15 +30,17 @@ class BlueCircle(Scene):
 """
 
 
-def test_simple_scene_source(catalogue: Catalogue) -> None:
-    generated = ManimCodeGenerator().generate(simple_scene(), catalogue)
+def test_simple_scene_source(catalogue: Catalogue, simple_scene: SceneDocument) -> None:
+    generated = ManimCodeGenerator().generate(simple_scene, catalogue)
     assert generated.code == EXPECTED
     assert generated.source_map.nodes == {"c": [6], "f": [7]}
     assert generated.source_map.steps == {0: [8]}
 
 
-def test_simple_scene_renders_a_blue_circle(catalogue: Catalogue) -> None:
-    code = ManimCodeGenerator().generate(simple_scene(), catalogue).code
+def test_simple_scene_renders_a_blue_circle(
+    catalogue: Catalogue, simple_scene: SceneDocument
+) -> None:
+    code = ManimCodeGenerator().generate(simple_scene, catalogue).code
     namespace: dict[str, Any] = {}
     exec(code, namespace)
     with tempconfig(
@@ -103,10 +97,10 @@ def test_all_step_kinds_positional_args_and_vectors(catalogue: Catalogue) -> Non
         "        box = Square()\n"
         "        box.shift(RIGHT)\n"
         "        dot = Dot(point=np.array([1.0, 2.0, 0.0]))\n"
-        "        v_group = VGroup(box, dot)\n"
-        "        self.add(v_group)\n"
+        "        vgroup = VGroup(box, dot)\n"
+        "        self.add(vgroup)\n"
         "        self.wait(0.5)\n"
-        "        self.play(FadeOut(v_group))\n"
+        "        self.play(FadeOut(vgroup))\n"
     )
 
 
@@ -141,6 +135,15 @@ def test_variable_names_are_unique_identifiers(catalogue: Catalogue) -> None:
     assert "circle_2 = Circle()" in code
     assert "v_2_big_circles = Circle()" in code
     assert snake_case("MathTex") == "math_tex"
+    assert snake_case("VGroup") == "vgroup"
+    assert snake_case("MoveAlongPath") == "move_along_path"
+
+
+def test_generate_refuses_an_invalid_scene(catalogue: Catalogue) -> None:
+    scene = SceneDocument(nodes=[Node(id="f", catalogue="VMobject.set_fill")])
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.code == ""
+    assert [i.code for i in generated.issues] == ["missing_required"]
 
 
 def test_empty_scene_has_a_pass(catalogue: Catalogue) -> None:
@@ -151,9 +154,9 @@ def test_empty_scene_has_a_pass(catalogue: Catalogue) -> None:
     )
 
 
-def test_rpc_generate_and_validate() -> None:
+def test_rpc_generate_and_validate(simple_scene: SceneDocument) -> None:
     dispatcher = build_dispatcher()
-    document = Document(scenes=[simple_scene()]).model_dump()
+    document = Document(scenes=[simple_scene]).model_dump()
     generated = dispatcher.handle(
         {
             "jsonrpc": "2.0",

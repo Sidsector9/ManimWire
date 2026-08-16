@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import ast
 import inspect
 import re
+import textwrap
 from collections.abc import Callable
 from typing import Any, Literal
 
@@ -39,12 +41,19 @@ def _parameters(
     context: TypeContext,
     self_type: PortType | None,
     seen: set[str],
+    skip_positional: int = 0,
 ) -> tuple[list[Parameter], bool]:
     """Parameters of one signature (without self), and whether it takes **kwargs."""
     parameters: list[Parameter] = []
     accepts_kwargs = False
     for name, param in signature.parameters.items():
-        if name == "self" or name.startswith("_") or name in seen:
+        if name == "self":
+            continue
+        if skip_positional and param.kind is not inspect.Parameter.VAR_KEYWORD:
+            skip_positional -= 1
+            seen.add(name)
+            continue
+        if name.startswith("_") or name in seen:
             continue
         if param.kind is inspect.Parameter.VAR_KEYWORD:
             accepts_kwargs = True
@@ -73,6 +82,34 @@ def _parameters(
     return parameters, accepts_kwargs
 
 
+def _super_call_arguments(init: Callable[..., Any]) -> tuple[int, set[str]]:
+    """Positional count and keyword names in ``super().__init__(...)`` calls."""
+    try:
+        tree = ast.parse(textwrap.dedent(inspect.getsource(init)))
+    except (OSError, TypeError, SyntaxError):
+        return 0, set()
+    positional = 0
+    keywords: set[str] = set()
+    for node in ast.walk(tree):
+        if not (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)):
+            continue
+        if node.func.attr != "__init__" or not _is_super(node.func.value):
+            continue
+        positional = max(
+            positional, sum(1 for a in node.args if not isinstance(a, ast.Starred))
+        )
+        keywords.update(k.arg for k in node.keywords if k.arg is not None)
+    return positional, keywords
+
+
+def _is_super(node: ast.expr) -> bool:
+    return (
+        isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "super"
+    )
+
+
 def class_descriptor(
     cls: type,
     module: str,
@@ -87,19 +124,25 @@ def class_descriptor(
     parameters: list[Parameter] = []
     seen: set[str] = set()
     accepts_kwargs = False
+    positional_to_parent = 0
     for base in cls.__mro__:
         if base is object or "__init__" not in base.__dict__:
             continue
+        init = base.__dict__["__init__"]
         found, accepts_kwargs = _parameters(
-            inspect.signature(base.__dict__["__init__"]),
+            inspect.signature(init),
             base.__name__,
             context,
             output,
             seen,
+            positional_to_parent,
         )
         parameters.extend(found)
         if not accepts_kwargs:
             break
+        # Arguments this __init__ passes to its parent explicitly are not free.
+        positional_to_parent, explicit = _super_call_arguments(init)
+        seen.update(explicit)
     bases = [b.__name__ for b in cls.__mro__[1:] if b.__name__ in exported]
     return Descriptor(
         name=cls.__name__,

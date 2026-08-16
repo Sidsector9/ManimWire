@@ -44,8 +44,10 @@ def receiver_type(descriptor: Descriptor, index: dict[str, Descriptor]) -> TypeR
 
 def validate_document(document: Document, catalogue: Catalogue) -> list[Issue]:
     issues: list[Issue] = []
+    reserved = {e.name for e in catalogue.entries if e.kind != "method"}
+    reserved |= {c.name for c in catalogue.colors} | set(DIRECTION_NAMES) | {"Scene"}
     for scene in document.scenes:
-        if not scene.name.isidentifier() or scene.name == "Scene":
+        if not scene.name.isidentifier() or scene.name in reserved:
             issues.append(
                 Issue(
                     code="bad_scene_name",
@@ -164,6 +166,21 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                         param.name,
                     )
                 )
+
+    for (node_id, port), sources in connected.items():
+        descriptor = descriptors.get(node_id)
+        if descriptor is None or len(sources) < 2:
+            continue
+        param = next((p for p in descriptor.parameters if p.name == port), None)
+        if param is None or param.kind != "var_positional":
+            issues.append(
+                _issue(
+                    "duplicate_connection",
+                    f"{descriptor.qualname}.{port} accepts one connection",
+                    node_id,
+                    port,
+                )
+            )
 
     issues.extend(_cycles(scene))
 

@@ -25,6 +25,8 @@ export interface SupervisorOptions {
   spawn: SpawnEngine
   /** Delay before restart attempt n (1-based). */
   backoff?: (attempt: number) => number
+  /** How long the engine may take to answer engine.info before it is restarted. */
+  probeTimeoutMs?: number
   log?: (line: string) => void
 }
 
@@ -44,11 +46,13 @@ export class EngineSupervisor {
   private restartTimer: ReturnType<typeof setTimeout> | null = null
   private readonly spawn: SpawnEngine
   private readonly backoff: (attempt: number) => number
+  private readonly probeTimeoutMs: number
   private readonly log: (line: string) => void
 
   constructor(options: SupervisorOptions) {
     this.spawn = options.spawn
     this.backoff = options.backoff ?? defaultBackoff
+    this.probeTimeoutMs = options.probeTimeoutMs ?? 30_000
     this.log = options.log ?? (() => {})
   }
 
@@ -84,7 +88,15 @@ export class EngineSupervisor {
 
   private launch(state: 'starting' | 'restarting'): void {
     this.setStatus({ state, attempt: this.attempt })
-    const child = this.spawn()
+    let child: EngineProcess
+    try {
+      child = this.spawn()
+    } catch (error) {
+      // A missing interpreter is a setup problem; retrying would not help.
+      this.stopped = true
+      this.setStatus({ state: 'stopped', attempt: this.attempt, message: String(error) })
+      return
+    }
     this.process = child
     child.stderr?.on('data', (chunk: Buffer) => this.log(chunk.toString()))
     const connection = createMessageConnection(
@@ -99,18 +111,25 @@ export class EngineSupervisor {
       if (this.stopped) return
       this.scheduleRestart(`engine exited with code ${code ?? 'null'}`)
     })
-    void this.probe(connection)
+    void this.probe(connection, child)
   }
 
-  private async probe(connection: MessageConnection): Promise<void> {
+  private async probe(connection: MessageConnection, child: EngineProcess): Promise<void> {
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`no answer within ${this.probeTimeoutMs} ms`)), this.probeTimeoutMs)
+    })
     try {
-      const info = (await connection.sendRequest('engine.info')) as EngineInfo
+      const info = (await Promise.race([connection.sendRequest('engine.info'), timeout])) as EngineInfo
       if (this.connection !== connection) return
       this.attempt = 0
       this.setStatus({ state: 'ready', attempt: 0, info })
     } catch (error) {
       if (this.connection !== connection) return
       this.log(`engine.info failed: ${String(error)}`)
+      child.kill() // the exit listener schedules the restart
+    } finally {
+      if (timer) clearTimeout(timer)
     }
   }
 

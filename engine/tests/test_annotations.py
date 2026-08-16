@@ -18,6 +18,8 @@ def context() -> TypeContext:
             "VMobject": PortType.MOBJECT,
             "VGroup": PortType.MOBJECT,
             "Surface": PortType.MOBJECT,
+            "Vector": PortType.MOBJECT,
+            "Point": PortType.MOBJECT,
             "Axes": PortType.COORDINATE_SYSTEM,
             "Animation": PortType.ANIMATION,
             "ValueTracker": PortType.LIVE_NUMBER,
@@ -45,6 +47,12 @@ def test_optional_number() -> None:
 
 def test_color_alias() -> None:
     assert map_annotation("ParsableManimColor | None", context()).type is PortType.COLOR
+
+
+def test_exported_class_names_win_over_alias_patterns() -> None:
+    assert map_annotation("Vector", context()).type is PortType.MOBJECT
+    assert map_annotation("Point", context()).type is PortType.MOBJECT
+    assert map_annotation("Vector3DLike", context()).type is PortType.VECTOR
 
 
 def test_vector_aliases() -> None:

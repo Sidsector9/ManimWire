@@ -6,6 +6,7 @@ needs no custom reader.
 
 from __future__ import annotations
 
+import inspect
 import json
 import traceback
 from collections.abc import Callable
@@ -29,6 +30,11 @@ class Dispatcher:
 
     def handle(self, request: Any) -> dict[str, Any] | None:
         """Return the response for a request, or None for a notification."""
+        notification = isinstance(request, dict) and "id" not in request
+        response = self._respond(request)
+        return None if notification else response
+
+    def _respond(self, request: Any) -> dict[str, Any]:
         if not isinstance(request, dict) or request.get("jsonrpc") != "2.0":
             return _error(None, INVALID_REQUEST, "invalid request")
         request_id = request.get("id")
@@ -39,21 +45,20 @@ class Dispatcher:
         if method is None:
             return _error(request_id, METHOD_NOT_FOUND, f"unknown method {method_name}")
         params = request.get("params", {})
+        if isinstance(params, list):
+            args, kwargs = params, {}
+        elif isinstance(params, dict):
+            args, kwargs = [], params
+        else:
+            return _error(request_id, INVALID_PARAMS, "params must be a list or object")
         try:
-            if isinstance(params, list):
-                result = method(*params)
-            elif isinstance(params, dict):
-                result = method(**params)
-            else:
-                return _error(
-                    request_id, INVALID_PARAMS, "params must be a list or object"
-                )
+            inspect.signature(method).bind(*args, **kwargs)
         except TypeError as exc:
             return _error(request_id, INVALID_PARAMS, str(exc))
+        try:
+            result = method(*args, **kwargs)
         except Exception as exc:
             return _error(request_id, INTERNAL_ERROR, str(exc), traceback.format_exc())
-        if request_id is None:
-            return None
         return {"jsonrpc": "2.0", "id": request_id, "result": result}
 
 
@@ -97,8 +102,9 @@ def serve(dispatcher: Dispatcher, stdin: BinaryIO, stdout: BinaryIO) -> None:
         try:
             request = read_message(stdin)
         except (ValueError, UnicodeDecodeError) as exc:
+            # The stream position is unknown after a framing error; stop here.
             write_message(stdout, _error(None, PARSE_ERROR, str(exc)))
-            continue
+            return
         if request is None:
             return
         response = dispatcher.handle(request)

@@ -18,6 +18,7 @@ from engine.document.model import (
     SceneDocument,
     WaitStep,
 )
+from engine.document.validate import Issue, validate_scene
 
 
 class SourceMap(BaseModel):
@@ -28,15 +29,18 @@ class SourceMap(BaseModel):
 
 
 class GeneratedCode(BaseModel):
+    """Code is empty when the scene has issues; the UI shows the issues instead."""
+
     code: str
     source_map: SourceMap
+    issues: list[Issue] = []
 
 
 class CodeGenerator(Protocol):
     def generate(self, scene: SceneDocument, catalogue: Catalogue) -> GeneratedCode: ...
 
 
-_CAMEL = re.compile(r"(?<!^)(?=[A-Z])")
+_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
 
 
 def snake_case(name: str) -> str:
@@ -47,8 +51,10 @@ class ManimCodeGenerator:
     """Emits construction statements in dependency order, then the steps."""
 
     def generate(self, scene: SceneDocument, catalogue: Catalogue) -> GeneratedCode:
-        build = _Build(scene, catalogue)
-        return build.run()
+        issues = validate_scene(scene, catalogue)
+        if issues:
+            return GeneratedCode(code="", source_map=SourceMap(), issues=issues)
+        return _Build(scene, catalogue).run()
 
 
 class _Build:

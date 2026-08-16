@@ -1,5 +1,59 @@
 {
   "$defs": {
+    "Issue": {
+      "properties": {
+        "code": {
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "node": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Node"
+        },
+        "port": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Port"
+        },
+        "step": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Step"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "Issue",
+      "type": "object"
+    },
     "SourceMap": {
       "description": "1-based line numbers of the generated code, by node id and by step index.",
       "properties": {
@@ -30,6 +84,7 @@
       "type": "object"
     }
   },
+  "description": "Code is empty when the scene has issues; the UI shows the issues instead.",
   "properties": {
     "code": {
       "title": "Code",
@@ -37,6 +92,14 @@
     },
     "source_map": {
       "$ref": "#/$defs/SourceMap"
+    },
+    "issues": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Issue"
+      },
+      "title": "Issues",
+      "type": "array"
     }
   },
   "required": [

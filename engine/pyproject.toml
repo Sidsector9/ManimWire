@@ -29,3 +29,5 @@ select = ["E", "F", "I", "UP", "B"]
 strict = true
 python_version = "3.12"
 files = ["src/engine", "tests"]
+explicit_package_bases = true
+mypy_path = "src"

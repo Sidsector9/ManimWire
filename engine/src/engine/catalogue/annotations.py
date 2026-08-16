@@ -86,7 +86,6 @@ _VECTOR = {
     "Vector3D",
     "Vector2D",
     "VectorND",
-    "Vector",
     "ColVector",
     "RowVector",
     "np.ndarray",
@@ -194,6 +193,9 @@ def _map_node(
         return _Mapped(PortType.NONE)
     if name == "Self":
         return _Mapped(self_type or PortType.ANY)
+    plain = name.removeprefix("OpenGL")
+    if plain in context.classes:
+        return _Mapped(context.classes[plain])
     if name in _NUMBER:
         return _Mapped(PortType.NUMBER)
     if name == "bool":
@@ -224,9 +226,6 @@ def _map_node(
             inner = _map_node(node.args[0], context, self_type, source)
             return _Mapped(inner.type, collection=True, signature=inner.signature)
         return _Mapped(PortType.ANY, collection=True)
-    plain = name.removeprefix("OpenGL")
-    if plain in context.classes:
-        return _Mapped(context.classes[plain])
     target = context.namespace.get(name)
     if isinstance(target, type) and issubclass(target, Enum):
         return _Mapped(PortType.TEXT, choices=[f"{name}.{m.name}" for m in target])

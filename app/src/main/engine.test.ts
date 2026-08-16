@@ -9,7 +9,10 @@ import { EngineSupervisor, type EngineProcess } from './engine'
 import type { EngineStatus } from '../shared/engine'
 
 /** An in-memory engine that answers engine.info and can be made to exit. */
-function fakeEngine(info: Record<string, unknown>): EngineProcess & { exit(code: number): void } {
+function fakeEngine(
+  info: Record<string, unknown>,
+  options: { silent?: boolean } = {}
+): EngineProcess & { exit(code: number): void } {
   const toEngine = new PassThrough()
   const fromEngine = new PassThrough()
   const exitListeners: Array<(code: number | null) => void> = []
@@ -17,18 +20,19 @@ function fakeEngine(info: Record<string, unknown>): EngineProcess & { exit(code:
     new StreamMessageReader(toEngine),
     new StreamMessageWriter(fromEngine)
   )
-  connection.onRequest('engine.info', () => info)
+  if (!options.silent) connection.onRequest('engine.info', () => info)
   connection.listen()
+  const exit = (code: number | null): void => {
+    connection.dispose()
+    for (const listener of exitListeners) listener(code)
+  }
   return {
     stdin: toEngine,
     stdout: fromEngine,
     stderr: null,
     onExit: (listener) => exitListeners.push(listener),
-    kill: () => connection.dispose(),
-    exit: (code) => {
-      connection.dispose()
-      for (const listener of exitListeners) listener(code)
-    }
+    kill: () => exit(null),
+    exit
   }
 }
 
@@ -79,6 +83,33 @@ describe('EngineSupervisor', () => {
     expect(ready.attempt).toBe(0)
     expect(engines).toHaveLength(2)
     supervisor.stop()
+  })
+
+  it('restarts an engine that never answers the probe', async () => {
+    let spawned = 0
+    const supervisor = new EngineSupervisor({
+      spawn: () => fakeEngine(info, { silent: spawned++ === 0 }),
+      backoff: () => 1,
+      probeTimeoutMs: 20
+    })
+    supervisor.start()
+    const restarting = await waitFor(supervisor, (s) => s.state === 'restarting')
+    expect(restarting.attempt).toBe(1)
+    const ready = await waitFor(supervisor, (s) => s.state === 'ready')
+    expect(ready.info).toEqual(info)
+    expect(spawned).toBe(2)
+    supervisor.stop()
+  })
+
+  it('reports a spawn failure as stopped with the reason', () => {
+    const supervisor = new EngineSupervisor({
+      spawn: () => {
+        throw new Error('no Python environment at /nowhere')
+      }
+    })
+    supervisor.start()
+    expect(supervisor.getStatus().state).toBe('stopped')
+    expect(supervisor.getStatus().message).toContain('no Python environment')
   })
 
   it('rejects calls while not ready', async () => {

@@ -1,15 +1,8 @@
 from __future__ import annotations
 
-import pytest
-
 from engine.__main__ import build_dispatcher
-from engine.catalogue import Catalogue, Descriptor, Parameter, PortType, get_catalogue
+from engine.catalogue import Catalogue, Descriptor, Parameter, PortType
 from engine.catalogue.build import category_for
-
-
-@pytest.fixture(scope="module")
-def catalogue() -> Catalogue:
-    return get_catalogue()
 
 
 def entry(catalogue: Catalogue, qualname: str) -> Descriptor:
@@ -49,6 +42,25 @@ def test_circle_constructor_follows_kwargs_up_the_hierarchy(
     assert param(circle, "arc_center").default == "ORIGIN"
     assert param(circle, "z_index").owner == "Mobject"
     assert circle.doc == "A circle."
+
+
+def test_parameters_a_subclass_passes_explicitly_are_not_offered(
+    catalogue: Catalogue,
+) -> None:
+    circle = {p.name for p in entry(catalogue, "Circle").parameters}
+    assert "angle" not in circle and "start_angle" not in circle
+    assert {"radius", "color", "fill_opacity", "arc_center"} <= circle
+    square = {p.name for p in entry(catalogue, "Square").parameters}
+    assert "width" not in square and "height" not in square
+    assert {"side_length", "fill_opacity"} <= square
+    rectangle = {p.name for p in entry(catalogue, "Rectangle").parameters}
+    assert {"width", "height"} <= rectangle
+
+
+def test_class_names_are_not_mistaken_for_vector_aliases(catalogue: Catalogue) -> None:
+    label = entry(catalogue, "VectorScene.label_vector")
+    assert param(label, "vector").type.type is PortType.MOBJECT
+    assert entry(catalogue, "Vector").returns.type is PortType.MOBJECT
 
 
 def test_set_fill_method(catalogue: Catalogue) -> None:
