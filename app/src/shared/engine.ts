@@ -8,6 +8,7 @@ export type { Issue } from './generated/issue'
 export type { GeneratedCode } from './generated/generated_code'
 export type { FrameResult } from './generated/frame_result'
 export type { ExportResult } from './generated/export_result'
+export type { TimelineLayout } from './generated/timeline_layout'
 export type { EngineInfo }
 
 export type EngineState = 'starting' | 'ready' | 'restarting' | 'stopped'

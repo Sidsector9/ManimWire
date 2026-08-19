@@ -31,8 +31,16 @@ class Edge(BaseModel):
 
 
 class PlayStep(BaseModel):
+    """``self.play(...)``. Keyword values apply to every animation, as in Manim."""
+
     kind: Literal["play"] = "play"
     animations: list[str]
+    run_time: float | None = None
+    rate_func: str | None = None
+    lag_ratio: float | None = None
+    subcaption: str | None = None
+    subcaption_duration: float | None = None
+    subcaption_offset: float = 0
 
 
 class WaitStep(BaseModel):
@@ -50,9 +58,56 @@ class RemoveStep(BaseModel):
     mobjects: list[str]
 
 
+class BringToFrontStep(BaseModel):
+    kind: Literal["bring_to_front"] = "bring_to_front"
+    mobjects: list[str]
+
+
+class BringToBackStep(BaseModel):
+    kind: Literal["bring_to_back"] = "bring_to_back"
+    mobjects: list[str]
+
+
+class SectionStep(BaseModel):
+    kind: Literal["section"] = "section"
+    name: str = "unnamed"
+    skip_animations: bool = False
+
+
+class SoundStep(BaseModel):
+    kind: Literal["sound"] = "sound"
+    file: str
+    time_offset: float = 0
+    gain: float | None = None
+
+
+class SubcaptionStep(BaseModel):
+    kind: Literal["subcaption"] = "subcaption"
+    content: str
+    duration: float = 1
+    offset: float = 0
+
+
 Step = Annotated[
-    PlayStep | WaitStep | AddStep | RemoveStep, Field(discriminator="kind")
+    PlayStep
+    | WaitStep
+    | AddStep
+    | RemoveStep
+    | BringToFrontStep
+    | BringToBackStep
+    | SectionStep
+    | SoundStep
+    | SubcaptionStep,
+    Field(discriminator="kind"),
 ]
+
+# Steps that name mobjects: (kind, Scene method).
+MOBJECT_STEP_METHODS = {
+    "add": "add",
+    "remove": "remove",
+    "bring_to_front": "bring_to_front",
+    "bring_to_back": "bring_to_back",
+}
 
 
 class SceneDocument(BaseModel):

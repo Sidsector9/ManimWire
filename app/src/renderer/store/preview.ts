@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { FrameResult, GeneratedCode, Issue } from '../../shared/engine'
+import type { FrameResult, GeneratedCode, Issue, TimelineLayout } from '../../shared/engine'
 import { call, EngineError } from '../engine/client'
 import type { Doc } from '../model/document'
 
@@ -21,6 +21,7 @@ interface PreviewStore {
   code: string
   sourceMap: SourceMap
   frame: FrameResult | null
+  layout: TimelineLayout | null
   failure: RenderFailure | null
   rendering: boolean
   /** Scene time shown on the canvas. Null means the end of the scene. */
@@ -40,6 +41,7 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   code: '',
   sourceMap: { nodes: {}, steps: {}, variables: {} },
   frame: null,
+  layout: null,
   failure: null,
   rendering: false,
   previewTime: null,
@@ -78,7 +80,8 @@ async function run(doc: Doc, sceneIndex: number, set: Set, get: Get): Promise<vo
   try {
     const generated = await call<GeneratedCode>('document.generate', { document: doc, scene })
     const issues = generated.issues ?? []
-    set({ issues, code: generated.code, sourceMap: generated.source_map as SourceMap })
+    const layout = await call<TimelineLayout>('timeline.layout', { document: doc, scene })
+    set({ issues, code: generated.code, sourceMap: generated.source_map as SourceMap, layout })
     if (issues.length > 0) {
       set({ failure: null })
       return

@@ -1,6 +1,6 @@
 import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
-import { selectColors, useCatalogueStore } from '../store/catalogue'
+import { selectColors, selectEntries, useCatalogueStore } from '../store/catalogue'
 
 // Direction constants Manim exports; mirrors DIRECTION_NAMES in the engine.
 export const DIRECTIONS = ['ORIGIN', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'IN', 'OUT', 'UL', 'UR', 'DL', 'DR', 'X_AXIS', 'Y_AXIS', 'Z_AXIS']
@@ -15,6 +15,7 @@ interface Props {
 /** Inline editor for one literal port, chosen by the catalogue type. */
 export function PortEditor({ param, value, onChange, compact = false }: Props) {
   const colors = useCatalogueStore(selectColors)
+  const entries = useCatalogueStore(selectEntries)
   const { type } = param
   const placeholder = param.display ?? ''
   const stop = (e: React.SyntheticEvent): void => e.stopPropagation()
@@ -104,6 +105,21 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
           onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
         />
       )
+    case 'function': {
+      // Rate functions are the one function family with catalogue entries to choose from.
+      const names = type.signature === '(float) -> float' ? entries.filter((e) => e.category === 'rate_functions').map((e) => e.name) : []
+      if (names.length === 0) return <span className="port-connect">{compact ? '' : 'connect'}</span>
+      return (
+        <select className="port-select mono" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>
+          <option value="">{placeholder || 'default'}</option>
+          {names.map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
+      )
+    }
     default:
       return <span className="port-connect">{compact ? '' : 'connect'}</span>
   }

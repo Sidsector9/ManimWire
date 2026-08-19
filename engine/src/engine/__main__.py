@@ -18,6 +18,7 @@ from engine.document import (
 from engine.info import engine_info
 from engine.render import RENDER_ERROR, CairoRenderService, RenderError
 from engine.rpc import Dispatcher, Notify, RpcError, serve
+from engine.timeline import layout_timeline
 
 
 def build_dispatcher(cache_dir: Path | None = None) -> Dispatcher:
@@ -32,6 +33,7 @@ def build_dispatcher(cache_dir: Path | None = None) -> Dispatcher:
     dispatcher.register("catalogue.get", _catalogue_get)
     dispatcher.register("document.validate", _document_validate)
     dispatcher.register("document.generate", _document_generate)
+    dispatcher.register("timeline.layout", _timeline_layout)
     dispatcher.register("render.frame", render.frame)
     dispatcher.register("render.export", render.export, notifies=True)
     return dispatcher
@@ -67,6 +69,11 @@ def _document_generate(document: dict[str, Any], scene: str) -> dict[str, Any]:
             code="", source_map=SourceMap(), issues=issues + generated.issues
         )
     return generated.model_dump()
+
+
+def _timeline_layout(document: dict[str, Any], scene: str) -> dict[str, Any]:
+    parsed = Document.model_validate(document)
+    return layout_timeline(_scene(parsed, scene), get_catalogue()).model_dump()
 
 
 def _scene(document: Document, name: str) -> SceneDocument:

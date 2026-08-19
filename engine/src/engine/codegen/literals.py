@@ -25,6 +25,8 @@ class LiteralFormatter:
                 self.uses_numpy = True
                 return f"np.array({[float(v) for v in value]!r})"
             return str(value)
+        if kind is PortType.FUNCTION and isinstance(value, str):
+            return value  # a Manim function such as smooth, validated by name
         if kind is PortType.TEXT and isinstance(value, str):
             return (
                 value if type_ref.choices and value in type_ref.choices else repr(value)

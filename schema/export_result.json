@@ -7,6 +7,18 @@
     "duration": {
       "title": "Duration",
       "type": "number"
+    },
+    "subtitles": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Subtitles"
     }
   },
   "required": [

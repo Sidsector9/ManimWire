@@ -13,6 +13,7 @@ from engine.codegen import GeneratedCode
 from engine.document import Document, Issue
 from engine.info import EngineInfo
 from engine.render import ExportResult, FrameResult
+from engine.timeline import TimelineLayout
 
 MODELS: dict[str, type[BaseModel]] = {
     "catalogue": Catalogue,
@@ -22,6 +23,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "generated_code": GeneratedCode,
     "frame_result": FrameResult,
     "export_result": ExportResult,
+    "timeline_layout": TimelineLayout,
 }
 
 

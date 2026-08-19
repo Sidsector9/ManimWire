@@ -12,7 +12,15 @@ from PIL import Image
 from engine.__main__ import build_dispatcher
 from engine.catalogue import Catalogue
 from engine.codegen import SourceMap
-from engine.document import Document, Node, SceneDocument, Settings, WaitStep
+from engine.document import (
+    Document,
+    Node,
+    SceneDocument,
+    Settings,
+    SoundStep,
+    SubcaptionStep,
+    WaitStep,
+)
 from engine.render import CairoRenderService, RenderError
 from engine.render.service import _locate
 from engine.rpc import read_message, write_message
@@ -201,3 +209,29 @@ def test_engine_process_keeps_the_protocol_clean(
     progress = [m for m in messages if m.get("method") == "render.progress"]
     assert progress and progress[0]["params"]["scene"] == "BlueCircle"
     assert Path(messages[-1]["result"]["path"]).exists()
+
+
+def test_preview_ignores_subtitles_and_missing_sounds(
+    service: CairoRenderService, catalogue: Catalogue, simple_scene: SceneDocument
+) -> None:
+    simple_scene.steps.insert(0, SoundStep(file="missing.wav"))
+    simple_scene.steps.append(SubcaptionStep(content="a circle", duration=1.0))
+    result = service.frame(simple_scene, catalogue, SMALL, 2.0)
+    assert Path(result.path).exists()
+    assert not list(Path.cwd().glob("*.srt"))
+
+
+def test_export_keeps_the_subtitle_file_next_to_the_video(
+    service: CairoRenderService,
+    catalogue: Catalogue,
+    simple_scene: SceneDocument,
+    tmp_path: Path,
+) -> None:
+    simple_scene.steps.append(SubcaptionStep(content="a circle", duration=1.0))
+    result = service.export(simple_scene, catalogue, SMALL, tmp_path / "out")
+    assert result.subtitles == str(tmp_path / "out" / "BlueCircle.srt")
+    assert "a circle" in Path(result.subtitles).read_text()
+    assert sorted(p.name for p in (tmp_path / "out").iterdir()) == [
+        "BlueCircle.mp4",
+        "BlueCircle.srt",
+    ]

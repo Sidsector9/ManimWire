@@ -14,6 +14,7 @@ function fakeEngine() {
 }
 
 const generated = (name: string) => ({ code: `class ${name}`, source_map: { nodes: {}, steps: {}, variables: {} }, issues: [] })
+const emptyLayout = { rows: [], steps: [], bars: [], markers: [], sections: [], total: 0 }
 const withName = (name: string): Doc => ({ ...emptyDocument(), scenes: [{ name, nodes: [], edges: [], steps: [] }] })
 
 describe('engine results sync', () => {
@@ -36,15 +37,20 @@ describe('engine results sync', () => {
 
     engine.calls[0]!.resolve(generated('A'))
     await vi.waitFor(() => expect(engine.calls).toHaveLength(2))
-    expect(engine.calls[1]!.method).toBe('render.frame')
-    engine.calls[1]!.resolve({ path: '/tmp/a.png', time: 1, bounds: [] })
+    expect(engine.calls[1]!.method).toBe('timeline.layout')
+    engine.calls[1]!.resolve(emptyLayout)
+    await vi.waitFor(() => expect(engine.calls).toHaveLength(3))
+    expect(engine.calls[2]!.method).toBe('render.frame')
+    engine.calls[2]!.resolve({ path: '/tmp/a.png', time: 1, bounds: [] })
 
     // A finished, so only C (not B) runs next.
-    await vi.waitFor(() => expect(engine.calls).toHaveLength(3))
-    expect(engine.calls[2]!.params.document.scenes[0]!.name).toBe('C')
-    engine.calls[2]!.resolve(generated('C'))
     await vi.waitFor(() => expect(engine.calls).toHaveLength(4))
-    engine.calls[3]!.resolve({ path: '/tmp/c.png', time: 2, bounds: [] })
+    expect(engine.calls[3]!.params.document.scenes[0]!.name).toBe('C')
+    engine.calls[3]!.resolve(generated('C'))
+    await vi.waitFor(() => expect(engine.calls).toHaveLength(5))
+    engine.calls[4]!.resolve(emptyLayout)
+    await vi.waitFor(() => expect(engine.calls).toHaveLength(6))
+    engine.calls[5]!.resolve({ path: '/tmp/c.png', time: 2, bounds: [] })
 
     await vi.waitFor(() => expect(useEngineResults.getState().rendering).toBe(false))
     expect(useEngineResults.getState().code).toBe('class C')
@@ -57,7 +63,9 @@ describe('engine results sync', () => {
         call: async (method: string): Promise<EngineCallResult> =>
           method === 'document.generate'
             ? { ok: true, result: generated('A') }
-            : { ok: false, error: { code: -32000, message: 'ValueError: bad', data: { node: 'n1', step: null, line: 7 } } }
+            : method === 'timeline.layout'
+              ? { ok: true, result: emptyLayout }
+              : { ok: false, error: { code: -32000, message: 'ValueError: bad', data: { node: 'n1', step: null, line: 7 } } }
       }
     })
     await useEngineResults.getState().sync(withName('A'), 0)
@@ -70,12 +78,13 @@ describe('engine results sync', () => {
       engine: {
         call: async (method: string): Promise<EngineCallResult> => {
           seen.push(method)
+          if (method === 'timeline.layout') return { ok: true, result: emptyLayout }
           return { ok: true, result: { ...generated('A'), code: '', issues: [{ code: 'missing_required', message: 'needs mobject', node: 'n', port: 'mobject', step: null }] } }
         }
       }
     })
     await useEngineResults.getState().sync(withName('A'), 0)
-    expect(seen).toEqual(['document.generate'])
+    expect(seen).toEqual(['document.generate', 'timeline.layout'])
     expect(useEngineResults.getState().issues).toHaveLength(1)
     expect(useEngineResults.getState().failure).toBeNull()
   })

@@ -845,3 +845,258 @@ body,
   margin-left: auto;
   color: var(--text);
 }
+
+/* Timeline */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.timeline-meta {
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.timeline-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.timeline-area {
+  position: relative;
+  flex: 1;
+  overflow: auto;
+  user-select: none;
+}
+
+.timeline-canvas {
+  position: relative;
+}
+
+.timeline-labels {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  height: 100%;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+}
+
+.timeline-corner {
+  height: 34px;
+  border-bottom: 1px solid var(--border);
+}
+
+.timeline-row-label {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  padding: 0 8px;
+  overflow: hidden;
+  font-size: 11px;
+  line-height: 22px;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-row-label.scene {
+  color: var(--text-muted);
+}
+
+.timeline-row {
+  position: absolute;
+  height: 22px;
+  border-bottom: 1px solid #12151a;
+}
+
+.timeline-row.scene {
+  background: #0f1216;
+}
+
+.timeline-ticks {
+  position: absolute;
+  top: 16px;
+  left: 0;
+  right: 0;
+  height: 18px;
+  border-bottom: 1px solid var(--border);
+  cursor: col-resize;
+}
+
+.tick {
+  position: absolute;
+  top: 2px;
+  padding-left: 3px;
+  border-left: 1px solid var(--border-strong);
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.timeline-section {
+  position: absolute;
+  top: 1px;
+  height: 13px;
+  padding: 0 6px;
+  overflow: hidden;
+  border-left: 2px solid var(--type-coordinate-system);
+  background: #12211e;
+  font-size: 10px;
+  line-height: 13px;
+  color: var(--type-coordinate-system);
+  white-space: nowrap;
+}
+
+.timeline-section.skipped {
+  opacity: 0.5;
+}
+
+.timeline-step {
+  position: absolute;
+  box-sizing: border-box;
+  border-left: 1px solid var(--border);
+  cursor: pointer;
+}
+
+.timeline-step.selected {
+  background: rgb(88 196 221 / 6%);
+}
+
+.timeline-step.drop {
+  background: rgb(255 134 47 / 12%);
+}
+
+.timeline-step.step-wait {
+  background: repeating-linear-gradient(115deg, #1a1e24, #1a1e24 4px, #12151a 4px, #12151a 8px);
+}
+
+.wait-label {
+  position: absolute;
+  top: 3px;
+  left: 6px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.timeline-bar {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  box-sizing: border-box;
+  padding: 0 6px;
+  overflow: hidden;
+  border: 1px solid #6b3a16;
+  border-radius: 3px;
+  background: #3b2110;
+  color: #ffd3ae;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: grab;
+}
+
+.timeline-bar.selected {
+  border-color: var(--type-animation);
+  background: #7a3d14;
+}
+
+.timeline-bar.group {
+  z-index: 1;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding-top: 1px;
+  border-style: dashed;
+  background: transparent;
+  color: #c68a5a;
+  cursor: default;
+}
+
+.timeline-bar.depth-2 {
+  border-color: #8a5a2a;
+}
+
+.bar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bar-rate {
+  margin-left: auto;
+  font-size: 10px;
+  color: #c68a5a;
+}
+
+.bar-edge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.bar-edge:hover {
+  background: rgb(255 255 255 / 15%);
+}
+
+.timeline-marker {
+  position: absolute;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  background: #b6bdc7;
+  transform: rotate(45deg);
+  cursor: pointer;
+}
+
+.timeline-marker.kind-section {
+  height: 100%;
+  width: 1px;
+  margin: 0;
+  background: var(--type-coordinate-system);
+  transform: none;
+}
+
+.timeline-marker.kind-sound,
+.timeline-marker.kind-subcaption {
+  background: var(--type-coordinate-system);
+}
+
+.marker-label {
+  position: absolute;
+  top: -2px;
+  left: 12px;
+  font-size: 10px;
+  color: var(--text-secondary);
+  transform: rotate(-45deg);
+  transform-origin: left top;
+  white-space: nowrap;
+}
+
+.timeline-playhead {
+  position: absolute;
+  top: 0;
+  z-index: 4;
+  width: 1px;
+  background: var(--type-number);
+  pointer-events: none;
+}
+
+.playhead-time {
+  position: absolute;
+  top: 0;
+  left: 3px;
+  font-size: 10px;
+  color: var(--type-number);
+}
+
+.inspector-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}

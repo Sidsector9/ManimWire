@@ -7,6 +7,8 @@ import {
   connect,
   disconnect,
   emptyDocument,
+  moveAnimation,
+  moveStep,
   removeNodes,
   removeStep,
   setSettings,
@@ -32,6 +34,7 @@ interface DocumentStore {
   past: Doc[]
   future: Doc[]
   selected: string | null
+  selectedStep: number | null
   lastEdit: { key: string; at: number } | null
 
   replace(doc: Doc, filePath: string | null): void
@@ -48,6 +51,9 @@ interface DocumentStore {
   addStep(step: Step, at?: number): void
   removeStep(at: number): void
   updateStep(at: number, step: Step): void
+  moveStep(from: number, to: number): void
+  moveAnimation(node: string, from: number, to: number | null): void
+  selectStep(at: number | null): void
   setSettings(change: Partial<Doc['settings']>): void
   select(id: string | null): void
   undo(): void
@@ -78,9 +84,10 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     past: [],
     future: [],
     selected: null,
+    selectedStep: null,
     lastEdit: null,
 
-    replace: (doc, filePath) => set({ doc, filePath, dirty: false, past: [], future: [], selected: null, lastEdit: null }),
+    replace: (doc, filePath) => set({ doc, filePath, dirty: false, past: [], future: [], selected: null, selectedStep: null, lastEdit: null }),
     apply: (change) => record(change(get().doc)),
     addNode: (catalogue, position, values = {}) => {
       const { doc, sceneIndex } = get()
@@ -119,14 +126,23 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     connect: (edge) => record(connect(get().doc, get().sceneIndex, edge)),
     disconnect: (edge) => record(disconnect(get().doc, get().sceneIndex, edge)),
     addStep: (step, at) => record(addStep(get().doc, get().sceneIndex, step, at)),
-    removeStep: (at) => record(removeStep(get().doc, get().sceneIndex, at)),
+    removeStep: (at) => {
+      record(removeStep(get().doc, get().sceneIndex, at))
+      if (get().selectedStep === at) set({ selectedStep: null })
+    },
+    moveStep: (from, to) => {
+      record(moveStep(get().doc, get().sceneIndex, from, to))
+      set({ selectedStep: to })
+    },
+    moveAnimation: (node, from, to) => record(moveAnimation(get().doc, get().sceneIndex, node, from, to)),
+    selectStep: (at) => set({ selectedStep: at }),
     updateStep: (at, step) =>
       coalesce(
         `step:${at}`,
         addStep(removeStep(get().doc, get().sceneIndex, at), get().sceneIndex, step, at)
       ),
     setSettings: (change) => record(setSettings(get().doc, change)),
-    select: (id) => set({ selected: id }),
+    select: (id) => set(id === null ? { selected: null, selectedStep: null } : { selected: id }),
     undo: () => {
       const { doc, past, future } = get()
       const previous = past.at(-1)

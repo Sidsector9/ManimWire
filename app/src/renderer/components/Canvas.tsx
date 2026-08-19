@@ -17,6 +17,7 @@ export function Canvas() {
   const engine = useEngineStore((s) => s.status)
   const scene = useDocumentStore(currentScene)
   const select = useDocumentStore((s) => s.select)
+  const selectStep = useDocumentStore((s) => s.selectStep)
   const host = useRef<HTMLDivElement>(null)
 
   // Ask the engine for frames close to the displayed size, rounded to keep the cache useful.
@@ -47,6 +48,11 @@ export function Canvas() {
           {failure.node && (
             <button className="link" onClick={() => select(failure.node)}>
               go to node
+            </button>
+          )}
+          {failure.node === null && failure.step !== null && (
+            <button className="link" onClick={() => selectStep(failure.step)}>
+              go to step
             </button>
           )}
         </div>

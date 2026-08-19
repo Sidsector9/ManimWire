@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 
 from pydantic import BaseModel
 
@@ -11,9 +12,15 @@ from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType, T
 from engine.document.model import (
     SELF_PORT,
     Document,
+    Node,
     PlayStep,
     SceneDocument,
+    SectionStep,
     Settings,
+    SoundStep,
+    Step,
+    SubcaptionStep,
+    WaitStep,
 )
 
 # A value of the key type may be connected to a port of any listed type.
@@ -71,6 +78,7 @@ def document_issues(document: Document, catalogue: Catalogue) -> list[Issue]:
 def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
     index = {e.qualname: e for e in catalogue.entries}
     colors = {c.name for c in catalogue.colors}
+    functions = {e.name for e in catalogue.entries if e.kind == "function"}
     nodes = {n.id: n for n in scene.nodes}
     issues: list[Issue] = []
 
@@ -97,7 +105,9 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                         port,
                     )
                 )
-            elif (problem := _literal_problem(value, param.type, colors)) is not None:
+            elif (
+                problem := _literal_problem(value, param.type, colors, functions)
+            ) is not None:
                 issues.append(_issue("bad_literal", problem, node.id, port))
 
     connected: dict[tuple[str, str], list[str]] = {}
@@ -195,46 +205,65 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
     issues.extend(_cycles(scene))
 
     for position, step in enumerate(scene.steps):
-        ids = (
-            step.animations
-            if isinstance(step, PlayStep)
-            else getattr(step, "mobjects", [])
-        )
-        for node_id in ids:
-            descriptor = descriptors.get(node_id)
-            if node_id not in nodes:
-                issues.append(
-                    Issue(
-                        code="unknown_node",
-                        message=f"step {position} names a missing node",
-                        step=position,
-                    )
+        issues.extend(_step_issues(position, step, nodes, descriptors, functions))
+    return issues
+
+
+def _step_issues(
+    position: int,
+    step: Step,
+    nodes: Mapping[str, Node],
+    descriptors: Mapping[str, Descriptor],
+    functions: set[str],
+) -> list[Issue]:
+    issues: list[Issue] = []
+
+    def bad(code: str, message: str, node: str | None = None) -> None:
+        issues.append(Issue(code=code, message=message, node=node, step=position))
+
+    if isinstance(step, PlayStep):
+        ids = step.animations
+        if step.run_time is not None and step.run_time <= 0:
+            bad("bad_step", "run_time must be positive")
+        if step.lag_ratio is not None and step.lag_ratio < 0:
+            bad("bad_step", "lag_ratio must not be negative")
+        if step.rate_func is not None and step.rate_func not in functions:
+            bad("bad_step", f"unknown rate function {step.rate_func}")
+    elif isinstance(step, WaitStep):
+        ids = []
+        if step.duration <= 0:
+            bad("bad_step", "wait duration must be positive")
+    elif isinstance(step, SectionStep):
+        ids = []
+        if not step.name:
+            bad("bad_step", "section needs a name")
+    elif isinstance(step, SoundStep):
+        ids = []
+        if not step.file:
+            bad("bad_step", "sound needs a file")
+    elif isinstance(step, SubcaptionStep):
+        ids = []
+        if step.duration <= 0:
+            bad("bad_step", "subcaption duration must be positive")
+    else:
+        ids = list(getattr(step, "mobjects", []))
+    for node_id in ids:
+        descriptor = descriptors.get(node_id)
+        if node_id not in nodes:
+            bad("unknown_node", f"step {position} names a missing node")
+        elif descriptor is None:
+            continue
+        elif isinstance(step, PlayStep):
+            if descriptor.returns.type is not PortType.ANIMATION:
+                bad(
+                    "not_animation",
+                    f"{descriptor.qualname} is not an animation",
+                    node_id,
                 )
-            elif descriptor is None:
-                continue
-            elif (
-                isinstance(step, PlayStep)
-                and descriptor.returns.type is not PortType.ANIMATION
-            ):
-                issues.append(
-                    Issue(
-                        code="not_animation",
-                        message=f"{descriptor.qualname} is not an animation",
-                        node=node_id,
-                        step=position,
-                    )
-                )
-            elif not isinstance(step, PlayStep) and not compatible(
-                descriptor.returns, TypeRef(type=PortType.MOBJECT, annotation="Mobject")
-            ):
-                issues.append(
-                    Issue(
-                        code="not_mobject",
-                        message=f"{descriptor.qualname} is not a mobject",
-                        node=node_id,
-                        step=position,
-                    )
-                )
+        elif not compatible(
+            descriptor.returns, TypeRef(type=PortType.MOBJECT, annotation="Mobject")
+        ):
+            bad("not_mobject", f"{descriptor.qualname} is not a mobject", node_id)
     return issues
 
 
@@ -277,7 +306,9 @@ def _mismatch(
     )
 
 
-def _literal_problem(value: object, type_ref: TypeRef, colors: set[str]) -> str | None:
+def _literal_problem(
+    value: object, type_ref: TypeRef, colors: set[str], functions: set[str]
+) -> str | None:
     if value is None:
         return None if type_ref.optional else "value must not be empty"
     kind = type_ref.type
@@ -313,12 +344,15 @@ def _literal_problem(value: object, type_ref: TypeRef, colors: set[str]) -> str 
         if isinstance(value, list) and len(value) == 3:
             return None
         return "expected a direction name or three numbers"
+    if kind is PortType.FUNCTION:
+        if isinstance(value, str) and value in functions:
+            return None
+        return "expected the name of a Manim function, or a connection"
     if kind in (
         PortType.MOBJECT,
         PortType.COORDINATE_SYSTEM,
         PortType.ANIMATION,
         PortType.LIVE_NUMBER,
-        PortType.FUNCTION,
     ):
         return f"{kind.value} values must be connected, not typed"
     return None

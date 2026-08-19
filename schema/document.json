@@ -22,6 +22,50 @@
       "title": "AddStep",
       "type": "object"
     },
+    "BringToBackStep": {
+      "properties": {
+        "kind": {
+          "const": "bring_to_back",
+          "default": "bring_to_back",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mobjects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mobjects",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mobjects"
+      ],
+      "title": "BringToBackStep",
+      "type": "object"
+    },
+    "BringToFrontStep": {
+      "properties": {
+        "kind": {
+          "const": "bring_to_front",
+          "default": "bring_to_front",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mobjects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mobjects",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mobjects"
+      ],
+      "title": "BringToFrontStep",
+      "type": "object"
+    },
     "Edge": {
       "properties": {
         "source": {
@@ -134,6 +178,7 @@
       "type": "object"
     },
     "PlayStep": {
+      "description": "``self.play(...)``. Keyword values apply to every animation, as in Manim.",
       "properties": {
         "kind": {
           "const": "play",
@@ -147,6 +192,71 @@
           },
           "title": "Animations",
           "type": "array"
+        },
+        "run_time": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Time"
+        },
+        "rate_func": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rate Func"
+        },
+        "lag_ratio": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lag Ratio"
+        },
+        "subcaption": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subcaption"
+        },
+        "subcaption_duration": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subcaption Duration"
+        },
+        "subcaption_offset": {
+          "default": 0,
+          "title": "Subcaption Offset",
+          "type": "number"
         }
       },
       "required": [
@@ -206,8 +316,13 @@
             "discriminator": {
               "mapping": {
                 "add": "#/$defs/AddStep",
+                "bring_to_back": "#/$defs/BringToBackStep",
+                "bring_to_front": "#/$defs/BringToFrontStep",
                 "play": "#/$defs/PlayStep",
                 "remove": "#/$defs/RemoveStep",
+                "section": "#/$defs/SectionStep",
+                "sound": "#/$defs/SoundStep",
+                "subcaption": "#/$defs/SubcaptionStep",
                 "wait": "#/$defs/WaitStep"
               },
               "propertyName": "kind"
@@ -224,6 +339,21 @@
               },
               {
                 "$ref": "#/$defs/RemoveStep"
+              },
+              {
+                "$ref": "#/$defs/BringToFrontStep"
+              },
+              {
+                "$ref": "#/$defs/BringToBackStep"
+              },
+              {
+                "$ref": "#/$defs/SectionStep"
+              },
+              {
+                "$ref": "#/$defs/SoundStep"
+              },
+              {
+                "$ref": "#/$defs/SubcaptionStep"
               }
             ]
           },
@@ -232,6 +362,28 @@
         }
       },
       "title": "SceneDocument",
+      "type": "object"
+    },
+    "SectionStep": {
+      "properties": {
+        "kind": {
+          "const": "section",
+          "default": "section",
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "default": "unnamed",
+          "title": "Name",
+          "type": "string"
+        },
+        "skip_animations": {
+          "default": false,
+          "title": "Skip Animations",
+          "type": "boolean"
+        }
+      },
+      "title": "SectionStep",
       "type": "object"
     },
     "Settings": {
@@ -258,6 +410,71 @@
         }
       },
       "title": "Settings",
+      "type": "object"
+    },
+    "SoundStep": {
+      "properties": {
+        "kind": {
+          "const": "sound",
+          "default": "sound",
+          "title": "Kind",
+          "type": "string"
+        },
+        "file": {
+          "title": "File",
+          "type": "string"
+        },
+        "time_offset": {
+          "default": 0,
+          "title": "Time Offset",
+          "type": "number"
+        },
+        "gain": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gain"
+        }
+      },
+      "required": [
+        "file"
+      ],
+      "title": "SoundStep",
+      "type": "object"
+    },
+    "SubcaptionStep": {
+      "properties": {
+        "kind": {
+          "const": "subcaption",
+          "default": "subcaption",
+          "title": "Kind",
+          "type": "string"
+        },
+        "content": {
+          "title": "Content",
+          "type": "string"
+        },
+        "duration": {
+          "default": 1,
+          "title": "Duration",
+          "type": "number"
+        },
+        "offset": {
+          "default": 0,
+          "title": "Offset",
+          "type": "number"
+        }
+      },
+      "required": [
+        "content"
+      ],
+      "title": "SubcaptionStep",
       "type": "object"
     },
     "WaitStep": {

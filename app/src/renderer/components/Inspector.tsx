@@ -4,11 +4,13 @@ import { TYPE_COLOR, selectIndex, useCatalogueStore } from '../store/catalogue'
 import { currentScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { PortEditor } from './PortEditor'
+import { StepInspector } from './StepInspector'
 
 /** Every field of the selected node, grouped by the Manim class that declares it. */
 export function Inspector() {
   const scene = useDocumentStore(currentScene)
   const selected = useDocumentStore((s) => s.selected)
+  const selectedStep = useDocumentStore((s) => s.selectedStep)
   const store = useDocumentStore()
   const index = useCatalogueStore(selectIndex)
   const code = useEngineResults((s) => s.code)
@@ -17,6 +19,7 @@ export function Inspector() {
 
   const node = scene.nodes.find((n) => n.id === selected)
   const descriptor = node ? index.get(node.catalogue) : undefined
+  if ((!node || !descriptor) && selectedStep !== null) return <StepInspector index={selectedStep} />
   if (!node || !descriptor) {
     return (
       <section className="panel inspector">

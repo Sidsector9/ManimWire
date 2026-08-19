@@ -10,15 +10,33 @@ from pydantic import BaseModel
 from engine.catalogue.model import Catalogue, Descriptor, PortType
 from engine.codegen.literals import LiteralFormatter
 from engine.document.model import (
+    MOBJECT_STEP_METHODS,
     SELF_PORT,
     AddStep,
+    BringToBackStep,
+    BringToFrontStep,
     Node,
     PlayStep,
     RemoveStep,
     SceneDocument,
+    SectionStep,
+    SoundStep,
+    SubcaptionStep,
     WaitStep,
 )
 from engine.document.validate import Issue, validate_scene
+
+AnyStep = (
+    PlayStep
+    | WaitStep
+    | AddStep
+    | RemoveStep
+    | BringToFrontStep
+    | BringToBackStep
+    | SectionStep
+    | SoundStep
+    | SubcaptionStep
+)
 
 
 class SourceMap(BaseModel):
@@ -159,21 +177,43 @@ class _Build:
         self.taken.add(name)
         return name
 
-    def emit_step(
-        self, position: int, step: PlayStep | WaitStep | AddStep | RemoveStep
-    ) -> None:
+    def emit_step(self, position: int, step: AnyStep) -> None:
         if isinstance(step, PlayStep):
-            text = (
-                f"self.play({', '.join(self.expression(a) for a in step.animations)})"
-            )
+            parts = [self.expression(a) for a in step.animations]
+            if step.run_time is not None:
+                parts.append(f"run_time={step.run_time!r}")
+            if step.rate_func is not None:
+                parts.append(f"rate_func={step.rate_func}")
+            if step.lag_ratio is not None:
+                parts.append(f"lag_ratio={step.lag_ratio!r}")
+            if step.subcaption is not None:
+                parts.append(f"subcaption={step.subcaption!r}")
+                if step.subcaption_duration is not None:
+                    parts.append(f"subcaption_duration={step.subcaption_duration!r}")
+                if step.subcaption_offset:
+                    parts.append(f"subcaption_offset={step.subcaption_offset!r}")
+            text = f"self.play({', '.join(parts)})"
         elif isinstance(step, WaitStep):
             text = f"self.wait({step.duration!r})"
-        elif isinstance(step, AddStep):
-            text = f"self.add({', '.join(self.expression(m) for m in step.mobjects)})"
+        elif isinstance(step, SectionStep):
+            skip = ", skip_animations=True" if step.skip_animations else ""
+            text = f"self.next_section({step.name!r}{skip})"
+        elif isinstance(step, SoundStep):
+            parts = [repr(step.file)]
+            if step.time_offset:
+                parts.append(f"time_offset={step.time_offset!r}")
+            if step.gain is not None:
+                parts.append(f"gain={step.gain!r}")
+            text = f"self.add_sound({', '.join(parts)})"
+        elif isinstance(step, SubcaptionStep):
+            parts = [repr(step.content), f"duration={step.duration!r}"]
+            if step.offset:
+                parts.append(f"offset={step.offset!r}")
+            text = f"self.add_subcaption({', '.join(parts)})"
         else:
-            text = (
-                f"self.remove({', '.join(self.expression(m) for m in step.mobjects)})"
-            )
+            method = MOBJECT_STEP_METHODS[step.kind]
+            mobjects = ", ".join(self.expression(m) for m in step.mobjects)
+            text = f"self.{method}({mobjects})"
         self.line(text, step=position)
 
     def line(self, text: str, node: str | None = None, step: int | None = None) -> None:

@@ -6,7 +6,7 @@ import { Graph } from './components/Graph'
 import { Inspector } from './components/Inspector'
 import { Library } from './components/Library'
 import { StatusBar } from './components/StatusBar'
-import { Steps } from './components/Steps'
+import { Timeline } from './components/Timeline'
 import { useEngineSync } from './engine/useEngineSync'
 import { useFiles } from './engine/useFiles'
 import { useCatalogueStore } from './store/catalogue'
@@ -67,7 +67,7 @@ export function App() {
         </ReactFlowProvider>
       </div>
       <Inspector />
-      <Steps />
+      <Timeline />
       <StatusBar />
     </div>
   )

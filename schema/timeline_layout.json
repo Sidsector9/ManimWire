@@ -1,0 +1,223 @@
+{
+  "$defs": {
+    "Bar": {
+      "description": "One animation on the timeline. Nested group children carry a parent and depth.",
+      "properties": {
+        "step": {
+          "title": "Step",
+          "type": "integer"
+        },
+        "node": {
+          "title": "Node",
+          "type": "string"
+        },
+        "rows": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rows",
+          "type": "array"
+        },
+        "start": {
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "title": "End",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "rate_func": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rate Func"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent"
+        },
+        "depth": {
+          "default": 0,
+          "title": "Depth",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "step",
+        "node",
+        "rows",
+        "start",
+        "end",
+        "label"
+      ],
+      "title": "Bar",
+      "type": "object"
+    },
+    "Marker": {
+      "properties": {
+        "step": {
+          "title": "Step",
+          "type": "integer"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "time": {
+          "title": "Time",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "rows": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Rows",
+          "type": "array"
+        }
+      },
+      "required": [
+        "step",
+        "kind",
+        "time",
+        "label"
+      ],
+      "title": "Marker",
+      "type": "object"
+    },
+    "Section": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "title": "End",
+          "type": "number"
+        },
+        "skip_animations": {
+          "default": false,
+          "title": "Skip Animations",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "start",
+        "end"
+      ],
+      "title": "Section",
+      "type": "object"
+    },
+    "StepSpan": {
+      "properties": {
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "title": "End",
+          "type": "number"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "kind",
+        "start",
+        "end",
+        "label"
+      ],
+      "title": "StepSpan",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "rows": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Rows",
+      "type": "array"
+    },
+    "steps": {
+      "items": {
+        "$ref": "#/$defs/StepSpan"
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "bars": {
+      "items": {
+        "$ref": "#/$defs/Bar"
+      },
+      "title": "Bars",
+      "type": "array"
+    },
+    "markers": {
+      "items": {
+        "$ref": "#/$defs/Marker"
+      },
+      "title": "Markers",
+      "type": "array"
+    },
+    "sections": {
+      "items": {
+        "$ref": "#/$defs/Section"
+      },
+      "title": "Sections",
+      "type": "array"
+    },
+    "total": {
+      "title": "Total",
+      "type": "number"
+    }
+  },
+  "required": [
+    "rows",
+    "steps",
+    "bars",
+    "markers",
+    "sections",
+    "total"
+  ],
+  "title": "TimelineLayout",
+  "type": "object"
+}

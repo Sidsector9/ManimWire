@@ -1,6 +1,9 @@
 from engine.document.model import (
+    MOBJECT_STEP_METHODS,
     SELF_PORT,
     AddStep,
+    BringToBackStep,
+    BringToFrontStep,
     Document,
     Edge,
     JsonValue,
@@ -8,8 +11,11 @@ from engine.document.model import (
     PlayStep,
     RemoveStep,
     SceneDocument,
+    SectionStep,
     Settings,
+    SoundStep,
     Step,
+    SubcaptionStep,
     WaitStep,
 )
 from engine.document.validate import (
@@ -20,8 +26,11 @@ from engine.document.validate import (
 )
 
 __all__ = [
+    "MOBJECT_STEP_METHODS",
     "SELF_PORT",
     "AddStep",
+    "BringToBackStep",
+    "BringToFrontStep",
     "Document",
     "Edge",
     "Issue",
@@ -30,8 +39,11 @@ __all__ = [
     "PlayStep",
     "RemoveStep",
     "SceneDocument",
+    "SectionStep",
     "Settings",
+    "SoundStep",
     "Step",
+    "SubcaptionStep",
     "WaitStep",
     "document_issues",
     "validate_document",

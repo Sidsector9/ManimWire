@@ -13,6 +13,7 @@ from typing import Any, Protocol
 from manim import tempconfig
 from manim.mobject.mobject import Mobject
 from manim.renderer.cairo_renderer import CairoRenderer
+from manim.scene.scene_file_writer import SceneFileWriter
 from manim.utils.exceptions import EndSceneEarlyException
 from PIL import Image
 from pydantic import BaseModel
@@ -61,6 +62,7 @@ class FrameResult(BaseModel):
 class ExportResult(BaseModel):
     path: str
     duration: float
+    subtitles: str | None = None
 
 
 class RenderError(Exception):
@@ -100,6 +102,21 @@ class Renderer(Protocol):
         fmt: str = "mp4",
         progress: Progress | None = None,
     ) -> ExportResult: ...
+
+
+class _PreviewFileWriter(SceneFileWriter):
+    """Previews write no sound or subtitle files and tolerate missing sounds."""
+
+    def write_subcaption_file(self) -> None:
+        return
+
+    def add_sound(
+        self, sound_file: Any, time: Any = None, gain: Any = None, **kwargs: Any
+    ) -> None:
+        try:
+            super().add_sound(sound_file, time, gain, **kwargs)
+        except OSError:
+            pass
 
 
 class _StopAtRenderer(CairoRenderer):
@@ -145,7 +162,7 @@ class CairoRenderService:
             generated,
             scene.name,
             {**overrides, "dry_run": True},
-            lambda: _StopAtRenderer(time, None),
+            lambda: _StopAtRenderer(time, None, file_writer_class=_PreviewFileWriter),
         )
         self.render_count += 1
         Image.fromarray(renderer.get_frame(), "RGBA").save(path)
@@ -176,7 +193,8 @@ class CairoRenderService:
             **_EXPORT_FORMATS[fmt],
             "format": fmt,
             "media_dir": str(work),
-            "output_file": scene.name,
+            # An absolute output name keeps Manim's subtitle file inside the work dir.
+            "output_file": str(work / scene.name),
         }
         instance, _, renderer = _run(
             generated,
@@ -188,8 +206,17 @@ class CairoRenderService:
         directory.mkdir(parents=True, exist_ok=True)
         final = directory / produced.name
         shutil.move(str(produced), final)
+        subtitles = (work / scene.name).with_suffix(".srt")
+        moved_subtitles = None
+        if subtitles.exists():
+            moved_subtitles = directory / subtitles.name
+            shutil.move(str(subtitles), moved_subtitles)
         shutil.rmtree(work, ignore_errors=True)
-        return ExportResult(path=str(final), duration=renderer.time)
+        return ExportResult(
+            path=str(final),
+            duration=renderer.time,
+            subtitles=str(moved_subtitles) if moved_subtitles else None,
+        )
 
     def _generate(self, scene: SceneDocument, catalogue: Catalogue) -> GeneratedCode:
         generated = self.generator.generate(scene, catalogue)

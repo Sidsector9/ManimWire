@@ -22,10 +22,24 @@ export interface DocEdge {
 }
 
 export type Step =
-  | { kind: 'play'; animations: string[] }
+  | {
+      kind: 'play'
+      animations: string[]
+      run_time?: number | null
+      rate_func?: string | null
+      lag_ratio?: number | null
+      subcaption?: string | null
+      subcaption_duration?: number | null
+      subcaption_offset?: number
+    }
   | { kind: 'wait'; duration: number }
   | { kind: 'add'; mobjects: string[] }
   | { kind: 'remove'; mobjects: string[] }
+  | { kind: 'bring_to_front'; mobjects: string[] }
+  | { kind: 'bring_to_back'; mobjects: string[] }
+  | { kind: 'section'; name: string; skip_animations: boolean }
+  | { kind: 'sound'; file: string; time_offset: number; gain: number | null }
+  | { kind: 'subcaption'; content: string; duration: number; offset: number }
 
 export interface Scene {
   name: string
@@ -88,12 +102,13 @@ export function removeNodes(doc: Doc, sceneIndex: number, ids: string[]): Doc {
     steps: s.steps
       .map((step) => {
         if (step.kind === 'play') return { ...step, animations: step.animations.filter((a) => !gone.has(a)) }
-        if (step.kind === 'add' || step.kind === 'remove') {
-          return { ...step, mobjects: step.mobjects.filter((m) => !gone.has(m)) }
-        }
+        if ('mobjects' in step) return { ...step, mobjects: step.mobjects.filter((m) => !gone.has(m)) }
         return step
       })
-      .filter((step) => step.kind === 'wait' || (step.kind === 'play' ? step.animations : step.mobjects).length > 0)
+      .filter((step) => {
+        if (step.kind === 'play') return step.animations.length > 0
+        return 'mobjects' in step ? step.mobjects.length > 0 : true
+      })
   }))
 }
 
@@ -195,4 +210,28 @@ export function parseDocument(text: string): Doc {
     return { name: scene.name, nodes: scene.nodes ?? [], edges: scene.edges ?? [], steps: scene.steps ?? [] }
   })
   return { version: 1, settings: { ...defaults.settings, ...(raw.settings ?? {}) }, scenes }
+}
+
+/** Move an animation to another play step, or to a new play step at the end when `to` is null. */
+export function moveAnimation(doc: Doc, sceneIndex: number, node: string, from: number, to: number | null): Doc {
+  return updateScene(doc, sceneIndex, (s) => {
+    const steps = s.steps.map((step, i) =>
+      i === from && step.kind === 'play' ? { ...step, animations: step.animations.filter((a) => a !== node) } : step
+    )
+    if (to === null) steps.push({ kind: 'play', animations: [node] })
+    else {
+      const target = steps[to]
+      if (target?.kind === 'play' && !target.animations.includes(node)) steps[to] = { ...target, animations: [...target.animations, node] }
+    }
+    return { ...s, steps: steps.filter((step) => step.kind !== 'play' || step.animations.length > 0) }
+  })
+}
+
+export function moveStep(doc: Doc, sceneIndex: number, from: number, to: number): Doc {
+  return updateScene(doc, sceneIndex, (s) => {
+    const steps = [...s.steps]
+    const [step] = steps.splice(from, 1)
+    if (step) steps.splice(to, 0, step)
+    return { ...s, steps }
+  })
 }

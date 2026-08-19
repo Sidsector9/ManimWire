@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import pytest
 from manim import config, tempconfig
 
 from engine.__main__ import build_dispatcher
@@ -10,11 +11,15 @@ from engine.codegen import ManimCodeGenerator
 from engine.codegen.generator import snake_case
 from engine.document import (
     AddStep,
+    BringToFrontStep,
     Document,
     Edge,
     Node,
     PlayStep,
     SceneDocument,
+    SectionStep,
+    SoundStep,
+    SubcaptionStep,
     WaitStep,
 )
 
@@ -194,3 +199,68 @@ def test_rpc_generate_reports_document_level_issues(
     assert response is not None
     assert response["result"]["code"] == ""
     assert [i["code"] for i in response["result"]["issues"]] == ["bad_setting"]
+
+
+def test_timeline_steps_and_play_keywords(catalogue: Catalogue) -> None:
+    scene = SceneDocument(
+        name="Timed",
+        nodes=[
+            Node(id="c", catalogue="Circle"),
+            Node(id="s", catalogue="Square"),
+            Node(id="a", catalogue="Create"),
+            Node(id="b", catalogue="FadeIn", values={"rate_func": "linear"}),
+        ],
+        edges=[
+            Edge(source="c", target="a", port="mobject"),
+            Edge(source="s", target="b", port="mobjects"),
+        ],
+        steps=[
+            SectionStep(name="intro", skip_animations=True),
+            PlayStep(
+                animations=["a", "b"], run_time=2.0, rate_func="smooth", lag_ratio=0.5
+            ),
+            SubcaptionStep(content="the slope", duration=2.0, offset=0.5),
+            SoundStep(file="ping.wav", time_offset=0.25),
+            BringToFrontStep(mobjects=["s"]),
+            PlayStep(animations=["a"], subcaption="again", subcaption_duration=1.5),
+        ],
+    )
+    code = ManimCodeGenerator().generate(scene, catalogue).code
+    assert code.endswith(
+        "        self.next_section('intro', skip_animations=True)\n"
+        "        self.play(Create(circle), FadeIn(square, rate_func=linear), "
+        "run_time=2.0, rate_func=smooth, lag_ratio=0.5)\n"
+        "        self.add_subcaption('the slope', duration=2.0, offset=0.5)\n"
+        "        self.add_sound('ping.wav', time_offset=0.25)\n"
+        "        self.bring_to_front(square)\n"
+        "        self.play(Create(circle), subcaption='again', "
+        "subcaption_duration=1.5)\n"
+    )
+
+
+def test_nested_groups_render(
+    catalogue: Catalogue, three_dots_scene: SceneDocument
+) -> None:
+    scene = three_dots_scene
+    scene.steps = [step for step in scene.steps if step.kind != "sound"]
+    code = ManimCodeGenerator().generate(scene, catalogue).code
+    assert (
+        "LaggedStart(Succession(FadeIn(dot, run_time=2.0), FadeIn(dot_2)), "
+        "FadeIn(dot_3), lag_ratio=0.3)" in code
+    )
+    namespace: dict[str, Any] = {}
+    exec(code, namespace)
+    with tempconfig(
+        {
+            "dry_run": True,
+            "pixel_width": 128,
+            "pixel_height": 72,
+            "frame_rate": 10,
+            "disable_caching": True,
+            "verbosity": "ERROR",
+            "progress_bar": "none",
+        }
+    ):
+        scene_instance = namespace["Dots"]()
+        scene_instance.render()
+        assert scene_instance.renderer.time == pytest.approx(3.5, abs=0.1)

@@ -9,7 +9,10 @@ from engine.document import (
     Node,
     PlayStep,
     SceneDocument,
+    SectionStep,
     Settings,
+    SoundStep,
+    WaitStep,
     validate_document,
     validate_scene,
 )
@@ -131,3 +134,33 @@ def test_settings_are_checked(catalogue: Catalogue) -> None:
     ] * 3
     fine = Document(settings=Settings(background_color="#102030"))
     assert validate_document(fine, catalogue) == []
+
+
+def test_step_fields_are_checked(
+    catalogue: Catalogue, simple_scene: SceneDocument
+) -> None:
+    scene = simple_scene
+    scene.steps = [
+        PlayStep(animations=["a"], run_time=0, rate_func="bouncy", lag_ratio=-1),
+        WaitStep(duration=0),
+        SectionStep(name=""),
+        SoundStep(file=""),
+    ]
+    issues = validate_scene(scene, catalogue)
+    assert [(i.code, i.step) for i in issues] == [("bad_step", 0)] * 3 + [
+        ("bad_step", 1),
+        ("bad_step", 2),
+        ("bad_step", 3),
+    ]
+
+
+def test_rate_func_literal_must_name_a_manim_function(
+    catalogue: Catalogue, simple_scene: SceneDocument
+) -> None:
+    scene = simple_scene
+    scene.nodes[2].values["rate_func"] = "smooth"
+    assert validate_scene(scene, catalogue) == []
+    scene.nodes[2].values["rate_func"] = "bouncy"
+    assert [i.code for i in validate_scene(scene, catalogue)] == ["bad_literal"]
+    scene.nodes[2].values["rate_func"] = "smooth"
+    scene.nodes.append(Node(id="x", catalogue="Circle"))
