@@ -1,10 +1,18 @@
 import type { Descriptor, Parameter } from '../../shared/engine'
-import { SELF_PORT, connectedPorts, type JsonValue } from '../model/document'
-import { TYPE_COLOR, selectIndex, useCatalogueStore } from '../store/catalogue'
+import { SELF_PORT, connectedPorts, type DocNode, type JsonValue, type MethodCall, type Scene, type UpdatingAction } from '../model/document'
+import { ANIMATE, chainMethods, effectiveDescriptor, isLiveSource, rootOf } from '../model/live'
+import type { DescriptorIndex } from '../model/types'
+import { TYPE_COLOR, selectExpressionNames, selectIndex, useCatalogueStore } from '../store/catalogue'
 import { currentScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { PortEditor } from './PortEditor'
 import { StepInspector } from './StepInspector'
+
+const UPDATING_ACTIONS: Array<[UpdatingAction, string]> = [
+  ['suspend', 'suspend updating'],
+  ['resume', 'resume updating'],
+  ['clear', 'clear updaters']
+]
 
 /** Every field of the selected node, grouped by the Manim class that declares it. */
 export function Inspector() {
@@ -13,14 +21,15 @@ export function Inspector() {
   const selectedStep = useDocumentStore((s) => s.selectedStep)
   const store = useDocumentStore()
   const index = useCatalogueStore(selectIndex)
+  const expressionNames = useCatalogueStore(selectExpressionNames)
   const code = useEngineResults((s) => s.code)
   const sourceMap = useEngineResults((s) => s.sourceMap)
   const issues = useEngineResults((s) => s.issues)
 
   const node = scene.nodes.find((n) => n.id === selected)
-  const descriptor = node ? index.get(node.catalogue) : undefined
-  if ((!node || !descriptor) && selectedStep !== null) return <StepInspector index={selectedStep} />
-  if (!node || !descriptor) {
+  const catalogued = node ? index.get(node.catalogue) : undefined
+  if ((!node || !catalogued) && selectedStep !== null) return <StepInspector index={selectedStep} />
+  if (!node || !catalogued) {
     return (
       <section className="panel inspector">
         <div className="panel-head">
@@ -31,17 +40,21 @@ export function Inspector() {
     )
   }
 
+  const descriptor = effectiveDescriptor(node, catalogued, scene, expressionNames)
   const connected = connectedPorts(scene, node.id)
   const groups = groupByOwner(descriptor)
   const lines = (sourceMap.nodes[node.id] ?? []).map((n) => code.split('\n')[n - 1] ?? '').map((l) => l.trim())
   const nodeIssues = issues.filter((i) => i.node === node.id)
   const inPlay = scene.steps.some((s) => s.kind === 'play' && s.animations.includes(node.id))
+  const live = isLiveSource(scene, node.id, index)
+  const hasUpdaters = sourceMap.live.some((id) => rootOf(scene, id, index) === node.id)
 
   return (
     <section className="panel inspector">
       <div className="panel-head">
         <span>Inspector</span>
         <span className="mono" style={{ fontWeight: 400, color: TYPE_COLOR[descriptor.returns.type] }}>
+          {live && descriptor.returns.type !== 'live_number' ? 'live ' : ''}
           {descriptor.returns.type.replace('_', ' ')}
         </span>
       </div>
@@ -86,6 +99,22 @@ export function Inspector() {
             ))}
           </div>
         ))}
+        {descriptor.name === ANIMATE && (
+          <ChainEditor node={node} scene={scene} index={index} onChange={(chain) => store.updateNode(node.id, { chain })} />
+        )}
+        {hasUpdaters && (
+          <div>
+            <div className="group-head">Updaters</div>
+            <div className="inspector-doc">This object changes every frame. Add a step to pause, continue, or remove its updaters.</div>
+            <div className="inspector-actions">
+              {UPDATING_ACTIONS.map(([action, label]) => (
+                <button key={action} className="button small" onClick={() => store.addStep({ kind: 'updating', mobjects: [node.id], action })}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {lines.length > 0 && (
           <div>
             <div className="group-head">Manim</div>
@@ -97,6 +126,73 @@ export function Inspector() {
         </button>
       </div>
     </section>
+  )
+}
+
+/** The method calls of an Animate node, each with the parameters Manim declares for it. */
+function ChainEditor({
+  node,
+  scene,
+  index,
+  onChange
+}: {
+  node: DocNode
+  scene: Scene
+  index: DescriptorIndex
+  onChange(chain: MethodCall[]): void
+}) {
+  const source = scene.edges.find((e) => e.target === node.id && e.port === 'mobject')
+  const methods = source ? chainMethods(scene, source.source, index) : []
+  const chain = node.chain ?? []
+  const replace = (at: number, call: MethodCall | null): void =>
+    onChange(call === null ? chain.filter((_, i) => i !== at) : chain.map((c, i) => (i === at ? call : c)))
+
+  return (
+    <div>
+      <div className="group-head">Method calls</div>
+      {!source && <div className="inspector-doc">Connect the object to animate first.</div>}
+      {chain.map((call, at) => {
+        const method = methods.find((m) => m.name === call.method)
+        return (
+          <div key={at} className="chain-call">
+            <div className="field">
+              <span className="field-label mono">.{call.method}()</span>
+              <span className="field-value">
+                <button className="link" onClick={() => replace(at, null)}>
+                  remove
+                </button>
+              </span>
+            </div>
+            {method
+              ? method.parameters.map((param) => (
+                  <Field
+                    key={param.name}
+                    param={param}
+                    connected={false}
+                    value={call.values[param.name]}
+                    onChange={(v) => {
+                      const values = { ...call.values }
+                      if (v === undefined) delete values[param.name]
+                      else values[param.name] = v
+                      replace(at, { ...call, values })
+                    }}
+                  />
+                ))
+              : source && <div className="inspector-issue">{call.method} is not a method of this object</div>}
+          </div>
+        )
+      })}
+      {methods.length > 0 && (
+        <select className="port-select mono" value="" onChange={(e) => e.target.value && onChange([...chain, { method: e.target.value, values: {} }])}>
+          <option value="">+ add a method call</option>
+          {methods.map((m) => (
+            <option key={m.name} value={m.name}>
+              {m.name}
+            </option>
+          ))}
+        </select>
+      )}
+    </div>
   )
 }
 

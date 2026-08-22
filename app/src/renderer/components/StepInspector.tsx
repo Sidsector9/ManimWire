@@ -84,6 +84,21 @@ export function StepInspector({ index }: { index: number }) {
             <NumberField label="offset" value={step.offset} placeholder="0" onChange={(v) => update({ offset: v ?? 0 })} />
           </>
         )}
+        {step.kind === 'updating' && (
+          <>
+            <div className="inspector-doc">Updaters of {step.mobjects.map(nameOf).join(', ')}. Suspend and resume keep them; clear removes them.</div>
+            <div className="field">
+              <span className="field-label">action</span>
+              <span className="field-value">
+                <select className="port-select mono" value={step.action} onChange={(e) => update({ action: e.target.value as typeof step.action })}>
+                  <option value="suspend">suspend_updating</option>
+                  <option value="resume">resume_updating</option>
+                  <option value="clear">clear_updaters</option>
+                </select>
+              </span>
+            </div>
+          </>
+        )}
         {(step.kind === 'add' || step.kind === 'remove' || step.kind === 'bring_to_front' || step.kind === 'bring_to_back') && (
           <div className="inspector-doc">{step.kind.replace(/_/g, ' ')}: {step.mobjects.map(nameOf).join(', ')}</div>
         )}

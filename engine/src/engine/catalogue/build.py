@@ -21,6 +21,7 @@ from manim.scene.scene import Scene
 from manim.utils.color import ManimColor, manim_colors
 
 from engine.catalogue.annotations import TypeContext
+from engine.catalogue.builtins import BUILTINS
 from engine.catalogue.defaults import DIRECTION_NAMES
 from engine.catalogue.extract import (
     class_descriptor,
@@ -28,6 +29,7 @@ from engine.catalogue.extract import (
     method_descriptor,
 )
 from engine.catalogue.model import Catalogue, ColorEntry, Descriptor, PortType
+from engine.expression import CONSTANTS, FUNCTIONS
 
 _SKIP_MODULES = (
     "manim.cli",
@@ -202,11 +204,13 @@ def build_catalogue() -> Catalogue:
         if not name.startswith("_")
         and isinstance(value := getattr(manim_colors, name), ManimColor)
     ]
+    entries.extend(BUILTINS)
     return Catalogue(
         manim_version=version("manim"),
         entries=entries,
         colors=colors,
         directions=list(DIRECTION_NAMES),
+        expression_names=sorted([*FUNCTIONS, *CONSTANTS]),
         unknown_annotations=sorted(context.unknown),
     )
 

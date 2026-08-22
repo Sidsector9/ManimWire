@@ -7,7 +7,7 @@ import { SELF_PORT } from './document'
 
 const SUBTYPES: Partial<Record<PortType, PortType[]>> = {
   coordinate_system: ['mobject'],
-  live_number: ['mobject']
+  live_number: ['mobject', 'number']
 }
 
 export function compatible(source: TypeRef, target: TypeRef): boolean {

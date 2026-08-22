@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react'
-import { HEADER_HEIGHT, placeBars, placeMarkers, ROW_HEIGHT, rowLabels, stepAt, ticks, timeToX, xToTime } from '../model/timeline'
+import { HEADER_HEIGHT, placeBands, placeBars, placeMarkers, ROW_HEIGHT, rowLabels, stepAt, ticks, timeToX, xToTime } from '../model/timeline'
 import { currentScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 
@@ -40,6 +40,7 @@ export function Timeline() {
   const rows = rowLabels(layout)
   const bars = placeBars(layout, geometry)
   const markers = placeMarkers(layout, geometry)
+  const bands = placeBands(layout, geometry)
   const playhead = previewTime ?? layout.total
   const width = Math.max(timeToX(geometry, layout.total) + 120, 600)
   const height = HEADER_HEIGHT + rows.length * ROW_HEIGHT
@@ -154,6 +155,10 @@ export function Timeline() {
 
           {rows.map((row, i) => (
             <div key={row.id} className={`timeline-row${i === 0 ? ' scene' : ''}`} style={{ top: HEADER_HEIGHT + i * ROW_HEIGHT, left: LABEL_WIDTH, width: width - LABEL_WIDTH }} />
+          ))}
+
+          {bands.map((band, i) => (
+            <div key={i} className="timeline-band" style={{ left: band.x, top: HEADER_HEIGHT + band.y, width: band.width, height: ROW_HEIGHT }} title="updaters running" />
           ))}
 
           {layout.steps.map((step) => (

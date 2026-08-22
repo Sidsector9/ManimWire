@@ -55,7 +55,7 @@ class Descriptor(BaseModel):
     name: str
     qualname: str
     module: str
-    kind: Literal["class", "method", "function"]
+    kind: Literal["class", "method", "function", "builtin"]
     category: str
     owner: str | None = None
     bases: list[str] = []
@@ -80,4 +80,6 @@ class Catalogue(BaseModel):
     colors: list[ColorEntry]
     # Direction and point constants a Vector port accepts by name (ORIGIN, UP, ...).
     directions: list[str]
+    # Names the Expression node treats as functions or constants, not variables.
+    expression_names: list[str]
     unknown_annotations: list[str]

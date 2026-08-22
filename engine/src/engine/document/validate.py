@@ -7,6 +7,7 @@ from collections.abc import Mapping
 
 from pydantic import BaseModel
 
+from engine.catalogue.builtins import ANIMATE, EXPRESSION, STATE
 from engine.catalogue.defaults import DIRECTION_NAMES
 from engine.catalogue.model import (
     Catalogue,
@@ -16,6 +17,7 @@ from engine.catalogue.model import (
     TypeRef,
     is_class_reference,
 )
+from engine.document.analysis import Graph
 from engine.document.model import (
     SELF_PORT,
     Document,
@@ -27,13 +29,15 @@ from engine.document.model import (
     SoundStep,
     Step,
     SubcaptionStep,
+    UpdatingStep,
     WaitStep,
 )
 
 # A value of the key type may be connected to a port of any listed type.
 _SUBTYPES: dict[PortType, set[PortType]] = {
     PortType.COORDINATE_SYSTEM: {PortType.MOBJECT},
-    PortType.LIVE_NUMBER: {PortType.MOBJECT},
+    # A ValueTracker is a mobject, and read through get_value() it is a number.
+    PortType.LIVE_NUMBER: {PortType.MOBJECT, PortType.NUMBER},
 }
 
 
@@ -83,16 +87,16 @@ def document_issues(document: Document, catalogue: Catalogue) -> list[Issue]:
 
 
 def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
-    index = {e.qualname: e for e in catalogue.entries}
+    graph = Graph(scene, catalogue)
     colors = {c.name for c in catalogue.colors}
     functions = function_signatures(catalogue)
     classes = {e.name for e in catalogue.entries if e.kind == "class"}
-    nodes = {n.id: n for n in scene.nodes}
+    nodes = graph.nodes
     issues: list[Issue] = []
 
     descriptors: dict[str, Descriptor] = {}
     for node in scene.nodes:
-        descriptor = index.get(node.catalogue)
+        descriptor = graph.descriptor(node.id)
         if descriptor is None:
             issues.append(
                 _issue(
@@ -101,7 +105,11 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
             )
             continue
         descriptors[node.id] = descriptor
-        params = {p.name: p for p in descriptor.parameters}
+        if descriptor.name == EXPRESSION.name:
+            error = graph.expressions.get(node.id, ([], None))[1]
+            if error:
+                issues.append(_issue("bad_expression", error, node.id, "expr"))
+        params = {p.name: p for p in graph.parameters(node.id)}
         for port, value in node.values.items():
             param = params.get(port)
             if param is None:
@@ -119,6 +127,8 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                 )
             ) is not None:
                 issues.append(_issue("bad_literal", problem, node.id, port))
+        if descriptor.name == ANIMATE.name:
+            issues.extend(_animate_issues(node, graph, colors, functions, classes))
 
     connected: dict[tuple[str, str], list[str]] = {}
     for edge in scene.edges:
@@ -135,6 +145,7 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
         target = descriptors.get(edge.target)
         if source is None or target is None:
             continue
+        produced = graph.output_type(edge.source)
         if edge.port == SELF_PORT:
             if target.kind != "method":
                 issues.append(
@@ -145,18 +156,21 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                         edge.port,
                     )
                 )
-            elif not compatible(source.returns, receiver_type(target, index)):
+            elif not compatible(produced, receiver_type(target, graph.index)):
                 issues.append(
                     _mismatch(
                         source,
+                        produced,
                         target,
                         edge.port,
-                        receiver_type(target, index),
+                        receiver_type(target, graph.index),
                         edge.target,
                     )
                 )
             continue
-        param = next((p for p in target.parameters if p.name == edge.port), None)
+        param = next(
+            (p for p in graph.parameters(edge.target) if p.name == edge.port), None
+        )
         if param is None:
             issues.append(
                 _issue(
@@ -166,8 +180,10 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                     edge.port,
                 )
             )
-        elif not compatible(source.returns, param.type):
-            issues.append(_mismatch(source, target, edge.port, param.type, edge.target))
+        elif not compatible(produced, param.type):
+            issues.append(
+                _mismatch(source, produced, target, edge.port, param.type, edge.target)
+            )
 
     for node in scene.nodes:
         descriptor = descriptors.get(node.id)
@@ -182,7 +198,7 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                     SELF_PORT,
                 )
             )
-        for param in descriptor.parameters:
+        for param in graph.parameters(node.id):
             if (
                 _required(param)
                 and param.name not in node.values
@@ -196,6 +212,18 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                         param.name,
                     )
                 )
+        if (
+            not graph.is_value_node(node.id)
+            and graph.reads_frame_delta(node.id)
+            and not _is_updater(node.id, graph)
+        ):
+            issues.append(
+                _issue(
+                    "bad_live",
+                    "FrameDelta can only feed a method acting on a live object",
+                    node.id,
+                )
+            )
 
     for (node_id, port), sources in connected.items():
         descriptor = descriptors.get(node_id)
@@ -216,6 +244,69 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
 
     for position, step in enumerate(scene.steps):
         issues.extend(_step_issues(position, step, nodes, descriptors, functions))
+    return issues
+
+
+def _is_updater(node_id: str, graph: Graph) -> bool:
+    """A live method node returning its object becomes an add_updater call."""
+    descriptor = graph.descriptor(node_id)
+    return (
+        descriptor is not None
+        and descriptor.kind == "method"
+        and descriptor.returns.annotation == "Self"
+        and graph.is_live(node_id)
+    )
+
+
+def _animate_issues(
+    node: Node,
+    graph: Graph,
+    colors: set[str],
+    functions: Mapping[str, str],
+    classes: set[str],
+) -> list[Issue]:
+    issues: list[Issue] = []
+    if not node.chain:
+        issues.append(
+            _issue("missing_required", "Animate needs at least one method", node.id)
+        )
+    targets = graph.sources(node.id, "mobject")
+    for position, call in enumerate(node.chain):
+        method = graph.method_descriptor(targets[0], call.method) if targets else None
+        if method is None:
+            if targets:
+                issues.append(
+                    _issue(
+                        "bad_chain", f"the object has no method {call.method}", node.id
+                    )
+                )
+            continue
+        params = {p.name: p for p in method.parameters}
+        for name, value in call.values.items():
+            param = params.get(name)
+            if param is None:
+                issues.append(
+                    _issue(
+                        "bad_chain", f"{call.method} has no parameter {name}", node.id
+                    )
+                )
+            elif (
+                problem := _literal_problem(
+                    value, param.type, colors, functions, classes
+                )
+            ) is not None:
+                issues.append(
+                    _issue("bad_chain", f"{call.method}.{name}: {problem}", node.id)
+                )
+        for param in method.parameters:
+            if _required(param) and param.name not in call.values:
+                issues.append(
+                    _issue(
+                        "bad_chain",
+                        f"chain step {position + 1}: {call.method} needs {param.name}",
+                        node.id,
+                    )
+                )
     return issues
 
 
@@ -258,6 +349,8 @@ def _step_issues(
         ids = []
         if step.duration <= 0:
             bad("bad_step", "subcaption duration must be positive")
+    elif isinstance(step, UpdatingStep):
+        ids = list(step.mobjects)
     else:
         ids = list(getattr(step, "mobjects", []))
     for node_id in ids:
@@ -316,12 +409,17 @@ def _issue(code: str, message: str, node: str, port: str | None = None) -> Issue
 
 
 def _mismatch(
-    source: Descriptor, target: Descriptor, port: str, expected: TypeRef, node: str
+    source: Descriptor,
+    produced: TypeRef,
+    target: Descriptor,
+    port: str,
+    expected: TypeRef,
+    node: str,
 ) -> Issue:
     return Issue(
         code="type_mismatch",
         message=(
-            f"{source.qualname} produces {source.returns.type.value}, "
+            f"{source.qualname} produces {produced.type.value}, "
             f"{target.qualname}.{port} expects {expected.type.value}"
         ),
         node=node,
@@ -393,8 +491,12 @@ def _literal_problem(
 
 
 def _cycles(scene: SceneDocument) -> list[Issue]:
+    # State.next is a feedback port: its value is read on the next frame.
+    feedback = {n.id for n in scene.nodes if n.catalogue == STATE.name}
     outgoing: dict[str, list[str]] = {n.id: [] for n in scene.nodes}
     for edge in scene.edges:
+        if edge.target in feedback and edge.port == "next":
+            continue
         if edge.source in outgoing and edge.target in outgoing:
             outgoing[edge.source].append(edge.target)
     state: dict[str, int] = {}

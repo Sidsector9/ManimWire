@@ -1062,6 +1062,22 @@ body,
   transform: none;
 }
 
+.timeline-band {
+  position: absolute;
+  z-index: 1;
+  box-sizing: border-box;
+  border-top: 1px dashed var(--type-live-number);
+  border-bottom: 1px dashed var(--type-live-number);
+  background: rgb(240 172 95 / 8%);
+  pointer-events: none;
+}
+
+.timeline-marker.kind-suspend,
+.timeline-marker.kind-resume,
+.timeline-marker.kind-clear {
+  background: var(--type-live-number);
+}
+
 .timeline-marker.kind-sound,
 .timeline-marker.kind-subcaption {
   background: var(--type-coordinate-system);

@@ -1,12 +1,14 @@
 from engine.document.model import (
     MOBJECT_STEP_METHODS,
     SELF_PORT,
+    UPDATING_METHODS,
     AddStep,
     BringToBackStep,
     BringToFrontStep,
     Document,
     Edge,
     JsonValue,
+    MethodCall,
     Node,
     PlayStep,
     RemoveStep,
@@ -16,6 +18,7 @@ from engine.document.model import (
     SoundStep,
     Step,
     SubcaptionStep,
+    UpdatingStep,
     WaitStep,
 )
 from engine.document.validate import (
@@ -29,6 +32,9 @@ from engine.document.validate import (
 
 __all__ = [
     "MOBJECT_STEP_METHODS",
+    "UPDATING_METHODS",
+    "MethodCall",
+    "UpdatingStep",
     "RATE_FUNCTION",
     "SELF_PORT",
     "AddStep",

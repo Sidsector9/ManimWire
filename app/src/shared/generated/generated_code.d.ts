@@ -1,6 +1,7 @@
 /* Generated from ../schema by pnpm generate. Do not edit. */
 
 export type Code = string;
+export type Live = string[];
 export type Code1 = string;
 export type Message = string;
 export type Node = string | null;
@@ -24,6 +25,7 @@ export interface SourceMap {
   nodes?: Nodes;
   steps?: Steps;
   variables?: Variables;
+  live?: Live;
   [k: string]: unknown;
 }
 export interface Nodes {

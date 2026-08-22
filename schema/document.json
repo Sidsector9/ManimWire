@@ -94,6 +94,50 @@
       "title": "Edge",
       "type": "object"
     },
+    "MethodCall": {
+      "description": "One step of an Animate chain: ``.method(**values)``.",
+      "properties": {
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "boolean"
+              },
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "default": {},
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "method"
+      ],
+      "title": "MethodCall",
+      "type": "object"
+    },
     "Node": {
       "properties": {
         "id": {
@@ -168,6 +212,14 @@
           "default": true,
           "title": "Collapsed",
           "type": "boolean"
+        },
+        "chain": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MethodCall"
+          },
+          "title": "Chain",
+          "type": "array"
         }
       },
       "required": [
@@ -323,6 +375,7 @@
                 "section": "#/$defs/SectionStep",
                 "sound": "#/$defs/SoundStep",
                 "subcaption": "#/$defs/SubcaptionStep",
+                "updating": "#/$defs/UpdatingStep",
                 "wait": "#/$defs/WaitStep"
               },
               "propertyName": "kind"
@@ -354,6 +407,9 @@
               },
               {
                 "$ref": "#/$defs/SubcaptionStep"
+              },
+              {
+                "$ref": "#/$defs/UpdatingStep"
               }
             ]
           },
@@ -475,6 +531,39 @@
         "content"
       ],
       "title": "SubcaptionStep",
+      "type": "object"
+    },
+    "UpdatingStep": {
+      "description": "suspend_updating, resume_updating, or clear_updaters on live objects.",
+      "properties": {
+        "kind": {
+          "const": "updating",
+          "default": "updating",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mobjects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mobjects",
+          "type": "array"
+        },
+        "action": {
+          "default": "suspend",
+          "enum": [
+            "suspend",
+            "resume",
+            "clear"
+          ],
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mobjects"
+      ],
+      "title": "UpdatingStep",
       "type": "object"
     },
     "WaitStep": {

@@ -5,6 +5,12 @@ import type { Descriptor } from '../../shared/engine'
 
 export type JsonValue = string | number | boolean | number[] | null
 
+/** One call in an Animate node's chain: mobject.animate.method(values). */
+export interface MethodCall {
+  method: string
+  values: Record<string, JsonValue>
+}
+
 export interface DocNode {
   id: string
   catalogue: string
@@ -12,6 +18,7 @@ export interface DocNode {
   label: string | null
   position: [number, number]
   collapsed: boolean
+  chain?: MethodCall[]
 }
 
 export interface DocEdge {
@@ -40,6 +47,9 @@ export type Step =
   | { kind: 'section'; name: string; skip_animations: boolean }
   | { kind: 'sound'; file: string; time_offset: number; gain: number | null }
   | { kind: 'subcaption'; content: string; duration: number; offset: number }
+  | { kind: 'updating'; mobjects: string[]; action: UpdatingAction }
+
+export type UpdatingAction = 'suspend' | 'resume' | 'clear'
 
 export interface Scene {
   name: string

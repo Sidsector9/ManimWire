@@ -36,7 +36,8 @@
           "enum": [
             "class",
             "method",
-            "function"
+            "function",
+            "builtin"
           ],
           "title": "Kind",
           "type": "string"
@@ -286,6 +287,13 @@
       "title": "Directions",
       "type": "array"
     },
+    "expression_names": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Expression Names",
+      "type": "array"
+    },
     "unknown_annotations": {
       "items": {
         "type": "string"
@@ -299,6 +307,7 @@
     "entries",
     "colors",
     "directions",
+    "expression_names",
     "unknown_annotations"
   ],
   "title": "Catalogue",

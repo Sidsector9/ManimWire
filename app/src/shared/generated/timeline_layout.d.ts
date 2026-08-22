@@ -30,6 +30,10 @@ export type Start2 = number;
 export type End2 = number;
 export type SkipAnimations = boolean;
 export type Sections = Section[];
+export type Row1 = string;
+export type Start3 = number;
+export type End3 = number;
+export type Bands = Band[];
 export type Total = number;
 export type Error = string | null;
 
@@ -39,6 +43,7 @@ export interface TimelineLayout {
   bars: Bars;
   markers: Markers;
   sections: Sections;
+  bands?: Bands;
   total: Total;
   error?: Error;
   [k: string]: unknown;
@@ -87,5 +92,14 @@ export interface Section {
   start: Start2;
   end: End2;
   skip_animations?: SkipAnimations;
+  [k: string]: unknown;
+}
+/**
+ * A stretch of time during which an object's updaters run.
+ */
+export interface Band {
+  row: Row1;
+  start: Start3;
+  end: End3;
   [k: string]: unknown;
 }

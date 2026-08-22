@@ -7,6 +7,8 @@ export interface SourceMap {
   nodes: Record<string, number[]>
   steps: Record<string, number[]>
   variables: Record<string, string>
+  /** Nodes emitted as always_redraw or add_updater. */
+  live: string[]
 }
 
 export interface RenderFailure {
@@ -39,7 +41,7 @@ const END_OF_SCENE = 1e6
 export const useEngineResults = create<PreviewStore>((set, get) => ({
   issues: [],
   code: '',
-  sourceMap: { nodes: {}, steps: {}, variables: {} },
+  sourceMap: { nodes: {}, steps: {}, variables: {}, live: [] },
   frame: null,
   layout: null,
   failure: null,

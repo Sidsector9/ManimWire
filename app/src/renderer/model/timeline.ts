@@ -26,6 +26,13 @@ export interface BarBox {
   depth: number
 }
 
+export interface BandBox {
+  row: string
+  x: number
+  y: number
+  width: number
+}
+
 export interface MarkerBox {
   step: number
   kind: string
@@ -93,6 +100,17 @@ export function placeMarkers(layout: TimelineLayout, geometry: Geometry): Marker
       label: marker.label
     }))
   })
+}
+
+/** Dashed bands behind the rows of objects whose updaters are running. */
+export function placeBands(layout: TimelineLayout, geometry: Geometry): BandBox[] {
+  const rows = rowLabels(layout)
+  return (layout.bands ?? []).map((band) => ({
+    row: band.row,
+    x: timeToX(geometry, band.start),
+    y: rowIndex(rows, band.row) * ROW_HEIGHT,
+    width: Math.max(2, (band.end - band.start) * geometry.pixelsPerSecond)
+  }))
 }
 
 /** The step whose span contains the time, preferring the one that starts there. */

@@ -14,6 +14,13 @@ JsonValue = str | float | int | bool | list[float] | None
 SELF_PORT = "self"
 
 
+class MethodCall(BaseModel):
+    """One step of an Animate chain: ``.method(**values)``."""
+
+    method: str
+    values: dict[str, JsonValue] = {}
+
+
 class Node(BaseModel):
     id: str
     catalogue: str
@@ -21,6 +28,8 @@ class Node(BaseModel):
     label: str | None = None
     position: tuple[float, float] = (0.0, 0.0)
     collapsed: bool = True
+    # Animate nodes only: the methods applied through mobject.animate, in order.
+    chain: list[MethodCall] = []
 
 
 class Edge(BaseModel):
@@ -88,6 +97,14 @@ class SubcaptionStep(BaseModel):
     offset: float = 0
 
 
+class UpdatingStep(BaseModel):
+    """suspend_updating, resume_updating, or clear_updaters on live objects."""
+
+    kind: Literal["updating"] = "updating"
+    mobjects: list[str]
+    action: Literal["suspend", "resume", "clear"] = "suspend"
+
+
 Step = Annotated[
     PlayStep
     | WaitStep
@@ -97,9 +114,16 @@ Step = Annotated[
     | BringToBackStep
     | SectionStep
     | SoundStep
-    | SubcaptionStep,
+    | SubcaptionStep
+    | UpdatingStep,
     Field(discriminator="kind"),
 ]
+
+UPDATING_METHODS = {
+    "suspend": "suspend_updating",
+    "resume": "resume_updating",
+    "clear": "clear_updaters",
+}
 
 # Steps that name mobjects: (kind, Scene method).
 MOBJECT_STEP_METHODS = {

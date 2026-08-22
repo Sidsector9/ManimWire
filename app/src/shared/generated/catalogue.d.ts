@@ -4,7 +4,7 @@ export type ManimVersion = string;
 export type Name = string;
 export type Qualname = string;
 export type Module = string;
-export type Kind = "class" | "method" | "function";
+export type Kind = "class" | "method" | "function" | "builtin";
 export type Category = string;
 export type Owner = string | null;
 export type Bases = string[];
@@ -45,6 +45,7 @@ export type Name2 = string;
 export type Hex = string;
 export type Colors = ColorEntry[];
 export type Directions = string[];
+export type ExpressionNames = string[];
 export type UnknownAnnotations = string[];
 
 export interface Catalogue {
@@ -52,6 +53,7 @@ export interface Catalogue {
   entries: Entries;
   colors: Colors;
   directions: Directions;
+  expression_names: ExpressionNames;
   unknown_annotations: UnknownAnnotations;
   [k: string]: unknown;
 }

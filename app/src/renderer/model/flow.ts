@@ -4,10 +4,12 @@ import type { Edge as FlowEdge, Node as FlowNode } from '@xyflow/react'
 import type { Descriptor, Issue } from '../../shared/engine'
 import { TYPE_COLOR } from '../store/catalogue'
 import { connectedPorts, type DocNode, type Scene } from './document'
+import { effectiveDescriptor } from './live'
 import type { DescriptorIndex } from './types'
 
 export interface ManimNodeData extends Record<string, unknown> {
   node: DocNode
+  /** The node's descriptor after per-node adjustments (Expression ports and output). */
   descriptor: Descriptor
   connected: string[]
   issues: Issue[]
@@ -23,12 +25,16 @@ export function toFlow(
   scene: Scene,
   index: DescriptorIndex,
   issues: Issue[],
-  selected: string | null
+  selected: string | null,
+  expressionNames: string[]
 ): { nodes: ManimFlowNode[]; edges: FlowEdge[] } {
   const nodes: ManimFlowNode[] = []
+  const descriptors = new Map<string, Descriptor>()
   for (const node of scene.nodes) {
     const descriptor = index.get(node.catalogue)
     if (!descriptor) continue
+    const effective = effectiveDescriptor(node, descriptor, scene, expressionNames)
+    descriptors.set(node.id, effective)
     nodes.push({
       id: node.id,
       type: 'manim',
@@ -36,21 +42,21 @@ export function toFlow(
       selected: node.id === selected,
       data: {
         node,
-        descriptor,
+        descriptor: effective,
         connected: [...connectedPorts(scene, node.id)],
         issues: issues.filter((i) => i.node === node.id)
       }
     })
   }
   const edges: FlowEdge[] = scene.edges.map((edge) => {
-    const source = scene.nodes.find((n) => n.id === edge.source)
-    const type = source ? index.get(source.catalogue)?.returns.type : undefined
+    const type = descriptors.get(edge.source)?.returns.type
     return {
       id: edgeId(edge.source, edge.target, edge.port),
       source: edge.source,
       sourceHandle: 'out',
       target: edge.target,
       targetHandle: edge.port,
+      className: edge.live ? 'live' : undefined,
       style: { stroke: type ? TYPE_COLOR[type] : 'var(--border-strong)', strokeWidth: 2, strokeDasharray: edge.live ? '5 4' : undefined }
     }
   })

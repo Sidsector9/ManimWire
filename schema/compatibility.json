@@ -222,7 +222,7 @@
   {
     "source": "live_number",
     "target": "number",
-    "ok": false
+    "ok": true
   },
   {
     "source": "live_number",

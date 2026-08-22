@@ -27,6 +27,7 @@ from engine.document.model import (
     SectionStep,
     SoundStep,
     SubcaptionStep,
+    UpdatingStep,
     WaitStep,
 )
 from engine.render.runner import QUIET, PreviewFileWriter, RenderError, run_scene
@@ -78,12 +79,21 @@ class Section(BaseModel):
     skip_animations: bool = False
 
 
+class Band(BaseModel):
+    """A stretch of time during which an object's updaters run."""
+
+    row: str
+    start: float
+    end: float
+
+
 class TimelineLayout(BaseModel):
     rows: list[Row]
     steps: list[StepSpan]
     bars: list[Bar]
     markers: list[Marker]
     sections: list[Section]
+    bands: list[Band] = []
     total: float
     error: str | None = None
 
@@ -129,7 +139,13 @@ class _Context:
             seen.add(node_id)
             descriptor = self.descriptor(node_id)
             sources = self.inputs.get((node_id, SELF_PORT), [])
-            if descriptor is None or descriptor.kind != "method" or not sources:
+            # A method returning a new object (axes.plot) constructs that object itself.
+            if (
+                descriptor is None
+                or descriptor.kind != "method"
+                or descriptor.returns.annotation != "Self"
+                or not sources
+            ):
                 return node_id
             node_id = sources[0]
         return node_id
@@ -157,6 +173,11 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
     markers: list[Marker] = []
     spans: list[StepSpan] = []
     section_starts: list[tuple[SectionStep, float]] = []
+    bands: list[Band] = []
+    # Updaters run from construction until suspended or cleared, and again after resume.
+    open_bands: dict[str, float] = {
+        context.root(n): 0.0 for n in generated.source_map.live
+    }
     plays = iter(renderer.plays)
     time = 0.0
     for position, step in enumerate(scene.steps):
@@ -187,6 +208,19 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
             markers.append(
                 Marker(step=position, kind="subcaption", time=time, label=step.content)
             )
+        elif isinstance(step, UpdatingStep):
+            rows = [context.root(m) for m in step.mobjects if m in context.nodes]
+            label = f"{step.action} updaters"
+            markers.append(
+                Marker(
+                    step=position, kind=step.action, time=time, label=label, rows=rows
+                )
+            )
+            for row in rows:
+                if step.action == "resume":
+                    open_bands.setdefault(row, time)
+                elif row in open_bands:
+                    bands.append(Band(row=row, start=open_bands.pop(row), end=time))
         else:
             mobjects = getattr(step, "mobjects", [])
             rows = [context.root(m) for m in mobjects if m in context.nodes]
@@ -207,12 +241,17 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
         )
         for i, (step, start) in enumerate(section_starts)
     ]
+    bands.extend(
+        Band(row=row, start=start, end=renderer.time)
+        for row, start in open_bands.items()
+    )
     return TimelineLayout(
-        rows=_rows(context, bars, markers),
+        rows=_rows(context, bars, markers, bands),
         steps=spans,
         bars=bars,
         markers=markers,
         sections=sections,
+        bands=bands,
         total=renderer.time,
     )
 
@@ -326,21 +365,24 @@ def _row_label(node_id: str, context: _Context) -> str:
     return str(node.label or (descriptor.name if descriptor else node.catalogue))
 
 
-def _rows(context: _Context, bars: list[Bar], markers: list[Marker]) -> list[Row]:
+def _rows(
+    context: _Context, bars: list[Bar], markers: list[Marker], bands: list[Band]
+) -> list[Row]:
     """Constructed mobjects in document order, then anything else bars mention."""
     ids: list[str] = []
     for node in context.scene.nodes:
         descriptor = context.descriptor(node.id)
         if (
             descriptor is not None
-            and descriptor.kind != "method"
             and descriptor.returns.type in _MOBJECT_TYPES
+            and (descriptor.kind != "method" or descriptor.returns.annotation != "Self")
         ):
             ids.append(node.id)
     for bar in bars:
         ids.extend(bar.rows)
     for marker in markers:
         ids.extend(marker.rows)
+    ids.extend(band.row for band in bands)
     ids = list(dict.fromkeys(ids))
     labels = [_row_label(i, context) for i in ids]
     rows: list[Row] = []

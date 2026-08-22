@@ -86,6 +86,14 @@
           "default": {},
           "title": "Variables",
           "type": "object"
+        },
+        "live": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Live",
+          "type": "array"
         }
       },
       "title": "SourceMap",

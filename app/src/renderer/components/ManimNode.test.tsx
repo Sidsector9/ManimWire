@@ -30,7 +30,7 @@ const circle: Descriptor = {
 }
 
 function renderNode(collapsed: boolean, connected: string[] = []) {
-  useCatalogueStore.setState({ catalogue: { manim_version: '0.21.0', entries: [circle], colors: [{ name: 'BLUE', hex: '#58C4DD' }], directions: ['ORIGIN', 'UP'], unknown_annotations: [] } })
+  useCatalogueStore.setState({ catalogue: { manim_version: '0.21.0', entries: [circle], colors: [{ name: 'BLUE', hex: '#58C4DD' }], directions: ['ORIGIN', 'UP'], unknown_annotations: [], expression_names: [] } })
   const node: ManimFlowNode = {
     id: 'c',
     type: 'manim',

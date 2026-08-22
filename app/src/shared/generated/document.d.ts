@@ -15,6 +15,8 @@ export type Label = string | null;
  */
 export type Position = [unknown, unknown];
 export type Collapsed = boolean;
+export type Method = string;
+export type Chain = MethodCall[];
 export type Nodes = Node[];
 export type Source = string;
 export type Target = string;
@@ -50,6 +52,9 @@ export type Kind8 = "subcaption";
 export type Content = string;
 export type Duration1 = number;
 export type Offset = number;
+export type Kind9 = "updating";
+export type Mobjects4 = string[];
+export type Action = "suspend" | "resume" | "clear";
 export type Steps = (
   | PlayStep
   | WaitStep
@@ -60,6 +65,7 @@ export type Steps = (
   | SectionStep
   | SoundStep
   | SubcaptionStep
+  | UpdatingStep
 )[];
 export type Scenes = SceneDocument[];
 
@@ -90,9 +96,21 @@ export interface Node {
   label?: Label;
   position?: Position;
   collapsed?: Collapsed;
+  chain?: Chain;
   [k: string]: unknown;
 }
 export interface Values {
+  [k: string]: string | number | boolean | number[] | null;
+}
+/**
+ * One step of an Animate chain: ``.method(**values)``.
+ */
+export interface MethodCall {
+  method: Method;
+  values?: Values1;
+  [k: string]: unknown;
+}
+export interface Values1 {
   [k: string]: string | number | boolean | number[] | null;
 }
 export interface Edge {
@@ -159,5 +177,14 @@ export interface SubcaptionStep {
   content: Content;
   duration?: Duration1;
   offset?: Offset;
+  [k: string]: unknown;
+}
+/**
+ * suspend_updating, resume_updating, or clear_updaters on live objects.
+ */
+export interface UpdatingStep {
+  kind?: Kind9;
+  mobjects: Mobjects4;
+  action?: Action;
   [k: string]: unknown;
 }

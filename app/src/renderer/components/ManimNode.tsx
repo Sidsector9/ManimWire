@@ -1,6 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SELF_PORT, visiblePorts } from '../model/document'
 import type { ManimFlowNode } from '../model/flow'
+import { ANIMATE, chainSummary } from '../model/live'
 import { portType } from '../model/types'
 import { TYPE_COLOR, selectIndex, useCatalogueStore } from '../store/catalogue'
 import { useDocumentStore } from '../store/document'
@@ -34,6 +35,7 @@ export function ManimNode({ data }: NodeProps<ManimFlowNode>) {
         )}
       </div>
       {descriptor.kind === 'method' && <div className="node-sub mono">{descriptor.qualname}</div>}
+      {descriptor.name === ANIMATE && <div className="node-sub mono">{chainSummary(node) || 'no method calls'}</div>}
       {visible.map((port) => {
         const param = descriptor.parameters.find((p) => p.name === port)
         const type = portType(descriptor, port, index)

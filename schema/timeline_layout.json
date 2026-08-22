@@ -1,5 +1,29 @@
 {
   "$defs": {
+    "Band": {
+      "description": "A stretch of time during which an object's updaters run.",
+      "properties": {
+        "row": {
+          "title": "Row",
+          "type": "string"
+        },
+        "start": {
+          "title": "Start",
+          "type": "number"
+        },
+        "end": {
+          "title": "End",
+          "type": "number"
+        }
+      },
+      "required": [
+        "row",
+        "start",
+        "end"
+      ],
+      "title": "Band",
+      "type": "object"
+    },
     "Bar": {
       "description": "One animation. Children Manim builds itself keep their parent's node id.",
       "properties": {
@@ -222,6 +246,14 @@
         "$ref": "#/$defs/Section"
       },
       "title": "Sections",
+      "type": "array"
+    },
+    "bands": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/Band"
+      },
+      "title": "Bands",
       "type": "array"
     },
     "total": {
