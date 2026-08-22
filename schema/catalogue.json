@@ -94,6 +94,18 @@
           "default": false,
           "title": "Hidden",
           "type": "boolean"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signature"
         }
       },
       "required": [
@@ -267,6 +279,13 @@
       "title": "Colors",
       "type": "array"
     },
+    "directions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Directions",
+      "type": "array"
+    },
     "unknown_annotations": {
       "items": {
         "type": "string"
@@ -279,6 +298,7 @@
     "manim_version",
     "entries",
     "colors",
+    "directions",
     "unknown_annotations"
   ],
   "title": "Catalogue",

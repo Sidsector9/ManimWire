@@ -1,9 +1,6 @@
 import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
-import { selectColors, selectEntries, useCatalogueStore } from '../store/catalogue'
-
-// Direction constants Manim exports; mirrors DIRECTION_NAMES in the engine.
-export const DIRECTIONS = ['ORIGIN', 'UP', 'DOWN', 'LEFT', 'RIGHT', 'IN', 'OUT', 'UL', 'UR', 'DL', 'DR', 'X_AXIS', 'Y_AXIS', 'Z_AXIS']
+import { selectColors, selectDirections, selectEntries, useCatalogueStore } from '../store/catalogue'
 
 interface Props {
   param: Parameter
@@ -16,6 +13,7 @@ interface Props {
 export function PortEditor({ param, value, onChange, compact = false }: Props) {
   const colors = useCatalogueStore(selectColors)
   const entries = useCatalogueStore(selectEntries)
+  const directions = useCatalogueStore(selectDirections)
   const { type } = param
   const placeholder = param.display ?? ''
   const stop = (e: React.SyntheticEvent): void => e.stopPropagation()
@@ -76,7 +74,7 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
       return (
         <select className="port-select mono" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>
           <option value="">{placeholder || 'default'}</option>
-          {DIRECTIONS.map((d) => (
+          {directions.map((d) => (
             <option key={d} value={d}>
               {d}
             </option>
@@ -106,8 +104,8 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
         />
       )
     case 'function': {
-      // Rate functions are the one function family with catalogue entries to choose from.
-      const names = type.signature === '(float) -> float' ? entries.filter((e) => e.category === 'rate_functions').map((e) => e.name) : []
+      // Catalogue functions whose signature matches the port, for example rate functions.
+      const names = type.signature ? entries.filter((e) => e.kind === 'function' && e.signature === type.signature).map((e) => e.name) : []
       if (names.length === 0) return <span className="port-connect">{compact ? '' : 'connect'}</span>
       return (
         <select className="port-select mono" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>

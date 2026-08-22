@@ -58,8 +58,9 @@ export function Timeline() {
       if (!bar) return
       const runTime = Math.max(MIN_RUN_TIME, Math.round((time - bar.start) * 20) / 20)
       const step = scene.steps[drag.step]
-      if (step?.kind === 'play' && step.run_time != null) store.updateStep(drag.step, { ...step, run_time: runTime })
-      else store.setValue(drag.node, 'run_time', runTime)
+      if (bar.depth === 0 && step?.kind === 'play' && step.run_time != null) {
+        store.updateStep(drag.step, { ...step, run_time: runTime })
+      } else store.setValue(drag.node, 'run_time', runTime)
     } else setHoverStep(stepAt(layout, time))
   }
 
@@ -81,7 +82,7 @@ export function Timeline() {
       <div className="panel-head">
         <span>Timeline</span>
         <span className="mono timeline-meta">
-          {`${(frame?.time ?? playhead).toFixed(2)} s / ${layout.total.toFixed(2)} s · ${scene.steps.length} steps`}
+          {layout.error ? `no timeline: ${layout.error}` : `${(frame?.time ?? playhead).toFixed(2)} s / ${layout.total.toFixed(2)} s · ${scene.steps.length} steps`}
         </span>
         <span className="timeline-actions">
           <button className="button small" onClick={() => store.addStep({ kind: 'wait', duration: 1 })}>
@@ -115,8 +116,13 @@ export function Timeline() {
           <div className="timeline-labels" style={{ width: LABEL_WIDTH }}>
             <div className="timeline-corner" />
             {rows.map((row, i) => (
-              <div key={row} className={`timeline-row-label mono${i === 0 ? ' scene' : ''}`} style={{ top: HEADER_HEIGHT + i * ROW_HEIGHT }}>
-                {row}
+              <div
+                key={row.id}
+                className={`timeline-row-label${i === 0 ? ' scene mono' : ''}`}
+                style={{ top: HEADER_HEIGHT + i * ROW_HEIGHT }}
+                onClick={() => i > 0 && store.select(row.id)}
+              >
+                {row.label}
               </div>
             ))}
           </div>
@@ -147,7 +153,7 @@ export function Timeline() {
           </div>
 
           {rows.map((row, i) => (
-            <div key={row} className={`timeline-row${i === 0 ? ' scene' : ''}`} style={{ top: HEADER_HEIGHT + i * ROW_HEIGHT, left: LABEL_WIDTH, width: width - LABEL_WIDTH }} />
+            <div key={row.id} className={`timeline-row${i === 0 ? ' scene' : ''}`} style={{ top: HEADER_HEIGHT + i * ROW_HEIGHT, left: LABEL_WIDTH, width: width - LABEL_WIDTH }} />
           ))}
 
           {layout.steps.map((step) => (
@@ -171,7 +177,8 @@ export function Timeline() {
                 e.stopPropagation()
                 store.select(bar.node)
                 store.selectStep(bar.step)
-                if (!bar.group) setDrag({ kind: 'move', node: bar.node, step: bar.step })
+                // Only top-level animations belong to the play step; children belong to their group.
+                if (!bar.group && bar.depth === 0) setDrag({ kind: 'move', node: bar.node, step: bar.step })
               }}
               title={`${bar.label}${bar.rateFunc ? ` · ${bar.rateFunc}` : ''}`}
             >

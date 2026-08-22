@@ -3,19 +3,22 @@ import type { TimelineLayout } from '../../shared/engine'
 import { placeBars, placeMarkers, ROW_HEIGHT, rowLabels, stepAt, ticks } from './timeline'
 
 const layout: TimelineLayout = {
-  rows: ['dot', 'dot_2'],
+  rows: [
+    { id: 'd1', label: 'Dot 1' },
+    { id: 'd2', label: 'Dot 2' }
+  ],
   steps: [
     { index: 0, kind: 'play', start: 0, end: 2, label: 'LaggedStart' },
     { index: 1, kind: 'wait', start: 2, end: 3, label: 'wait 1 s' },
     { index: 2, kind: 'add', start: 3, end: 3, label: 'dot' }
   ],
   bars: [
-    { step: 0, node: 'lag', rows: ['dot', 'dot_2'], start: 0, end: 2, label: 'LaggedStart', rate_func: 'linear', parent: null, depth: 0 },
-    { step: 0, node: 'f1', rows: ['dot'], start: 0, end: 1, label: 'FadeIn', rate_func: 'smooth', parent: 'lag', depth: 1 },
-    { step: 0, node: 'f2', rows: ['dot_2'], start: 0.5, end: 2, label: 'FadeIn', rate_func: 'smooth', parent: 'lag', depth: 1 },
+    { step: 0, node: 'lag', rows: ['d1', 'd2'], start: 0, end: 2, label: 'LaggedStart', rate_func: 'linear', parent: null, depth: 0 },
+    { step: 0, node: 'f1', rows: ['d1'], start: 0, end: 1, label: 'FadeIn', rate_func: 'smooth', parent: 'lag', depth: 1 },
+    { step: 0, node: 'f2', rows: ['d2'], start: 0.5, end: 2, label: 'FadeIn', rate_func: 'smooth', parent: 'lag', depth: 1 },
     { step: 0, node: 'flash', rows: [], start: 0, end: 1, label: 'Flash', rate_func: 'smooth', parent: null, depth: 0 }
   ],
-  markers: [{ step: 2, kind: 'add', time: 3, label: 'dot', rows: ['dot'] }],
+  markers: [{ step: 2, kind: 'add', time: 3, label: 'Dot 1', rows: ['d1'] }],
   sections: [],
   total: 3
 }
@@ -23,7 +26,7 @@ const geometry = { labelWidth: 100, pixelsPerSecond: 50 }
 
 describe('timeline geometry', () => {
   it('puts the scene row first', () => {
-    expect(rowLabels(layout)).toEqual(['scene', 'dot', 'dot_2'])
+    expect(rowLabels(layout).map((r) => r.label)).toEqual(['scene', 'Dot 1', 'Dot 2'])
   })
 
   it('places bars by time and row, spanning rows for groups', () => {
@@ -43,7 +46,7 @@ describe('timeline geometry', () => {
   })
 
   it('places markers on their rows', () => {
-    expect(placeMarkers(layout, geometry)).toEqual([{ step: 2, kind: 'add', x: 250, y: ROW_HEIGHT * 1.5, label: 'dot' }])
+    expect(placeMarkers(layout, geometry)).toEqual([{ step: 2, kind: 'add', x: 250, y: ROW_HEIGHT * 1.5, label: 'Dot 1' }])
   })
 
   it('finds the step at a time and the axis ticks', () => {

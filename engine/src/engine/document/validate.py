@@ -8,7 +8,14 @@ from collections.abc import Mapping
 from pydantic import BaseModel
 
 from engine.catalogue.defaults import DIRECTION_NAMES
-from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType, TypeRef
+from engine.catalogue.model import (
+    Catalogue,
+    Descriptor,
+    Parameter,
+    PortType,
+    TypeRef,
+    is_class_reference,
+)
 from engine.document.model import (
     SELF_PORT,
     Document,
@@ -78,7 +85,8 @@ def document_issues(document: Document, catalogue: Catalogue) -> list[Issue]:
 def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
     index = {e.qualname: e for e in catalogue.entries}
     colors = {c.name for c in catalogue.colors}
-    functions = {e.name for e in catalogue.entries if e.kind == "function"}
+    functions = function_signatures(catalogue)
+    classes = {e.name for e in catalogue.entries if e.kind == "class"}
     nodes = {n.id: n for n in scene.nodes}
     issues: list[Issue] = []
 
@@ -106,7 +114,9 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                     )
                 )
             elif (
-                problem := _literal_problem(value, param.type, colors, functions)
+                problem := _literal_problem(
+                    value, param.type, colors, functions, classes
+                )
             ) is not None:
                 issues.append(_issue("bad_literal", problem, node.id, port))
 
@@ -214,7 +224,7 @@ def _step_issues(
     step: Step,
     nodes: Mapping[str, Node],
     descriptors: Mapping[str, Descriptor],
-    functions: set[str],
+    functions: Mapping[str, str],
 ) -> list[Issue]:
     issues: list[Issue] = []
 
@@ -227,8 +237,11 @@ def _step_issues(
             bad("bad_step", "run_time must be positive")
         if step.lag_ratio is not None and step.lag_ratio < 0:
             bad("bad_step", "lag_ratio must not be negative")
-        if step.rate_func is not None and step.rate_func not in functions:
-            bad("bad_step", f"unknown rate function {step.rate_func}")
+        if (
+            step.rate_func is not None
+            and functions.get(step.rate_func) != RATE_FUNCTION
+        ):
+            bad("bad_step", f"{step.rate_func} is not a rate function")
     elif isinstance(step, WaitStep):
         ids = []
         if step.duration <= 0:
@@ -268,6 +281,16 @@ def _step_issues(
 
 
 _HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+RATE_FUNCTION = "(float) -> float"
+
+
+def function_signatures(catalogue: Catalogue) -> dict[str, str]:
+    """Signature text per catalogue function, as computed by the catalogue."""
+    return {
+        e.name: e.signature
+        for e in catalogue.entries
+        if e.kind == "function" and e.signature is not None
+    }
 
 
 def _settings_issues(settings: Settings, colors: set[str]) -> list[Issue]:
@@ -307,7 +330,11 @@ def _mismatch(
 
 
 def _literal_problem(
-    value: object, type_ref: TypeRef, colors: set[str], functions: set[str]
+    value: object,
+    type_ref: TypeRef,
+    colors: set[str],
+    functions: Mapping[str, str],
+    classes: set[str],
 ) -> str | None:
     if value is None:
         return None if type_ref.optional else "value must not be empty"
@@ -327,6 +354,8 @@ def _literal_problem(
     if kind is PortType.TEXT:
         if not isinstance(value, str):
             return "expected text"
+        if is_class_reference(type_ref):
+            return None if value in classes else f"unknown Manim class {value}"
         if type_ref.choices and value not in type_ref.choices:
             return f"expected one of {', '.join(type_ref.choices)}"
         return None
@@ -345,9 +374,14 @@ def _literal_problem(
             return None
         return "expected a direction name or three numbers"
     if kind is PortType.FUNCTION:
-        if isinstance(value, str) and value in functions:
-            return None
-        return "expected the name of a Manim function, or a connection"
+        if not isinstance(value, str) or value not in functions:
+            return "expected the name of a Manim function, or a connection"
+        if type_ref.signature and functions[value] != type_ref.signature:
+            return (
+                f"{value} has signature {functions[value]}, "
+                f"port needs {type_ref.signature}"
+            )
+        return None
     if kind in (
         PortType.MOBJECT,
         PortType.COORDINATE_SYSTEM,

@@ -1,7 +1,7 @@
 {
   "$defs": {
     "Bar": {
-      "description": "One animation on the timeline. Nested group children carry a parent and depth.",
+      "description": "One animation. Children Manim builds itself keep their parent's node id.",
       "properties": {
         "step": {
           "title": "Step",
@@ -107,6 +107,25 @@
       "title": "Marker",
       "type": "object"
     },
+    "Row": {
+      "description": "One object on the timeline: the node that constructs it, with a display label.",
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "label"
+      ],
+      "title": "Row",
+      "type": "object"
+    },
     "Section": {
       "properties": {
         "name": {
@@ -172,7 +191,7 @@
   "properties": {
     "rows": {
       "items": {
-        "type": "string"
+        "$ref": "#/$defs/Row"
       },
       "title": "Rows",
       "type": "array"
@@ -208,6 +227,18 @@
     "total": {
       "title": "Total",
       "type": "number"
+    },
+    "error": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error"
     }
   },
   "required": [

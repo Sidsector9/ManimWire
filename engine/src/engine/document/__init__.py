@@ -19,14 +19,17 @@ from engine.document.model import (
     WaitStep,
 )
 from engine.document.validate import (
+    RATE_FUNCTION,
     Issue,
     document_issues,
+    function_signatures,
     validate_document,
     validate_scene,
 )
 
 __all__ = [
     "MOBJECT_STEP_METHODS",
+    "RATE_FUNCTION",
     "SELF_PORT",
     "AddStep",
     "BringToBackStep",
@@ -46,6 +49,7 @@ __all__ = [
     "SubcaptionStep",
     "WaitStep",
     "document_issues",
+    "function_signatures",
     "validate_document",
     "validate_scene",
 ]

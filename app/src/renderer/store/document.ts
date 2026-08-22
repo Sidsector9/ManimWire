@@ -128,7 +128,9 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     addStep: (step, at) => record(addStep(get().doc, get().sceneIndex, step, at)),
     removeStep: (at) => {
       record(removeStep(get().doc, get().sceneIndex, at))
-      if (get().selectedStep === at) set({ selectedStep: null })
+      const { selectedStep } = get()
+      if (selectedStep === at) set({ selectedStep: null })
+      else if (selectedStep !== null && selectedStep > at) set({ selectedStep: selectedStep - 1 })
     },
     moveStep: (from, to) => {
       record(moveStep(get().doc, get().sceneIndex, from, to))

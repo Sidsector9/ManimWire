@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -264,3 +266,32 @@ def test_nested_groups_render(
         scene_instance = namespace["Dots"]()
         scene_instance.render()
         assert scene_instance.renderer.time == pytest.approx(3.5, abs=0.1)
+
+
+def test_compatibility_fixture_matches_the_validator(tmp_path: Path) -> None:
+    from engine.schema import write_schemas
+
+    written = {p.name: p for p in write_schemas(tmp_path)}
+    table = json.loads(written["compatibility.json"].read_text())
+    assert {"source": "mobject", "target": "mobject", "ok": True} in table
+    assert {"source": "number", "target": "text", "ok": False} in table
+    assert {"source": "coordinate_system", "target": "mobject", "ok": True} in table
+    assert {"source": "mobject", "target": "coordinate_system", "ok": False} in table
+
+
+def test_class_reference_literal_is_an_identifier(catalogue: Catalogue) -> None:
+    scene = SceneDocument(
+        name="Ref",
+        nodes=[
+            Node(id="c", catalogue="Circle"),
+            Node(id="a", catalogue="Circumscribe", values={"shape": "Circle"}),
+        ],
+        edges=[Edge(source="c", target="a", port="mobject")],
+        steps=[PlayStep(animations=["a"])],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert "Circumscribe(circle, shape=Circle)" in generated.code
+    scene.nodes[1].values["shape"] = "Rectangel"
+    assert [i.code for i in ManimCodeGenerator().generate(scene, catalogue).issues] == [
+        "bad_literal"
+    ]

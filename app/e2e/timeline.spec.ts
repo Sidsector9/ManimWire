@@ -10,7 +10,7 @@ test('timeline shows rows and bars, scrubs the preview, and edits run_time by dr
   const window = await app.firstWindow()
   try {
     await expect(window.locator('.status')).toContainText('engine ready')
-    await expect(window.locator('.timeline-row-label')).toHaveText(['scene', 'dot', 'dot_2', 'dot_3'])
+    await expect(window.locator('.timeline-row-label')).toHaveText(['scene', 'Dot 1', 'Dot 2', 'Dot 3'])
     await expect(window.locator('.timeline-bar')).toHaveCount(6)
     await expect(window.locator('.timeline-section')).toHaveText(['intro', 'grow'])
     await expect(window.locator('.frame img')).toBeVisible()

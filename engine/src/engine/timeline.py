@@ -1,23 +1,27 @@
-"""Where things happen in time, computed from the document with Manim's rules.
+"""Where things happen in time, read from Manim's own animation objects.
 
-Timing follows ``AnimationGroup.build_animations_with_timings`` and
-``init_run_time`` (manim/manim/animation/composition.py): a child starts after
-the previous child's run time times ``lag_ratio``; a group lasts until its
-last child ends unless it has an explicit ``run_time``, which rescales the
-children. ``Scene.play`` lasts as long as its longest animation
-(manim/manim/scene/scene.py, ``get_run_time``).
+The scene runs with animations skipped. Every ``play`` call still compiles its
+animations (``Scene.compile_animation_data``), so each animation's ``run_time``
+and each group's ``anims_with_timings`` are Manim's values; nothing is
+re-derived here. Objects are matched back to document nodes structurally: the
+n-th top-level animation of a play step is the n-th id in ``step.animations``,
+and the n-th child of a group is the n-th connection into its animations port.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
+from manim.animation.animation import Animation
+from manim.animation.composition import AnimationGroup
+from manim.renderer.cairo_renderer import CairoRenderer
 from pydantic import BaseModel
 
-from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType
+from engine.catalogue.model import Catalogue, Descriptor, PortType
 from engine.codegen import ManimCodeGenerator
 from engine.document.model import (
-    Node,
+    SELF_PORT,
     PlayStep,
     SceneDocument,
     SectionStep,
@@ -25,12 +29,20 @@ from engine.document.model import (
     SubcaptionStep,
     WaitStep,
 )
+from engine.render.runner import QUIET, PreviewFileWriter, RenderError, run_scene
 
 _MOBJECT_TYPES = {PortType.MOBJECT, PortType.COORDINATE_SYSTEM, PortType.LIVE_NUMBER}
 
 
+class Row(BaseModel):
+    """One object on the timeline: the node that constructs it, with a display label."""
+
+    id: str
+    label: str
+
+
 class Bar(BaseModel):
-    """One animation on the timeline. Nested group children carry a parent and depth."""
+    """One animation. Children Manim builds itself keep their parent's node id."""
 
     step: int
     node: str
@@ -67,71 +79,98 @@ class Section(BaseModel):
 
 
 class TimelineLayout(BaseModel):
-    rows: list[str]
+    rows: list[Row]
     steps: list[StepSpan]
     bars: list[Bar]
     markers: list[Marker]
     sections: list[Section]
     total: float
+    error: str | None = None
 
 
 @dataclass
-class _Timing:
-    node: str
+class _Play:
     start: float
-    end: float
-    rows: list[str]
-    label: str
-    rate_func: str | None
-    children: list[_Timing] = field(default_factory=list)
-
-    @property
-    def duration(self) -> float:
-        return self.end - self.start
+    duration: float
+    animations: list[Animation]
 
 
+class _TimingRenderer(CairoRenderer):
+    """Records each play call's compiled animations instead of rendering them."""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(
+            file_writer_class=PreviewFileWriter, skip_animations=True, **kwargs
+        )
+        self.plays: list[_Play] = []
+
+    def play(self, scene: Any, *args: Any, **kwargs: Any) -> None:
+        scene.compile_animation_data(*args, **kwargs)
+        self.plays.append(_Play(self.time, scene.duration, list(scene.animations)))
+        self.time += scene.duration
+        self.num_plays += 1
+
+
+@dataclass
 class _Context:
-    def __init__(self, scene: SceneDocument, catalogue: Catalogue) -> None:
-        self.index = {e.qualname: e for e in catalogue.entries}
-        self.nodes = {n.id: n for n in scene.nodes}
-        self.inputs: dict[tuple[str, str], list[str]] = {}
-        for edge in scene.edges:
-            self.inputs.setdefault((edge.target, edge.port), []).append(edge.source)
-        generated = ManimCodeGenerator().generate(scene, catalogue)
-        self.variables = dict(generated.source_map.variables)
-        for node in scene.nodes:
-            self.variables.setdefault(node.id, node.label or node.id)
+    scene: SceneDocument
+    index: dict[str, Descriptor]
+    nodes: dict[str, Any]
+    inputs: dict[tuple[str, str], list[str]] = field(default_factory=dict)
 
     def descriptor(self, node_id: str) -> Descriptor | None:
         node = self.nodes.get(node_id)
         return self.index.get(node.catalogue) if node else None
 
-    def row(self, node_id: str) -> str:
-        return self.variables[node_id]
+    def root(self, node_id: str) -> str:
+        """The node that constructs an object: follow method nodes back through self."""
+        seen: set[str] = set()
+        while node_id not in seen:
+            seen.add(node_id)
+            descriptor = self.descriptor(node_id)
+            sources = self.inputs.get((node_id, SELF_PORT), [])
+            if descriptor is None or descriptor.kind != "method" or not sources:
+                return node_id
+            node_id = sources[0]
+        return node_id
 
 
 def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayout:
-    context = _Context(scene, catalogue)
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    if generated.issues:
+        return _empty(generated.issues[0].message)
+    try:
+        _, _, renderer = run_scene(
+            generated, scene.name, {**QUIET, "dry_run": True}, _TimingRenderer
+        )
+    except RenderError as exc:
+        return _empty(str(exc))
+    context = _Context(
+        scene,
+        {e.qualname: e for e in catalogue.entries},
+        {n.id: n for n in scene.nodes},
+    )
+    for edge in scene.edges:
+        context.inputs.setdefault((edge.target, edge.port), []).append(edge.source)
+
     bars: list[Bar] = []
     markers: list[Marker] = []
     spans: list[StepSpan] = []
     section_starts: list[tuple[SectionStep, float]] = []
+    plays = iter(renderer.plays)
     time = 0.0
     for position, step in enumerate(scene.steps):
         end = time
+        if isinstance(step, PlayStep | WaitStep):
+            play = next(plays)
+            time, end = play.start, play.start + play.duration
         if isinstance(step, PlayStep):
-            timings = [
-                _animation_timing(a, context, step.run_time)
-                for a in step.animations
-                if context.descriptor(a) is not None
-            ]
-            end = time + max((t.duration for t in timings), default=0.0)
-            for timing in timings:
-                _collect_bars(timing, position, time, None, 0, bars)
-            label = ", ".join(t.label for t in timings)
+            pairs = list(zip(step.animations, play.animations, strict=False))
+            for node_id, animation in pairs:
+                _collect(animation, node_id, position, time, None, 0, context, bars)
+            label = ", ".join(_label(a, n, context) for n, a in pairs)
         elif isinstance(step, WaitStep):
-            end = time + step.duration
-            label = f"wait {step.duration:g} s"
+            label = f"wait {play.duration:g} s"
         elif isinstance(step, SectionStep):
             section_starts.append((step, time))
             label = step.name
@@ -149,9 +188,9 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
                 Marker(step=position, kind="subcaption", time=time, label=step.content)
             )
         else:
-            mobjects = [m for m in getattr(step, "mobjects", []) if m in context.nodes]
-            rows = [context.row(m) for m in mobjects]
-            label = ", ".join(rows)
+            mobjects = getattr(step, "mobjects", [])
+            rows = [context.root(m) for m in mobjects if m in context.nodes]
+            label = ", ".join(_row_label(r, context) for r in rows)
             markers.append(
                 Marker(step=position, kind=step.kind, time=time, label=label, rows=rows)
             )
@@ -168,155 +207,145 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
         )
         for i, (step, start) in enumerate(section_starts)
     ]
-    rows = _rows(context, bars, markers)
     return TimelineLayout(
-        rows=rows,
+        rows=_rows(context, bars, markers),
         steps=spans,
         bars=bars,
         markers=markers,
         sections=sections,
-        total=time,
+        total=renderer.time,
     )
 
 
-def _animation_timing(
-    node_id: str, context: _Context, override: float | None = None
-) -> _Timing:
-    node = context.nodes[node_id]
-    descriptor = context.descriptor(node_id)
-    assert descriptor is not None
-    params = {p.name: p for p in descriptor.parameters}
-    explicit = _number(node, params.get("run_time"), only_explicit=True)
-    rate_func = _text(node, params.get("rate_func"))
-    label = node.label or descriptor.name
-    group_port = next(
-        (
-            p
-            for p in descriptor.parameters
-            if p.kind == "var_positional" and p.type.type is PortType.ANIMATION
-        ),
-        None,
-    )
-    if group_port is not None:
-        children = [
-            _animation_timing(child, context)
-            for child in context.inputs.get((node_id, group_port.name), [])
-            if context.descriptor(child) is not None
-        ]
-        lag = _number(node, params.get("lag_ratio")) or 0.0
-        start = 0.0
-        for i, child in enumerate(children):
-            if i > 0:
-                start += children[i - 1].duration * lag
-            _shift(child, start)
-        max_end = max((c.end for c in children), default=0.0)
-        duration = override if override is not None else explicit
-        if duration is None:
-            duration = max_end
-        if max_end > 0 and duration != max_end:
-            for child in children:
-                _scale(child, duration / max_end)
-        rows = _unique(r for c in children for r in c.rows)
-        return _Timing(node_id, 0.0, duration, rows, label, rate_func, children)
-    duration = override if override is not None else explicit
-    if duration is None:
-        duration = _number(node, params.get("run_time")) or 1.0
-    return _Timing(
-        node_id, 0.0, duration, _input_rows(node, descriptor, context), label, rate_func
+def _empty(error: str) -> TimelineLayout:
+    return TimelineLayout(
+        rows=[], steps=[], bars=[], markers=[], sections=[], total=0.0, error=error
     )
 
 
-def _input_rows(node: Node, descriptor: Descriptor, context: _Context) -> list[str]:
-    rows: list[str] = []
-    for param in descriptor.parameters:
-        accepted = {param.type.type, *param.type.accepts}
-        if not accepted & _MOBJECT_TYPES:
-            continue
-        for source in context.inputs.get((node.id, param.name), []):
-            if source in context.nodes:
-                rows.append(context.row(source))
-    return _unique(rows)
-
-
-def _collect_bars(
-    timing: _Timing,
+def _collect(
+    animation: Animation,
+    node_id: str,
     step: int,
-    offset: float,
+    start: float,
     parent: str | None,
     depth: int,
+    context: _Context,
     bars: list[Bar],
+    scale: float = 1.0,
 ) -> None:
-    bars.append(
-        Bar(
-            step=step,
-            node=timing.node,
-            rows=timing.rows,
-            start=offset + timing.start,
-            end=offset + timing.end,
-            label=timing.label,
-            rate_func=timing.rate_func,
-            parent=parent,
-            depth=depth,
-        )
+    """Append the bar for ``animation`` and, for groups, its children.
+
+    ``scale`` maps the animation's own clock to scene time: a group with an
+    explicit ``run_time`` plays its children at ``run_time / max_end_time`` speed
+    (``AnimationGroup.interpolate``), and nested groups multiply.
+    """
+    bar = Bar(
+        step=step,
+        node=node_id,
+        rows=_animation_rows(node_id, context),
+        start=start,
+        end=start + animation.run_time * scale,
+        label=_label(animation, node_id, context),
+        rate_func=getattr(animation.rate_func, "__name__", None),
+        parent=parent,
+        depth=depth,
     )
-    for child in timing.children:
-        _collect_bars(child, step, offset, timing.node, depth + 1, bars)
+    bars.append(bar)
+    if not isinstance(animation, AnimationGroup) or not len(animation.animations):
+        return
+    inner = (
+        animation.run_time / animation.max_end_time if animation.max_end_time else 1.0
+    )
+    child_scale = scale * inner
+    child_ids = _child_ids(node_id, context, len(animation.animations))
+    timings = animation.anims_with_timings
+    for child_id, child, timing in zip(
+        child_ids, animation.animations, timings, strict=True
+    ):
+        child_start = start + float(timing["start"]) * child_scale
+        _collect(
+            child,
+            child_id,
+            step,
+            child_start,
+            node_id,
+            depth + 1,
+            context,
+            bars,
+            child_scale,
+        )
+    children = [b for b in bars if b.parent == node_id and b.depth == depth + 1]
+    bar.rows = list(dict.fromkeys(bar.rows + [r for c in children for r in c.rows]))
 
 
-def _shift(timing: _Timing, by: float) -> None:
-    timing.start += by
-    timing.end += by
-    for child in timing.children:
-        _shift(child, by)
+def _child_ids(node_id: str, context: _Context, count: int) -> list[str]:
+    """Child node ids in port order, or the parent's id for children Manim created."""
+    descriptor = context.descriptor(node_id)
+    if descriptor is not None:
+        port = next(
+            (
+                p.name
+                for p in descriptor.parameters
+                if p.kind == "var_positional" and p.type.type is PortType.ANIMATION
+            ),
+            None,
+        )
+        connected = context.inputs.get((node_id, port), []) if port else []
+        if len(connected) == count:
+            return connected
+    return [node_id] * count
 
 
-def _scale(timing: _Timing, factor: float) -> None:
-    timing.start *= factor
-    timing.end *= factor
-    for child in timing.children:
-        _scale(child, factor)
-
-
-def _rows(context: _Context, bars: list[Bar], markers: list[Marker]) -> list[str]:
-    """Mobject variables in construction order, then anything else the bars mention."""
+def _animation_rows(node_id: str, context: _Context) -> list[str]:
+    descriptor = context.descriptor(node_id)
+    if descriptor is None:
+        return []
     rows: list[str] = []
-    for node_id, name in context.variables.items():
-        descriptor = context.descriptor(node_id)
-        if descriptor is not None and descriptor.returns.type in _MOBJECT_TYPES:
-            rows.append(name)
+    for param in descriptor.parameters:
+        if not ({param.type.type, *param.type.accepts} & _MOBJECT_TYPES):
+            continue
+        for source in context.inputs.get((node_id, param.name), []):
+            if source in context.nodes:
+                rows.append(context.root(source))
+    return list(dict.fromkeys(rows))
+
+
+def _label(animation: Animation, node_id: str, context: _Context) -> str:
+    node = context.nodes.get(node_id)
+    if node is not None and node.label:
+        return str(node.label)
+    return type(animation).__name__
+
+
+def _row_label(node_id: str, context: _Context) -> str:
+    node = context.nodes.get(node_id)
+    if node is None:
+        return node_id
+    descriptor = context.descriptor(node_id)
+    return str(node.label or (descriptor.name if descriptor else node.catalogue))
+
+
+def _rows(context: _Context, bars: list[Bar], markers: list[Marker]) -> list[Row]:
+    """Constructed mobjects in document order, then anything else bars mention."""
+    ids: list[str] = []
+    for node in context.scene.nodes:
+        descriptor = context.descriptor(node.id)
+        if (
+            descriptor is not None
+            and descriptor.kind != "method"
+            and descriptor.returns.type in _MOBJECT_TYPES
+        ):
+            ids.append(node.id)
     for bar in bars:
-        rows.extend(bar.rows)
+        ids.extend(bar.rows)
     for marker in markers:
-        rows.extend(marker.rows)
-    return _unique(rows)
-
-
-def _number(
-    node: Node, param: Parameter | None, only_explicit: bool = False
-) -> float | None:
-    if param is None:
-        return None
-    value = node.values.get(param.name)
-    if isinstance(value, int | float) and not isinstance(value, bool):
-        return float(value)
-    if only_explicit or param.default is None:
-        return None
-    try:
-        return float(param.default)
-    except ValueError:
-        return None
-
-
-def _text(node: Node, param: Parameter | None) -> str | None:
-    if param is None:
-        return None
-    value = node.values.get(param.name)
-    return value if isinstance(value, str) else param.default
-
-
-def _unique(items: object) -> list[str]:
-    seen: list[str] = []
-    for item in items:  # type: ignore[attr-defined]
-        if item not in seen:
-            seen.append(item)
-    return seen
+        ids.extend(marker.rows)
+    ids = list(dict.fromkeys(ids))
+    labels = [_row_label(i, context) for i in ids]
+    rows: list[Row] = []
+    for position, (node_id, label) in enumerate(zip(ids, labels, strict=True)):
+        if labels.count(label) > 1:
+            label = f"{label} {labels[: position + 1].count(label)}"
+        rows.append(Row(id=node_id, label=label))
+    return rows

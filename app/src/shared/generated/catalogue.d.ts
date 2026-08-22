@@ -39,16 +39,19 @@ export type AcceptsKwargs = boolean;
 export type Doc = string;
 export type IsVmobject = boolean;
 export type Hidden = boolean;
+export type Signature1 = string | null;
 export type Entries = Descriptor[];
 export type Name2 = string;
 export type Hex = string;
 export type Colors = ColorEntry[];
+export type Directions = string[];
 export type UnknownAnnotations = string[];
 
 export interface Catalogue {
   manim_version: ManimVersion;
   entries: Entries;
   colors: Colors;
+  directions: Directions;
   unknown_annotations: UnknownAnnotations;
   [k: string]: unknown;
 }
@@ -66,6 +69,7 @@ export interface Descriptor {
   doc?: Doc;
   is_vmobject?: IsVmobject;
   hidden?: Hidden;
+  signature?: Signature1;
   [k: string]: unknown;
 }
 export interface Parameter {

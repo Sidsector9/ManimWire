@@ -108,6 +108,9 @@ def test_value_tracker_and_scene(catalogue: Catalogue) -> None:
     assert param(play, "args").kind == "var_positional"
     assert entry(catalogue, "always_redraw").kind == "function"
     assert entry(catalogue, "smooth").category == "rate_functions"
+    assert entry(catalogue, "smooth").signature == "(float) -> float"
+    assert entry(catalogue, "always_redraw").signature == "(Callable[[], M]) -> M"
+    assert entry(catalogue, "Circle").signature is None
 
 
 def test_counts_stay_in_expected_ranges(catalogue: Catalogue) -> None:
@@ -131,6 +134,7 @@ def test_colors_and_version(catalogue: Catalogue) -> None:
     assert colors["BLUE"] == "#58C4DD"
     assert colors["BLACK"] == "#000000"
     assert catalogue.manim_version == "0.21.0"
+    assert catalogue.directions[:5] == ["ORIGIN", "UP", "DOWN", "LEFT", "RIGHT"]
 
 
 def test_unknown_annotations_are_reported(catalogue: Catalogue) -> None:

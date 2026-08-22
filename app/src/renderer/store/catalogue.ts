@@ -13,11 +13,13 @@ interface CatalogueStore {
 
 const NO_ENTRIES: Descriptor[] = []
 const NO_COLORS: Catalogue['colors'] = []
+const NO_DIRECTIONS: string[] = []
 
 /** Selectors must return stable references; these avoid a fresh [] per render. */
 export const selectEntries = (s: CatalogueStore): Descriptor[] => s.catalogue?.entries ?? NO_ENTRIES
 export const selectColors = (s: CatalogueStore): Catalogue['colors'] => s.catalogue?.colors ?? NO_COLORS
 export const selectIndex = (s: CatalogueStore): DescriptorIndex => s.index
+export const selectDirections = (s: CatalogueStore): string[] => s.catalogue?.directions ?? NO_DIRECTIONS
 
 export const useCatalogueStore = create<CatalogueStore>((set) => ({
   catalogue: null,

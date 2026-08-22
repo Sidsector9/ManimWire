@@ -22,7 +22,7 @@ from engine.document import (
     WaitStep,
 )
 from engine.render import CairoRenderService, RenderError
-from engine.render.service import _locate
+from engine.render.runner import locate as _locate
 from engine.rpc import read_message, write_message
 
 SMALL = Settings(pixel_width=256, pixel_height=144, frame_rate=15)

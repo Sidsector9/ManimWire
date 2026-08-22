@@ -1,3 +1,4 @@
+from engine.render.runner import RenderError
 from engine.render.service import (
     RENDER_ERROR,
     Bounds,
@@ -5,7 +6,6 @@ from engine.render.service import (
     ExportResult,
     FrameResult,
     Renderer,
-    RenderError,
 )
 
 __all__ = [

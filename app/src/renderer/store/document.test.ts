@@ -99,3 +99,28 @@ describe('document store, compound and repeated edits', () => {
     ])
   })
 })
+
+describe('step selection follows step edits', () => {
+  beforeEach(() => useDocumentStore.getState().replace(emptyDocument(), null))
+
+  it('shifts the selected step when an earlier one is removed and clears it when it is removed', () => {
+    const store = useDocumentStore.getState()
+    store.addStep({ kind: 'wait', duration: 1 })
+    store.addStep({ kind: 'wait', duration: 2 })
+    store.addStep({ kind: 'wait', duration: 3 })
+    store.selectStep(2)
+    useDocumentStore.getState().removeStep(0)
+    expect(useDocumentStore.getState().selectedStep).toBe(1)
+    useDocumentStore.getState().removeStep(1)
+    expect(useDocumentStore.getState().selectedStep).toBeNull()
+  })
+
+  it('moveStep keeps the moved step selected', () => {
+    const store = useDocumentStore.getState()
+    store.addStep({ kind: 'wait', duration: 1 })
+    store.addStep({ kind: 'wait', duration: 2 })
+    useDocumentStore.getState().moveStep(1, 0)
+    expect(useDocumentStore.getState().selectedStep).toBe(0)
+    expect(currentScene(useDocumentStore.getState()).steps[0]).toEqual({ kind: 'wait', duration: 2 })
+  })
+})

@@ -17,9 +17,10 @@ const entries: Descriptor[] = [
 const index = indexDescriptors(entries)
 
 describe('quickAddResults', () => {
-  it('filters by text, prefers prefix matches, hides methods and hidden classes', () => {
+  it('filters by text, prefers prefix matches, ranks methods last, hides hidden classes', () => {
     expect(quickAddResults(entries, 'circ', null, index).map((e) => e.name)).toEqual(['Circle', 'Circumscribe'])
-    expect(quickAddResults(entries, '', null, index).map((e) => e.name)).toEqual(['Circle', 'Circumscribe', 'ComplexPlane', 'VMobject'])
+    expect(quickAddResults(entries, '', null, index).map((e) => e.qualname)).toEqual(['Circle', 'Circumscribe', 'ComplexPlane', 'VMobject', 'VMobject.set_fill'])
+    expect(quickAddResults(entries, 'set_f', null, index).map((e) => e.qualname)).toEqual(['VMobject.set_fill'])
   })
 
   it('offers only nodes with a port accepting the dragged type, including methods', () => {

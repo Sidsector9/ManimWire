@@ -5,12 +5,14 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
-from engine.catalogue.model import Catalogue
+from engine.catalogue.model import Catalogue, PortType, TypeRef
 from engine.codegen import GeneratedCode
 from engine.document import Document, Issue
+from engine.document.validate import compatible
 from engine.info import EngineInfo
 from engine.render import ExportResult, FrameResult
 from engine.timeline import TimelineLayout
@@ -27,9 +29,41 @@ MODELS: dict[str, type[BaseModel]] = {
 }
 
 
+def compatibility_table() -> list[dict[str, Any]]:
+    """Every source and target port type pair with the engine's verdict.
+
+    The renderer mirrors the rule for instant drag feedback; its test reads this
+    table so the two cannot drift apart silently.
+    """
+    table: list[dict[str, Any]] = []
+    for source in PortType:
+        for target in PortType:
+            ok = compatible(
+                TypeRef(type=source, annotation=""), TypeRef(type=target, annotation="")
+            )
+            table.append({"source": source.value, "target": target.value, "ok": ok})
+    table.append(
+        {
+            "source": "vector",
+            "target": "mobject",
+            "accepts": ["vector"],
+            "ok": compatible(
+                TypeRef(type=PortType.VECTOR, annotation=""),
+                TypeRef(
+                    type=PortType.MOBJECT, annotation="", accepts=[PortType.VECTOR]
+                ),
+            ),
+        }
+    )
+    return table
+
+
 def write_schemas(directory: Path) -> list[Path]:
     directory.mkdir(parents=True, exist_ok=True)
     written: list[Path] = []
+    fixture = directory / "compatibility.json"
+    fixture.write_text(json.dumps(compatibility_table(), indent=2) + "\n")
+    written.append(fixture)
     for name, model in MODELS.items():
         path = directory / f"{name}.json"
         schema = model.model_json_schema()

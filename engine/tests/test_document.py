@@ -13,9 +13,11 @@ from engine.document import (
     Settings,
     SoundStep,
     WaitStep,
+    function_signatures,
     validate_document,
     validate_scene,
 )
+from engine.document.validate import RATE_FUNCTION
 
 
 @pytest.fixture(scope="module")
@@ -141,7 +143,7 @@ def test_step_fields_are_checked(
 ) -> None:
     scene = simple_scene
     scene.steps = [
-        PlayStep(animations=["a"], run_time=0, rate_func="bouncy", lag_ratio=-1),
+        PlayStep(animations=["a"], run_time=0, rate_func="always_redraw", lag_ratio=-1),
         WaitStep(duration=0),
         SectionStep(name=""),
         SoundStep(file=""),
@@ -162,5 +164,31 @@ def test_rate_func_literal_must_name_a_manim_function(
     assert validate_scene(scene, catalogue) == []
     scene.nodes[2].values["rate_func"] = "bouncy"
     assert [i.code for i in validate_scene(scene, catalogue)] == ["bad_literal"]
+    scene.nodes[2].values["rate_func"] = (
+        "always_redraw"  # a function, not a rate function
+    )
+    issues = validate_scene(scene, catalogue)
+    assert [i.code for i in issues] == ["bad_literal"]
+    assert "(float) -> float" in issues[0].message
     scene.nodes[2].values["rate_func"] = "smooth"
     scene.nodes.append(Node(id="x", catalogue="Circle"))
+
+
+def test_function_signatures_from_the_catalogue(catalogue: Catalogue) -> None:
+    signatures = function_signatures(catalogue)
+    assert signatures["smooth"] == RATE_FUNCTION
+    assert signatures["linear"] == RATE_FUNCTION
+    assert signatures["there_and_back_with_pause"] == RATE_FUNCTION
+    assert signatures["always_redraw"] != RATE_FUNCTION
+    # Factories that build rate functions are not rate functions themselves.
+    assert signatures["not_quite_there"] != RATE_FUNCTION
+    assert signatures["squish_rate_func"] != RATE_FUNCTION
+    rate_functions = {
+        name
+        for name, signature in signatures.items()
+        if signature == RATE_FUNCTION
+        and any(
+            e.name == name and e.category == "rate_functions" for e in catalogue.entries
+        )
+    }
+    assert len(rate_functions) >= 14

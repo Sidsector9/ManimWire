@@ -12,11 +12,11 @@ interface Props {
 
 const LIMIT = 12
 
-/** Entries a user can add: classes and functions, or only those with a port accepting `type`. */
+/** Entries a user can add, or only those with a port accepting `type`. Methods rank after classes and functions. */
 export function quickAddResults(entries: Descriptor[], query: string, type: TypeRef | null, index: DescriptorIndex): Descriptor[] {
   const needle = query.trim().toLowerCase()
   return entries
-    .filter((e) => !e.hidden && (e.kind !== 'method' || type !== null))
+    .filter((e) => !e.hidden)
     .filter((e) => !needle || e.name.toLowerCase().includes(needle) || e.qualname.toLowerCase().includes(needle))
     .filter((e) => type === null || acceptingPorts(type, e, index).length > 0)
     .sort((a, b) => rank(a, needle) - rank(b, needle) || a.name.localeCompare(b.name))
@@ -26,8 +26,8 @@ export function quickAddResults(entries: Descriptor[], query: string, type: Type
 function rank(entry: Descriptor, needle: string): number {
   const name = entry.name.toLowerCase()
   if (needle && name === needle) return 0
-  if (needle && name.startsWith(needle)) return 1
-  return entry.kind === 'class' ? 2 : 3
+  if (needle && name.startsWith(needle)) return entry.kind === 'method' ? 2 : 1
+  return entry.kind === 'class' ? 3 : entry.kind === 'function' ? 4 : 5
 }
 
 export function QuickAdd({ at, acceptType, onChoose, onClose }: Props) {

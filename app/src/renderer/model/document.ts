@@ -78,7 +78,11 @@ export function newId(): string {
 
 /** All operations return a new document; the store keeps history by reference. */
 function updateScene(doc: Doc, index: number, change: (scene: Scene) => Scene): Doc {
-  return { ...doc, scenes: doc.scenes.map((s, i) => (i === index ? change(s) : s)) }
+  const scene = doc.scenes[index]
+  if (!scene) return doc
+  const changed = change(scene)
+  if (changed === scene) return doc
+  return { ...doc, scenes: doc.scenes.map((s, i) => (i === index ? changed : s)) }
 }
 
 export function addNode(
@@ -215,6 +219,7 @@ export function parseDocument(text: string): Doc {
 /** Move an animation to another play step, or to a new play step at the end when `to` is null. */
 export function moveAnimation(doc: Doc, sceneIndex: number, node: string, from: number, to: number | null): Doc {
   return updateScene(doc, sceneIndex, (s) => {
+    if (s.steps[from]?.kind !== 'play' || (to !== null && s.steps[to]?.kind !== 'play')) return s
     const steps = s.steps.map((step, i) =>
       i === from && step.kind === 'play' ? { ...step, animations: step.animations.filter((a) => a !== node) } : step
     )

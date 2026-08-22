@@ -1,0 +1,990 @@
+[
+  {
+    "source": "mobject",
+    "target": "mobject",
+    "ok": true
+  },
+  {
+    "source": "mobject",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "mobject",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "coordinate_system",
+    "target": "mobject",
+    "ok": true
+  },
+  {
+    "source": "coordinate_system",
+    "target": "coordinate_system",
+    "ok": true
+  },
+  {
+    "source": "coordinate_system",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "coordinate_system",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "number",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "number",
+    "ok": true
+  },
+  {
+    "source": "number",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "number",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "live_number",
+    "target": "mobject",
+    "ok": true
+  },
+  {
+    "source": "live_number",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "live_number",
+    "ok": true
+  },
+  {
+    "source": "live_number",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "live_number",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "vector",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "vector",
+    "ok": true
+  },
+  {
+    "source": "vector",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "vector",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "color",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "color",
+    "ok": true
+  },
+  {
+    "source": "color",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "color",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "function",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "function",
+    "ok": true
+  },
+  {
+    "source": "function",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "function",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "animation",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "animation",
+    "ok": true
+  },
+  {
+    "source": "animation",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "animation",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "text",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "text",
+    "ok": true
+  },
+  {
+    "source": "text",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "text",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "boolean",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "boolean",
+    "ok": true
+  },
+  {
+    "source": "boolean",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "boolean",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "config",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "config",
+    "ok": true
+  },
+  {
+    "source": "config",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "config",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "scene",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "scene",
+    "ok": true
+  },
+  {
+    "source": "scene",
+    "target": "none",
+    "ok": false
+  },
+  {
+    "source": "scene",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "none",
+    "target": "mobject",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "coordinate_system",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "number",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "live_number",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "vector",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "color",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "function",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "animation",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "text",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "boolean",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "config",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "scene",
+    "ok": false
+  },
+  {
+    "source": "none",
+    "target": "none",
+    "ok": true
+  },
+  {
+    "source": "none",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "mobject",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "coordinate_system",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "number",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "live_number",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "vector",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "color",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "function",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "animation",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "text",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "boolean",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "config",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "scene",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "none",
+    "ok": true
+  },
+  {
+    "source": "any",
+    "target": "any",
+    "ok": true
+  },
+  {
+    "source": "vector",
+    "target": "mobject",
+    "accepts": [
+      "vector"
+    ],
+    "ok": true
+  }
+]

@@ -4,16 +4,12 @@ from __future__ import annotations
 
 import hashlib
 import shutil
-import sys
-import traceback
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, Protocol
 
-from manim import tempconfig
 from manim.mobject.mobject import Mobject
 from manim.renderer.cairo_renderer import CairoRenderer
-from manim.scene.scene_file_writer import SceneFileWriter
 from manim.utils.exceptions import EndSceneEarlyException
 from PIL import Image
 from pydantic import BaseModel
@@ -21,10 +17,15 @@ from pydantic import BaseModel
 from engine.catalogue.model import Catalogue
 from engine.codegen import GeneratedCode, ManimCodeGenerator, SourceMap
 from engine.document.model import SceneDocument, Settings
+from engine.render.runner import (
+    QUIET,
+    PreviewFileWriter,
+    RenderError,
+    run_scene,
+)
 
 RENDER_ERROR = -32000
-_SOURCE_NAME = "<scene>"
-_QUIET = {"disable_caching": True, "verbosity": "ERROR", "progress_bar": "none"}
+_QUIET = QUIET
 # Config per export format, and the SceneFileWriter attribute holding the result
 # (manim/manim/scene/scene_file_writer.py: movie_file_path, gif_file_path,
 # image_file_path).
@@ -65,21 +66,6 @@ class ExportResult(BaseModel):
     subtitles: str | None = None
 
 
-class RenderError(Exception):
-    """A Manim failure, located in the document when the traceback allows it."""
-
-    def __init__(
-        self, message: str, node: str | None, step: int | None, line: int | None
-    ) -> None:
-        super().__init__(message)
-        self.node = node
-        self.step = step
-        self.line = line
-
-    def data(self) -> dict[str, Any]:
-        return {"node": self.node, "step": self.step, "line": self.line}
-
-
 Progress = Callable[[float], None]
 
 
@@ -102,21 +88,6 @@ class Renderer(Protocol):
         fmt: str = "mp4",
         progress: Progress | None = None,
     ) -> ExportResult: ...
-
-
-class _PreviewFileWriter(SceneFileWriter):
-    """Previews write no sound or subtitle files and tolerate missing sounds."""
-
-    def write_subcaption_file(self) -> None:
-        return
-
-    def add_sound(
-        self, sound_file: Any, time: Any = None, gain: Any = None, **kwargs: Any
-    ) -> None:
-        try:
-            super().add_sound(sound_file, time, gain, **kwargs)
-        except OSError:
-            pass
 
 
 class _StopAtRenderer(CairoRenderer):
@@ -158,11 +129,11 @@ class CairoRenderService:
         record = path.with_suffix(".json")
         if path.exists() and record.exists():
             return FrameResult.model_validate_json(record.read_text())
-        instance, locals_, renderer = _run(
+        instance, locals_, renderer = run_scene(
             generated,
             scene.name,
             {**overrides, "dry_run": True},
-            lambda: _StopAtRenderer(time, None, file_writer_class=_PreviewFileWriter),
+            lambda: _StopAtRenderer(time, None, file_writer_class=PreviewFileWriter),
         )
         self.render_count += 1
         Image.fromarray(renderer.get_frame(), "RGBA").save(path)
@@ -196,7 +167,7 @@ class CairoRenderService:
             # An absolute output name keeps Manim's subtitle file inside the work dir.
             "output_file": str(work / scene.name),
         }
-        instance, _, renderer = _run(
+        instance, _, renderer = run_scene(
             generated,
             scene.name,
             overrides,
@@ -239,53 +210,6 @@ def _config_for(settings: Settings, width: int | None) -> dict[str, Any]:
         "frame_rate": settings.frame_rate,
         "background_color": settings.background_color,
     }
-
-
-def _run(
-    generated: GeneratedCode,
-    scene_name: str,
-    overrides: dict[str, Any],
-    make_renderer: Callable[[], _StopAtRenderer],
-) -> tuple[Any, dict[str, Any], _StopAtRenderer]:
-    """Run the generated scene. Returns the scene, construct's locals, and the renderer.
-
-    The renderer is created inside ``tempconfig`` because Manim's camera reads
-    the resolution and frame rate from the global config when it is built.
-    """
-    namespace: dict[str, Any] = {}
-    captured: dict[str, Any] = {}
-    try:
-        exec(compile(generated.code, _SOURCE_NAME, "exec"), namespace)
-        construct_code = namespace[scene_name].construct.__code__
-
-        def profiler(frame: Any, event: str, arg: Any) -> None:
-            if event == "return" and frame.f_code is construct_code:
-                captured.update(frame.f_locals)
-
-        with tempconfig(overrides):
-            renderer = make_renderer()
-            instance = namespace[scene_name](renderer=renderer)
-            previous = sys.getprofile()
-            sys.setprofile(profiler)
-            try:
-                instance.render()
-            finally:
-                sys.setprofile(previous)
-    except Exception as exc:
-        raise _locate(exc, generated.source_map) from exc
-    return instance, captured, renderer
-
-
-def _locate(exc: Exception, source_map: SourceMap) -> RenderError:
-    line = None
-    if isinstance(exc, SyntaxError) and exc.filename == _SOURCE_NAME:
-        line = exc.lineno
-    for frame in traceback.extract_tb(exc.__traceback__):
-        if frame.filename == _SOURCE_NAME:
-            line = frame.lineno
-    node = next((n for n, lines in source_map.nodes.items() if line in lines), None)
-    step = next((s for s, lines in source_map.steps.items() if line in lines), None)
-    return RenderError(f"{type(exc).__name__}: {exc}", node, step, line)
 
 
 def _bounds(scene: Any, locals_: dict[str, Any], source_map: SourceMap) -> list[Bounds]:

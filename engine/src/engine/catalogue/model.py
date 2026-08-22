@@ -37,6 +37,11 @@ class TypeRef(BaseModel):
     choices: list[str] | None = None
 
 
+def is_class_reference(type_ref: TypeRef) -> bool:
+    """A ``type[X]`` parameter takes a class, for example ``animation_class=FadeIn``."""
+    return type_ref.annotation.startswith(("type[", "Type["))
+
+
 class Parameter(BaseModel):
     name: str
     type: TypeRef
@@ -60,6 +65,8 @@ class Descriptor(BaseModel):
     doc: str = ""
     is_vmobject: bool = False
     hidden: bool = False
+    # Functions only: the shape a Function port compares against, "(float) -> float".
+    signature: str | None = None
 
 
 class ColorEntry(BaseModel):
@@ -71,4 +78,6 @@ class Catalogue(BaseModel):
     manim_version: str
     entries: list[Descriptor]
     colors: list[ColorEntry]
+    # Direction and point constants a Vector port accepts by name (ORIGIN, UP, ...).
+    directions: list[str]
     unknown_annotations: list[str]

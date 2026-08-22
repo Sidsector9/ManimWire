@@ -42,13 +42,18 @@ export function xToTime(geometry: Geometry, x: number): number {
   return Math.max(0, (x - geometry.labelWidth) / geometry.pixelsPerSecond)
 }
 
-/** Row labels: the scene row first, then the engine's object rows. */
-export function rowLabels(layout: TimelineLayout): string[] {
-  return [SCENE_ROW, ...layout.rows]
+export interface RowInfo {
+  id: string
+  label: string
 }
 
-function rowIndex(rows: string[], name: string): number {
-  const index = rows.indexOf(name)
+/** Rows: the scene row first, then the engine's object rows (node id plus display label). */
+export function rowLabels(layout: TimelineLayout): RowInfo[] {
+  return [{ id: SCENE_ROW, label: SCENE_ROW }, ...layout.rows]
+}
+
+function rowIndex(rows: RowInfo[], id: string): number {
+  const index = rows.findIndex((r) => r.id === id)
   return index === -1 ? 0 : index
 }
 

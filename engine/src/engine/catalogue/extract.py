@@ -189,6 +189,25 @@ def method_descriptor(
     )
 
 
+_SIGNATURE_NAMES = {
+    PortType.NUMBER: "float",
+    PortType.BOOLEAN: "bool",
+    PortType.TEXT: "str",
+    PortType.VECTOR: "point",
+}
+
+
+def function_signature(parameters: list[Parameter], returns: TypeRef) -> str:
+    """The shape Function ports use, from required parameters: ``(float) -> float``."""
+    inputs = ", ".join(
+        _SIGNATURE_NAMES.get(p.type.type, p.type.annotation or "any")
+        for p in parameters
+        if p.default is None and p.kind != "var_positional"
+    )
+    output = _SIGNATURE_NAMES.get(returns.type, returns.annotation or "any")
+    return f"({inputs}) -> {output}"
+
+
 def function_descriptor(
     name: str,
     function: Callable[..., Any],
@@ -198,6 +217,9 @@ def function_descriptor(
 ) -> Descriptor:
     signature = inspect.signature(function)
     parameters, accepts_kwargs = _parameters(signature, name, context, None, set())
+    returns = map_annotation(
+        _annotation_text(signature.return_annotation), context, None
+    )
     return Descriptor(
         name=name,
         qualname=name,
@@ -206,8 +228,7 @@ def function_descriptor(
         category=category,
         parameters=parameters,
         accepts_kwargs=accepts_kwargs,
-        returns=map_annotation(
-            _annotation_text(signature.return_annotation), context, None
-        ),
+        returns=returns,
         doc=first_paragraph(function.__doc__),
+        signature=function_signature(parameters, returns),
     )

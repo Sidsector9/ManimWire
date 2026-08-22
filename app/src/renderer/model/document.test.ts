@@ -7,6 +7,8 @@ import {
   connectedPorts,
   disconnect,
   emptyDocument,
+  moveAnimation,
+  moveStep,
   nextPosition,
   parseDocument,
   removeNodes,
@@ -121,5 +123,43 @@ describe('parseDocument', () => {
   it('places library nodes to the right of the last one', () => {
     expect(nextPosition({ name: 'S', nodes: [], edges: [], steps: [] })).toEqual([40, 60])
     expect(nextPosition(starterDocument().scenes[0]!)).toEqual([740, 60])
+  })
+})
+
+describe('moveAnimation and moveStep', () => {
+  const base = (): ReturnType<typeof emptyDocument> => {
+    let doc = addNode(emptyDocument(), 0, 'Create', [0, 0], {}, 'a')
+    doc = addNode(doc, 0, 'FadeIn', [0, 0], {}, 'b')
+    doc = addStep(doc, 0, { kind: 'play', animations: ['a', 'b'] })
+    doc = addStep(doc, 0, { kind: 'wait', duration: 1 })
+    return addStep(doc, 0, { kind: 'play', animations: [] })
+  }
+
+  it('moves an animation into another play step and drops an emptied step', () => {
+    const doc = moveAnimation(base(), 0, 'a', 0, 2)
+    expect(doc.scenes[0]!.steps).toEqual([
+      { kind: 'play', animations: ['b'] },
+      { kind: 'wait', duration: 1 },
+      { kind: 'play', animations: ['a'] }
+    ])
+    const alone = moveAnimation(doc, 0, 'b', 0, 2)
+    expect(alone.scenes[0]!.steps).toEqual([{ kind: 'wait', duration: 1 }, { kind: 'play', animations: ['a', 'b'] }])
+  })
+
+  it('appends a new play step when the target is null', () => {
+    const doc = moveAnimation(base(), 0, 'a', 0, null)
+    expect(doc.scenes[0]!.steps.at(-1)).toEqual({ kind: 'play', animations: ['a'] })
+  })
+
+  it('leaves the document unchanged for a target that is not a play step', () => {
+    const doc = base()
+    expect(moveAnimation(doc, 0, 'a', 0, 1)).toBe(doc)
+    expect(moveAnimation(doc, 0, 'a', 0, 9)).toBe(doc)
+    expect(moveAnimation(doc, 0, 'a', 1, 0)).toBe(doc)
+  })
+
+  it('reorders steps', () => {
+    const doc = moveStep(base(), 0, 2, 0)
+    expect(doc.scenes[0]!.steps.map((s) => s.kind)).toEqual(['play', 'play', 'wait'])
   })
 })

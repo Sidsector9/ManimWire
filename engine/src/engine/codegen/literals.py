@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from engine.catalogue.model import PortType, TypeRef
+from engine.catalogue.model import PortType, TypeRef, is_class_reference
 from engine.document.model import JsonValue
 
 
@@ -28,7 +28,9 @@ class LiteralFormatter:
         if kind is PortType.FUNCTION and isinstance(value, str):
             return value  # a Manim function such as smooth, validated by name
         if kind is PortType.TEXT and isinstance(value, str):
-            return (
-                value if type_ref.choices and value in type_ref.choices else repr(value)
-            )
+            if type_ref.choices and value in type_ref.choices:
+                return value
+            if is_class_reference(type_ref):
+                return value  # a Manim class such as FadeIn, validated by name
+            return repr(value)
         return repr(value)

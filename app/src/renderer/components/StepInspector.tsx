@@ -10,7 +10,7 @@ export function StepInspector({ index }: { index: number }) {
   const step = scene.steps[index]
   if (!step) return null
   const update = (change: Partial<Step>): void => store.updateStep(index, { ...step, ...change } as Step)
-  const rateFunctions = entries.filter((e) => e.category === 'rate_functions').map((e) => e.name)
+  const rateFunctions = entries.filter((e) => e.kind === 'function' && e.signature === '(float) -> float').map((e) => e.name)
   const nameOf = (id: string): string => scene.nodes.find((n) => n.id === id)?.label ?? id
 
   return (

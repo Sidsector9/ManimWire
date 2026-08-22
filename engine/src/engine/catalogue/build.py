@@ -21,6 +21,7 @@ from manim.scene.scene import Scene
 from manim.utils.color import ManimColor, manim_colors
 
 from engine.catalogue.annotations import TypeContext
+from engine.catalogue.defaults import DIRECTION_NAMES
 from engine.catalogue.extract import (
     class_descriptor,
     function_descriptor,
@@ -205,6 +206,7 @@ def build_catalogue() -> Catalogue:
         manim_version=version("manim"),
         entries=entries,
         colors=colors,
+        directions=list(DIRECTION_NAMES),
         unknown_annotations=sorted(context.unknown),
     )
 
