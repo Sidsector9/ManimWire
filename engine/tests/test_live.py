@@ -141,8 +141,11 @@ def test_updater_from_frame_delta_and_time(catalogue: Catalogue) -> None:
             edge("t", "setv", "x"),
         ],
         steps=[
+            AddStep(mobjects=["sq", "lbl"]),
             WaitStep(duration=1.0),
             UpdatingStep(mobjects=["sq"], action="suspend"),
+            WaitStep(duration=1.0),
+            UpdatingStep(mobjects=["sq"], action="resume"),
             WaitStep(duration=1.0),
         ],
     )
@@ -160,8 +163,9 @@ def test_updater_from_frame_delta_and_time(catalogue: Catalogue) -> None:
     layout = layout_timeline(scene, catalogue)
     assert layout.error is None
     bands = {(b.row, b.start, b.end) for b in layout.bands}
-    assert bands == {("sq", 0.0, 1.0), ("lbl", 0.0, 2.0)}
-    assert [m.kind for m in layout.markers] == ["suspend"]
+    assert bands == {("sq", 0.0, 1.0), ("sq", 2.0, 3.0), ("lbl", 0.0, 3.0)}
+    assert [m.kind for m in layout.markers] == ["add", "suspend", "resume"]
+    assert [r.id for r in layout.rows] == ["sq", "lbl"]
 
 
 def test_frame_delta_outside_an_updater_is_refused(catalogue: Catalogue) -> None:
@@ -282,8 +286,101 @@ def test_derivative_example_exports(catalogue: Catalogue, tmp_path: Path) -> Non
     assert generated.issues == []
     layout = layout_timeline(scene, catalogue)
     assert layout.error is None
-    assert {b.row for b in layout.bands} == {"dot", "tangent"}
+    assert {(b.row, b.start, b.end) for b in layout.bands} == {
+        ("dot", 2.0, 9.0),
+        ("tangent", 2.0, 9.0),
+    }
     settings = Settings.model_validate({**SMALL, "frame_rate": 5})
     result = CairoRenderService(tmp_path).export(scene, catalogue, settings, tmp_path)
     assert Path(result.path).name == "Tangent.mp4"
     assert Path(result.path).stat().st_size > 1000
+
+
+def test_builtin_numbers_are_not_objects(catalogue: Catalogue) -> None:
+    scene = SceneDocument(
+        nodes=[
+            Node(id="t", catalogue="SceneTime"),
+            Node(id="st", catalogue="State"),
+            Node(id="fade", catalogue="FadeIn"),
+            Node(id="shift", catalogue="Mobject.shift", values={"vectors": "UP"}),
+        ],
+        edges=[edge("t", "fade", "mobjects"), edge("st", "shift", "self")],
+        steps=[AddStep(mobjects=["st"]), UpdatingStep(mobjects=["t"], action="clear")],
+    )
+    issues = ManimCodeGenerator().generate(scene, catalogue).issues
+    assert sorted(i.code for i in issues) == [
+        "not_mobject",
+        "not_mobject",
+        "type_mismatch",
+        "type_mismatch",
+    ]
+
+
+def test_reserved_expression_names_and_state_keeps_dt_inside(
+    catalogue: Catalogue,
+) -> None:
+    for text in ("PI * pi", "np + 1", "expr * 2", "self"):
+        with pytest.raises(ExpressionError, match="cannot be used"):
+            parse_expression(text)
+    scene = SceneDocument(
+        nodes=[
+            Node(id="dt", catalogue="FrameDelta"),
+            Node(id="st", catalogue="State"),
+            Node(id="grow", catalogue="Expression", values={"expr": "s + dt"}),
+            Node(id="start", catalogue="Expression", values={"expr": "2 * 3"}),
+            Node(id="c", catalogue="Circle"),
+        ],
+        edges=[
+            edge("st", "grow", "s"),
+            edge("dt", "grow", "dt"),
+            edge("grow", "st", "next"),
+            edge("start", "st", "initial"),
+            edge("st", "c", "radius"),
+        ],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert "        state = [expression]\n" in generated.code
+    assert "always_redraw(lambda: Circle(radius=state[0]))" in generated.code
+
+
+def test_methods_on_a_live_object_become_updaters(catalogue: Catalogue) -> None:
+    scene = SceneDocument(
+        nodes=[
+            Node(id="x", catalogue="ValueTracker", values={"value": 1.0}),
+            Node(id="c", catalogue="Circle"),
+            Node(id="fill", catalogue="VMobject.set_fill", values={"color": "BLUE"}),
+            Node(id="ax", catalogue="Axes"),
+            Node(id="p", catalogue="Axes.coords_to_point"),
+            Node(id="d", catalogue="Dot"),
+            Node(id="move", catalogue="Mobject.move_to"),
+            Node(
+                id="a",
+                catalogue="Animate",
+                chain=[MethodCall(method="move_to", values={})],
+            ),
+        ],
+        edges=[
+            edge("x", "c", "radius", live=True),
+            edge("c", "fill", "self"),
+            edge("ax", "p", "self"),
+            edge("x", "p", "coords", live=True),
+            edge("p", "move", "point_or_mobject"),
+            edge("d", "move", "self"),
+            edge("d", "a", "mobject"),
+            edge("p", "a", "1.move_to.point_or_mobject"),
+        ],
+        steps=[PlayStep(animations=["a"])],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    code = generated.code
+    assert "circle.add_updater(lambda mob: mob.set_fill(color=BLUE))" in code
+    assert (
+        "dot.add_updater(lambda mob: mob.move_to("
+        "axes.coords_to_point(value_tracker.get_value())))"
+    ) in code
+    assert (
+        "self.play(dot.animate.move_to("
+        "axes.coords_to_point(value_tracker.get_value())))"
+    ) in code

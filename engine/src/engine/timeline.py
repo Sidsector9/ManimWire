@@ -22,7 +22,9 @@ from engine.catalogue.model import Catalogue, Descriptor, PortType
 from engine.codegen import ManimCodeGenerator
 from engine.document.model import (
     SELF_PORT,
+    AddStep,
     PlayStep,
+    RemoveStep,
     SceneDocument,
     SectionStep,
     SoundStep,
@@ -173,11 +175,7 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
     markers: list[Marker] = []
     spans: list[StepSpan] = []
     section_starts: list[tuple[SectionStep, float]] = []
-    bands: list[Band] = []
-    # Updaters run from construction until suspended or cleared, and again after resume.
-    open_bands: dict[str, float] = {
-        context.root(n): 0.0 for n in generated.source_map.live
-    }
+    events: list[tuple[float, str, str]] = []  # (time, row, enter|leave|action)
     plays = iter(renderer.plays)
     time = 0.0
     for position, step in enumerate(scene.steps):
@@ -189,6 +187,12 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
             pairs = list(zip(step.animations, play.animations, strict=False))
             for node_id, animation in pairs:
                 _collect(animation, node_id, position, time, None, 0, context, bars)
+                # Scene.play adds the animated mobjects; a remover takes its own out.
+                for row in _animation_rows(node_id, context):
+                    if animation.is_remover():
+                        events.append((end, row, "leave"))
+                    else:
+                        events.append((time, row, "enter"))
             label = ", ".join(_label(a, n, context) for n, a in pairs)
         elif isinstance(step, WaitStep):
             label = f"wait {play.duration:g} s"
@@ -216,14 +220,13 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
                     step=position, kind=step.action, time=time, label=label, rows=rows
                 )
             )
-            for row in rows:
-                if step.action == "resume":
-                    open_bands.setdefault(row, time)
-                elif row in open_bands:
-                    bands.append(Band(row=row, start=open_bands.pop(row), end=time))
+            events.extend((time, row, step.action) for row in rows)
         else:
             mobjects = getattr(step, "mobjects", [])
             rows = [context.root(m) for m in mobjects if m in context.nodes]
+            if isinstance(step, AddStep | RemoveStep):
+                kind = "enter" if isinstance(step, AddStep) else "leave"
+                events.extend((time, row, kind) for row in rows)
             label = ", ".join(_row_label(r, context) for r in rows)
             markers.append(
                 Marker(step=position, kind=step.kind, time=time, label=label, rows=rows)
@@ -241,10 +244,12 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
         )
         for i, (step, start) in enumerate(section_starts)
     ]
-    bands.extend(
-        Band(row=row, start=start, end=renderer.time)
-        for row, start in open_bands.items()
-    )
+    live_rows = {
+        root
+        for root in (context.root(n) for n in generated.source_map.live)
+        if (d := context.descriptor(root)) is not None and d.kind != "builtin"
+    }
+    bands = _bands(live_rows, events, renderer.time)
     return TimelineLayout(
         rows=_rows(context, bars, markers, bands),
         steps=spans,
@@ -254,6 +259,38 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
         bands=bands,
         total=renderer.time,
     )
+
+
+def _bands(
+    rows: set[str], events: list[tuple[float, str, str]], total: float
+) -> list[Band]:
+    """Updaters run while the object is in the scene, not suspended, and not cleared."""
+    bands: list[Band] = []
+    state = {
+        row: {"in_scene": False, "updating": True, "cleared": False} for row in rows
+    }
+    opened: dict[str, float] = {}
+    for time, row, kind in sorted(events, key=lambda e: e[0]):
+        if row not in state:
+            continue
+        flags = state[row]
+        if kind == "enter":
+            flags["in_scene"] = True
+        elif kind == "leave":
+            flags["in_scene"] = False
+        elif kind == "suspend":
+            flags["updating"] = False
+        elif kind == "resume":
+            flags["updating"] = True
+        elif kind == "clear":
+            flags["cleared"] = True
+        active = flags["in_scene"] and flags["updating"] and not flags["cleared"]
+        if active and row not in opened:
+            opened[row] = time
+        elif not active and row in opened:
+            bands.append(Band(row=row, start=opened.pop(row), end=time))
+    bands.extend(Band(row=row, start=start, end=total) for row, start in opened.items())
+    return bands
 
 
 def _empty(error: str) -> TimelineLayout:
@@ -374,6 +411,7 @@ def _rows(
         descriptor = context.descriptor(node.id)
         if (
             descriptor is not None
+            and descriptor.kind != "builtin"
             and descriptor.returns.type in _MOBJECT_TYPES
             and (descriptor.kind != "method" or descriptor.returns.annotation != "Self")
         ):

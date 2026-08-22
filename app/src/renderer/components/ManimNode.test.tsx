@@ -39,6 +39,7 @@ function renderNode(collapsed: boolean, connected: string[] = []) {
       node: { id: 'c', catalogue: 'Circle', values: { radius: 2 }, label: null, position: [0, 0], collapsed },
       descriptor: circle,
       connected,
+      live: [],
       issues: []
     }
   }
@@ -71,7 +72,8 @@ describe('ManimNode', () => {
     expect(screen.getByText('Circle')).toBeTruthy()
     expect(screen.getByText('radius')).toBeTruthy()
     expect(screen.getByText('stroke_width')).toBeTruthy()
-    expect(screen.getByText('connected')).toBeTruthy()
+    // A connected value port is a live/once toggle; it reads once until made live.
+    expect(screen.getByText('once')).toBeTruthy()
     expect(screen.queryByText('color')).toBeNull()
     expect(screen.queryByText('fill_opacity')).toBeNull()
     expect(screen.getByText('+2')).toBeTruthy()

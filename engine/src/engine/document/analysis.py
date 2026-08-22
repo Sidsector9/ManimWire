@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from functools import cached_property
 
-from engine.catalogue.builtins import ALWAYS_LIVE, EXPRESSION
+from engine.catalogue.builtins import ALWAYS_LIVE, ANIMATE, EXPRESSION, STATE
 from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType, TypeRef
 from engine.document.model import SELF_PORT, Edge, Node, SceneDocument
 from engine.expression import ExpressionError, parse_expression, signature
@@ -22,6 +22,11 @@ OBJECT_TYPES = {
     PortType.ANIMATION,
     PortType.SCENE,
 }
+
+
+def chain_port(position: int, method: str, parameter: str) -> str:
+    """Port name for one parameter of one call in an Animate chain."""
+    return f"{position + 1}.{method}.{parameter}"
 
 
 class Graph:
@@ -71,10 +76,14 @@ class Graph:
         ]
 
     def parameters(self, node_id: str) -> list[Parameter]:
-        """Catalogue parameters, plus one number port per Expression variable."""
+        """Catalogue parameters, plus the ports a node grows from its own values:
+        one number port per Expression variable, one port per Animate chain argument.
+        """
         descriptor = self.descriptor(node_id)
         if descriptor is None:
             return []
+        if descriptor.name == ANIMATE.name:
+            return descriptor.parameters + self.chain_parameters(node_id)
         if descriptor.name != EXPRESSION.name:
             return descriptor.parameters
         variables = self.expressions.get(node_id, ([], None))[0]
@@ -94,11 +103,36 @@ class Graph:
             for name in variables
         ]
 
+    def chain_parameters(self, node_id: str) -> list[Parameter]:
+        targets = self.sources(node_id, "mobject")
+        if not targets:
+            return []
+        ports: list[Parameter] = []
+        for position, call in enumerate(self.nodes[node_id].chain):
+            method = self.method_descriptor(targets[0], call.method)
+            for param in method.parameters if method else []:
+                ports.append(
+                    param.model_copy(
+                        update={
+                            "name": chain_port(position, call.method, param.name),
+                            "display": "chain",
+                            "owner": ANIMATE.name,
+                        }
+                    )
+                )
+        return ports
+
     def output_type(self, node_id: str) -> TypeRef:
         """What a node produces. An Expression is a function of its free variables."""
         descriptor = self.descriptor(node_id)
         if descriptor is None:
             return TypeRef(type=PortType.ANY, annotation="")
+        if (
+            descriptor.returns.type is PortType.LIVE_NUMBER
+            and descriptor.kind != "class"
+        ):
+            # Time, frame delta, and state are numbers; only a tracker is an object.
+            return TypeRef(type=PortType.NUMBER, annotation="float")
         if descriptor.name == EXPRESSION.name:
             free = self.free_variables(node_id)
             if free:
@@ -131,6 +165,10 @@ class Graph:
                 self.is_value_node(edge.source) and self.is_live(edge.source)
             ):
                 live = True
+            # A method on an object that is redrawn every frame must run every frame
+            # too, or the redraw discards its effect.
+            if edge.port == SELF_PORT and self.is_live(edge.source):
+                live = True
         self._live[node_id] = live
         return live
 
@@ -140,6 +178,8 @@ class Graph:
             return self._dt[node_id]
         self._dt[node_id] = False
         descriptor = self.descriptor(node_id)
+        if descriptor is not None and descriptor.name == STATE.name:
+            return False  # State consumes dt inside its own updater
         found = descriptor is not None and descriptor.name == "FrameDelta"
         for edge in self.edges_in.get(node_id, []):
             source = self.descriptor(edge.source)

@@ -13,7 +13,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Descriptor, TypeRef } from '../../shared/engine'
 import { starterDocument } from '../model/document'
 import { toFlow, type ManimFlowNode } from '../model/flow'
-import { effectiveDescriptor, isLiveSource, isObjectType } from '../model/live'
+import { effectiveDescriptor, isObjectType, liveByDefault, producedType } from '../model/live'
 import { acceptsManyConnections, compatible, portType } from '../model/types'
 import { selectExpressionNames, selectIndex, useCatalogueStore } from '../store/catalogue'
 import { currentScene, useDocumentStore } from '../store/document'
@@ -42,7 +42,7 @@ export function Graph() {
     (id: string | null | undefined): Descriptor | undefined => {
       const node = scene.nodes.find((n) => n.id === id)
       const descriptor = node ? index.get(node.catalogue) : undefined
-      return node && descriptor ? effectiveDescriptor(node, descriptor, scene, expressionNames) : undefined
+      return node && descriptor ? effectiveDescriptor(node, descriptor, scene, expressionNames, index) : undefined
     },
     [scene, index, expressionNames]
   )
@@ -79,7 +79,7 @@ export function Graph() {
       if (!source || !target) return false
       const port = connection.targetHandle
       const accepted = portType(target, port, index)
-      if (!accepted || !compatible(source.returns, accepted)) return false
+      if (!accepted || !compatible(producedType(source), accepted)) return false
       const already = scene.edges.some((e) => e.target === connection.target && e.port === port && e.source !== connection.source)
       return !already || acceptsManyConnections(target, port)
     },
@@ -93,8 +93,7 @@ export function Graph() {
       const port = connection.targetHandle
       const target = describe(connection.target)
       if (!port || !target) return
-      const accepted = portType(target, port, index)
-      const live = accepted !== null && !isObjectType(accepted) && isLiveSource(scene, connection.source, index)
+      const live = liveByDefault(scene, connection.source, portType(target, port, index), index)
       store.connect({ source: connection.source, target: connection.target, port, live })
     },
     [store, scene, index, describe]
@@ -117,7 +116,7 @@ export function Graph() {
       const descriptor = describe(state.fromNode.id)
       if (!descriptor) return
       const point = 'clientX' in event ? { x: event.clientX, y: event.clientY } : { x: mouse.current.x, y: mouse.current.y }
-      setQuickAdd({ screen: point, flow: screenToFlowPosition(point), from: { node: state.fromNode.id, type: descriptor.returns } })
+      setQuickAdd({ screen: point, flow: screenToFlowPosition(point), from: { node: state.fromNode.id, type: producedType(descriptor) } })
     },
     [describe, screenToFlowPosition]
   )

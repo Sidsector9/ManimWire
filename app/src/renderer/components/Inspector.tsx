@@ -1,6 +1,6 @@
 import type { Descriptor, Parameter } from '../../shared/engine'
 import { SELF_PORT, connectedPorts, type DocNode, type JsonValue, type MethodCall, type Scene, type UpdatingAction } from '../model/document'
-import { ANIMATE, chainMethods, effectiveDescriptor, isLiveSource, rootOf } from '../model/live'
+import { ANIMATE, chainMethods, chainPort, effectiveDescriptor, isLiveSource, rootOf } from '../model/live'
 import type { DescriptorIndex } from '../model/types'
 import { TYPE_COLOR, selectExpressionNames, selectIndex, useCatalogueStore } from '../store/catalogue'
 import { currentScene, useDocumentStore } from '../store/document'
@@ -40,14 +40,15 @@ export function Inspector() {
     )
   }
 
-  const descriptor = effectiveDescriptor(node, catalogued, scene, expressionNames)
+  const descriptor = effectiveDescriptor(node, catalogued, scene, expressionNames, index)
   const connected = connectedPorts(scene, node.id)
   const groups = groupByOwner(descriptor)
   const lines = (sourceMap.nodes[node.id] ?? []).map((n) => code.split('\n')[n - 1] ?? '').map((l) => l.trim())
   const nodeIssues = issues.filter((i) => i.node === node.id)
   const inPlay = scene.steps.some((s) => s.kind === 'play' && s.animations.includes(node.id))
   const live = isLiveSource(scene, node.id, index)
-  const hasUpdaters = sourceMap.live.some((id) => rootOf(scene, id, index) === node.id)
+  // Only Manim objects have suspend_updating and friends; a State runs a scene updater.
+  const hasUpdaters = catalogued.kind !== 'builtin' && sourceMap.live.some((id) => rootOf(scene, id, index) === node.id)
 
   return (
     <section className="panel inspector">
@@ -100,7 +101,7 @@ export function Inspector() {
           </div>
         ))}
         {descriptor.name === ANIMATE && (
-          <ChainEditor node={node} scene={scene} index={index} onChange={(chain) => store.updateNode(node.id, { chain })} />
+          <ChainEditor node={node} scene={scene} index={index} connected={connected} onChange={(chain) => store.updateNode(node.id, { chain })} />
         )}
         {hasUpdaters && (
           <div>
@@ -134,11 +135,13 @@ function ChainEditor({
   node,
   scene,
   index,
+  connected,
   onChange
 }: {
   node: DocNode
   scene: Scene
   index: DescriptorIndex
+  connected: Set<string>
   onChange(chain: MethodCall[]): void
 }) {
   const source = scene.edges.find((e) => e.target === node.id && e.port === 'mobject')
@@ -168,7 +171,7 @@ function ChainEditor({
                   <Field
                     key={param.name}
                     param={param}
-                    connected={false}
+                    connected={connected.has(chainPort(at, call.method, param.name))}
                     value={call.values[param.name]}
                     onChange={(v) => {
                       const values = { ...call.values }
@@ -233,6 +236,7 @@ function Field({
 function groupByOwner(descriptor: Descriptor): [string, Parameter[]][] {
   const groups = new Map<string, Parameter[]>()
   for (const param of descriptor.parameters) {
+    if (param.display === 'chain') continue // shown with its call in the chain editor
     const list = groups.get(param.owner) ?? []
     list.push(param)
     groups.set(param.owner, list)

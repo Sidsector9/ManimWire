@@ -22,9 +22,9 @@ from engine.catalogue.builtins import (
     SCENE_TIME,
     STATE,
 )
-from engine.catalogue.model import Catalogue, Descriptor, PortType, TypeRef
+from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType, TypeRef
 from engine.codegen.literals import LiteralFormatter
-from engine.document.analysis import OBJECT_TYPES, Graph
+from engine.document.analysis import OBJECT_TYPES, Graph, chain_port
 from engine.document.model import (
     MOBJECT_STEP_METHODS,
     SELF_PORT,
@@ -32,6 +32,7 @@ from engine.document.model import (
     AddStep,
     BringToBackStep,
     BringToFrontStep,
+    JsonValue,
     Node,
     PlayStep,
     RemoveStep,
@@ -190,9 +191,7 @@ class _Build:
         name = self.new_variable(node, STATE)
         self.variables[node.id] = name
         params = {p.name: p for p in STATE.parameters}
-        initial = self.formatter.format(
-            node.values.get("initial", 0.0), params["initial"].type
-        )
+        initial = self.argument(node, params["initial"], default=0.0)
         self.line(f"{name} = [{initial}]", node.id)
         sources = self.graph.sources(node.id, "next")
         if sources:
@@ -262,26 +261,42 @@ class _Build:
         params = {p.name: p for p in ANIMATE.parameters}
         target_id = self.graph.sources(node.id, "mobject")[0]
         target = self.expression(target_id)
-        kwargs = [
-            f"{name}={self.formatter.format(node.values[name], params[name].type)}"
-            for name in ("run_time", "rate_func", "lag_ratio")
-            if name in node.values
-        ]
+        kwargs = []
+        for name in ("run_time", "rate_func", "lag_ratio"):
+            value = self.argument(node, params[name])
+            if value is not None:
+                kwargs.append(f"{name}={value}")
         chain = f"{target}.animate" + (f"({', '.join(kwargs)})" if kwargs else "")
-        for call in node.chain:
+        for position, call in enumerate(node.chain):
             method = self.graph.method_descriptor(target_id, call.method)
             assert method is not None  # validated
             parts = []
             for param in method.parameters:
-                if param.name not in call.values:
+                sources = self.graph.sources(
+                    node.id, chain_port(position, call.method, param.name)
+                )
+                if sources:
+                    value = self.expression(sources[0], param.type)
+                elif param.name in call.values:
+                    value = self.formatter.format(call.values[param.name], param.type)
+                else:
                     continue
-                value = self.formatter.format(call.values[param.name], param.type)
                 positional = param.kind == "var_positional" or (
                     param.default is None and param.kind == "positional"
                 )
                 parts.append(value if positional else f"{param.name}={value}")
             chain += f".{call.method}({', '.join(parts)})"
         return chain
+
+    def argument(
+        self, node: Node, param: Parameter, default: JsonValue = None
+    ) -> str | None:
+        """One argument: the connected value, else the literal, else ``default``."""
+        sources = self.graph.sources(node.id, param.name)
+        if sources:
+            return self.expression(sources[0], param.type)
+        value = node.values.get(param.name, default)
+        return None if value is None else self.formatter.format(value, param.type)
 
     def arguments(self, node: Node, descriptor: Descriptor) -> str:
         parts: list[str] = []

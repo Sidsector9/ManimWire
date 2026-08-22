@@ -540,6 +540,17 @@ body,
   font-size: 10px;
 }
 
+button.port-connected {
+  padding: 0;
+  font-family: var(--font-mono);
+  opacity: 0.8;
+}
+
+button.port-connected.live {
+  opacity: 1;
+  text-decoration: underline dashed;
+}
+
 .node-more {
   display: block;
   width: 100%;

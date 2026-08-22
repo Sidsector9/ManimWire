@@ -33,6 +33,8 @@ FUNCTIONS = {
     "max": "max",
 }
 CONSTANTS = {"pi": "PI", "tau": "TAU", "e": "np.e"}
+# Names the generated code uses around an expression; a variable would shadow them.
+RESERVED = {"expr", "np", "self", "mob", "PI", "TAU"}
 _OPERATORS = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod, ast.FloorDiv)
 
 
@@ -73,6 +75,8 @@ def parse_expression(text: str) -> ParsedExpression:
             if node.keywords:
                 raise ExpressionError("functions take positional arguments only")
         elif isinstance(node, ast.Name):
+            if node.id in RESERVED:
+                raise ExpressionError(f"{node.id} cannot be used as a variable name")
             if node.id not in FUNCTIONS and node.id not in CONSTANTS:
                 if node.id not in variables:
                     variables.append(node.id)

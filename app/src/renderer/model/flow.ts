@@ -12,6 +12,8 @@ export interface ManimNodeData extends Record<string, unknown> {
   /** The node's descriptor after per-node adjustments (Expression ports and output). */
   descriptor: Descriptor
   connected: string[]
+  /** Ports whose connection is live. */
+  live: string[]
   issues: Issue[]
 }
 
@@ -33,7 +35,7 @@ export function toFlow(
   for (const node of scene.nodes) {
     const descriptor = index.get(node.catalogue)
     if (!descriptor) continue
-    const effective = effectiveDescriptor(node, descriptor, scene, expressionNames)
+    const effective = effectiveDescriptor(node, descriptor, scene, expressionNames, index)
     descriptors.set(node.id, effective)
     nodes.push({
       id: node.id,
@@ -44,6 +46,7 @@ export function toFlow(
         node,
         descriptor: effective,
         connected: [...connectedPorts(scene, node.id)],
+        live: scene.edges.filter((e) => e.target === node.id && e.live).map((e) => e.port),
         issues: issues.filter((i) => i.node === node.id)
       }
     })

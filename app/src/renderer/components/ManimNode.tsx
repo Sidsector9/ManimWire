@@ -1,7 +1,7 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { SELF_PORT, visiblePorts } from '../model/document'
 import type { ManimFlowNode } from '../model/flow'
-import { ANIMATE, chainSummary } from '../model/live'
+import { ANIMATE, chainSummary, isObjectType } from '../model/live'
 import { portType } from '../model/types'
 import { TYPE_COLOR, selectIndex, useCatalogueStore } from '../store/catalogue'
 import { useDocumentStore } from '../store/document'
@@ -9,10 +9,11 @@ import { PortEditor } from './PortEditor'
 
 /** One node for any catalogue descriptor. Collapsed by default; +N reveals the rest. */
 export function ManimNode({ data }: NodeProps<ManimFlowNode>) {
-  const { node, descriptor, connected, issues } = data
+  const { node, descriptor, connected, live, issues } = data
   const index = useCatalogueStore(selectIndex)
   const setValue = useDocumentStore((s) => s.setValue)
   const updateNode = useDocumentStore((s) => s.updateNode)
+  const setPortLive = useDocumentStore((s) => s.setPortLive)
   const connectedSet = new Set(connected)
   const visible = visiblePorts(node, descriptor, connectedSet)
   const hidden = (descriptor.parameters.length + (descriptor.kind === 'method' ? 1 : 0)) - visible.length
@@ -46,7 +47,16 @@ export function ManimNode({ data }: NodeProps<ManimFlowNode>) {
             <Handle type="target" position={Position.Left} id={port} className="socket" style={{ borderColor: color, background: isConnected ? color : 'var(--panel)' }} />
             <span className="node-label">{port === SELF_PORT ? 'object' : port}</span>
             <span className="node-value">
-              {isConnected ? (
+              {isConnected && type && !isObjectType(type) ? (
+                <button
+                  className={`port-connected link${live.includes(port) ? ' live' : ''}`}
+                  style={{ color }}
+                  title={live.includes(port) ? 'Live: read every frame. Click to read once.' : 'Read once. Click to read every frame (an updater).'}
+                  onClick={() => setPortLive(node.id, port, !live.includes(port))}
+                >
+                  {live.includes(port) ? 'live' : 'once'}
+                </button>
+              ) : isConnected ? (
                 <span className="port-connected" style={{ color }}>
                   connected
                 </span>

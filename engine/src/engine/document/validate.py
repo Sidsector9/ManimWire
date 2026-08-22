@@ -17,7 +17,7 @@ from engine.catalogue.model import (
     TypeRef,
     is_class_reference,
 )
-from engine.document.analysis import Graph
+from engine.document.analysis import Graph, chain_port
 from engine.document.model import (
     SELF_PORT,
     Document,
@@ -201,6 +201,7 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
         for param in graph.parameters(node.id):
             if (
                 _required(param)
+                and param.display != "chain"  # checked with its call below
                 and param.name not in node.values
                 and (node.id, param.name) not in connected
             ):
@@ -243,7 +244,7 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
     issues.extend(_cycles(scene))
 
     for position, step in enumerate(scene.steps):
-        issues.extend(_step_issues(position, step, nodes, descriptors, functions))
+        issues.extend(_step_issues(position, step, graph, descriptors, functions))
     return issues
 
 
@@ -299,7 +300,12 @@ def _animate_issues(
                     _issue("bad_chain", f"{call.method}.{name}: {problem}", node.id)
                 )
         for param in method.parameters:
-            if _required(param) and param.name not in call.values:
+            port = chain_port(position, call.method, param.name)
+            if (
+                _required(param)
+                and param.name not in call.values
+                and not graph.sources(node.id, port)
+            ):
                 issues.append(
                     _issue(
                         "bad_chain",
@@ -313,11 +319,12 @@ def _animate_issues(
 def _step_issues(
     position: int,
     step: Step,
-    nodes: Mapping[str, Node],
+    graph: Graph,
     descriptors: Mapping[str, Descriptor],
     functions: Mapping[str, str],
 ) -> list[Issue]:
     issues: list[Issue] = []
+    nodes = graph.nodes
 
     def bad(code: str, message: str, node: str | None = None) -> None:
         issues.append(Issue(code=code, message=message, node=node, step=position))
@@ -367,7 +374,8 @@ def _step_issues(
                     node_id,
                 )
         elif not compatible(
-            descriptor.returns, TypeRef(type=PortType.MOBJECT, annotation="Mobject")
+            graph.output_type(node_id),
+            TypeRef(type=PortType.MOBJECT, annotation="Mobject"),
         ):
             bad("not_mobject", f"{descriptor.qualname} is not a mobject", node_id)
     return issues

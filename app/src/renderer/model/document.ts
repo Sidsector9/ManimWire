@@ -196,7 +196,9 @@ export function visiblePorts(node: DocNode, descriptor: Descriptor, connected: S
   const ports = descriptor.parameters.map((p) => p.name)
   if (descriptor.kind === 'method') ports.unshift(SELF_PORT)
   if (!node.collapsed) return ports
-  return ports.filter((p) => connected.has(p) || p in node.values || p === SELF_PORT)
+  // Expression variables are the node's purpose, so they stay visible while collapsed.
+  const always = new Set(descriptor.parameters.filter((p) => p.owner === 'Expression').map((p) => p.name))
+  return ports.filter((p) => connected.has(p) || p in node.values || p === SELF_PORT || always.has(p))
 }
 
 export function connectedPorts(scene: Scene, nodeId: string): Set<string> {

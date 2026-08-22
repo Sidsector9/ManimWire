@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { Descriptor, TypeRef } from '../../shared/engine'
-import { acceptingPorts, type DescriptorIndex } from '../model/types'
+import { liveByDefault } from '../model/live'
+import { acceptingPorts, portType, type DescriptorIndex } from '../model/types'
 import {
   addNode,
   addStep,
@@ -48,6 +49,8 @@ interface DocumentStore {
   setValue(id: string, port: string, value: JsonValue | undefined): void
   connect(edge: DocEdge): void
   disconnect(edge: Pick<DocEdge, 'source' | 'target' | 'port'>): void
+  /** Make every connection into a port live (an updater) or one-time. */
+  setPortLive(target: string, port: string, live: boolean): void
   addStep(step: Step, at?: number): void
   removeStep(at: number): void
   updateStep(at: number, step: Step): void
@@ -102,7 +105,10 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
       const id = newId()
       let next = addNode(doc, sceneIndex, descriptor.qualname, position, {}, id)
       const port = from ? acceptingPorts(from.type, descriptor, index)[0] : undefined
-      if (from && port) next = connect(next, sceneIndex, { source: from.node, target: id, port, live: false })
+      if (from && port) {
+        const live = liveByDefault(doc.scenes[sceneIndex]!, from.node, portType(descriptor, port, index), index)
+        next = connect(next, sceneIndex, { source: from.node, target: id, port, live })
+      }
       if (descriptor.returns.type === 'animation') next = addStep(next, sceneIndex, { kind: 'play', animations: [id] })
       record(next)
       set({ selected: id })
@@ -125,6 +131,17 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     setValue: (id, port, value) => coalesce(`${id}:${port}`, setValue(get().doc, get().sceneIndex, id, port, value)),
     connect: (edge) => record(connect(get().doc, get().sceneIndex, edge)),
     disconnect: (edge) => record(disconnect(get().doc, get().sceneIndex, edge)),
+    setPortLive: (target, port, live) => {
+      const { doc, sceneIndex } = get()
+      const scene = doc.scenes[sceneIndex]
+      if (!scene) return
+      record({
+        ...doc,
+        scenes: doc.scenes.map((s, i) =>
+          i === sceneIndex ? { ...s, edges: s.edges.map((e) => (e.target === target && e.port === port ? { ...e, live } : e)) } : s
+        )
+      })
+    },
     addStep: (step, at) => record(addStep(get().doc, get().sceneIndex, step, at)),
     removeStep: (at) => {
       record(removeStep(get().doc, get().sceneIndex, at))
