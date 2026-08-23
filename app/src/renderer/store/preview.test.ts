@@ -15,7 +15,7 @@ function fakeEngine() {
 
 const generated = (name: string) => ({ code: `class ${name}`, source_map: { nodes: {}, steps: {}, variables: {} }, issues: [] })
 const emptyLayout = { rows: [], steps: [], bars: [], markers: [], sections: [], total: 0 }
-const withName = (name: string): Doc => ({ ...emptyDocument(), scenes: [{ name, nodes: [], edges: [], steps: [] }] })
+const withName = (name: string): Doc => ({ ...emptyDocument(), scenes: [{ name, scene_type: 'Scene', nodes: [], edges: [], steps: [] }] })
 
 describe('engine results sync', () => {
   const engine = fakeEngine()

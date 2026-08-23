@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.catalogue import get_catalogue
+from engine.catalogue.coverage import coverage_report
 from engine.codegen import GeneratedCode, ManimCodeGenerator, SourceMap
 from engine.document import (
     Document,
@@ -31,6 +32,7 @@ def build_dispatcher(cache_dir: Path | None = None) -> Dispatcher:
     dispatcher.register("engine.info", _info)
     dispatcher.register("catalogue.list", _catalogue_list)
     dispatcher.register("catalogue.get", _catalogue_get)
+    dispatcher.register("catalogue.coverage", _catalogue_coverage)
     dispatcher.register("document.validate", _document_validate)
     dispatcher.register("document.generate", _document_generate)
     dispatcher.register("timeline.layout", _timeline_layout)
@@ -45,6 +47,10 @@ def _info() -> dict[str, Any]:
 
 def _catalogue_list() -> dict[str, Any]:
     return get_catalogue().model_dump()
+
+
+def _catalogue_coverage() -> dict[str, Any]:
+    return coverage_report(get_catalogue()).model_dump()
 
 
 def _catalogue_get(qualname: str) -> dict[str, Any]:
@@ -62,7 +68,9 @@ def _document_validate(document: dict[str, Any]) -> list[dict[str, Any]]:
 def _document_generate(document: dict[str, Any], scene: str) -> dict[str, Any]:
     parsed = Document.model_validate(document)
     catalogue = get_catalogue()
-    generated = ManimCodeGenerator().generate(_scene(parsed, scene), catalogue)
+    generated = ManimCodeGenerator().generate(
+        _scene(parsed, scene), catalogue, parsed.groups
+    )
     issues = document_issues(parsed, catalogue)
     if issues:
         generated = GeneratedCode(
@@ -73,7 +81,9 @@ def _document_generate(document: dict[str, Any], scene: str) -> dict[str, Any]:
 
 def _timeline_layout(document: dict[str, Any], scene: str) -> dict[str, Any]:
     parsed = Document.model_validate(document)
-    return layout_timeline(_scene(parsed, scene), get_catalogue()).model_dump()
+    return layout_timeline(
+        _scene(parsed, scene), get_catalogue(), parsed.groups
+    ).model_dump()
 
 
 def _scene(document: Document, name: str) -> SceneDocument:
@@ -97,7 +107,12 @@ class _RenderMethods:
         parsed = Document.model_validate(document)
         try:
             result = self.service.frame(
-                _scene(parsed, scene), get_catalogue(), parsed.settings, time, width
+                _scene(parsed, scene),
+                get_catalogue(),
+                parsed.settings,
+                time,
+                width,
+                parsed.groups,
             )
         except RenderError as exc:
             raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc
@@ -108,10 +123,11 @@ class _RenderMethods:
         document: dict[str, Any],
         scene: str,
         directory: str,
-        format: str = "mp4",
+        format: str | None = None,
         notify: Notify = lambda method, params: None,
     ) -> dict[str, Any]:
         parsed = Document.model_validate(document)
+        fmt = format or parsed.settings.output_format
         last = -1.0
 
         def progress(time: float) -> None:
@@ -126,8 +142,9 @@ class _RenderMethods:
                 get_catalogue(),
                 parsed.settings,
                 Path(directory),
-                format,
+                fmt,
                 progress,
+                parsed.groups,
             )
         except RenderError as exc:
             raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc

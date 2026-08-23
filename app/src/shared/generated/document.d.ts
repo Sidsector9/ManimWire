@@ -5,7 +5,9 @@ export type PixelWidth = number;
 export type PixelHeight = number;
 export type FrameRate = number;
 export type BackgroundColor = string;
+export type OutputFormat = "mp4" | "mov" | "webm" | "gif" | "png";
 export type Name = string;
+export type SceneType = "Scene" | "MovingCameraScene" | "ThreeDScene" | "ZoomedScene";
 export type Id = string;
 export type Catalogue = string;
 export type Label = string | null;
@@ -17,6 +19,25 @@ export type Position = [unknown, unknown];
 export type Collapsed = boolean;
 export type Method = string;
 export type Chain = MethodCall[];
+export type Name1 = string;
+export type PortType =
+  | "mobject"
+  | "coordinate_system"
+  | "number"
+  | "live_number"
+  | "vector"
+  | "color"
+  | "function"
+  | "animation"
+  | "text"
+  | "boolean"
+  | "config"
+  | "scene"
+  | "none"
+  | "any";
+export type Config = ConfigKey[];
+export type Parent = string | null;
+export type Size = [unknown, unknown] | null;
 export type Nodes = Node[];
 export type Source = string;
 export type Target = string;
@@ -42,7 +63,7 @@ export type Mobjects2 = string[];
 export type Kind5 = "bring_to_back";
 export type Mobjects3 = string[];
 export type Kind6 = "section";
-export type Name1 = string;
+export type Name2 = string;
 export type SkipAnimations = boolean;
 export type Kind7 = "sound";
 export type File = string;
@@ -55,6 +76,17 @@ export type Offset = number;
 export type Kind9 = "updating";
 export type Mobjects4 = string[];
 export type Action = "suspend" | "resume" | "clear";
+export type Kind10 = "camera";
+export type Action1 = "orient" | "move";
+export type Phi = number | null;
+export type Theta = number | null;
+export type Gamma = number | null;
+export type Zoom = number | null;
+export type FocalDistance = number | null;
+export type RunTime1 = number | null;
+export type Kind11 = "fixed_in_frame";
+export type Mobjects5 = string[];
+export type Action2 = "add" | "remove";
 export type Steps = (
   | PlayStep
   | WaitStep
@@ -66,13 +98,20 @@ export type Steps = (
   | SoundStep
   | SubcaptionStep
   | UpdatingStep
+  | CameraStep
+  | FixedInFrameStep
 )[];
 export type Scenes = SceneDocument[];
+export type Name3 = string;
+export type Nodes1 = Node[];
+export type Edges1 = Edge[];
+export type Groups = GroupDefinition[];
 
 export interface Document {
   version?: Version;
   settings?: Settings;
   scenes?: Scenes;
+  groups?: Groups;
   [k: string]: unknown;
 }
 export interface Settings {
@@ -80,10 +119,12 @@ export interface Settings {
   pixel_height?: PixelHeight;
   frame_rate?: FrameRate;
   background_color?: BackgroundColor;
+  output_format?: OutputFormat;
   [k: string]: unknown;
 }
 export interface SceneDocument {
   name?: Name;
+  scene_type?: SceneType;
   nodes?: Nodes;
   edges?: Edges;
   steps?: Steps;
@@ -97,6 +138,9 @@ export interface Node {
   position?: Position;
   collapsed?: Collapsed;
   chain?: Chain;
+  config?: Config;
+  parent?: Parent;
+  size?: Size;
   [k: string]: unknown;
 }
 export interface Values {
@@ -112,6 +156,14 @@ export interface MethodCall {
 }
 export interface Values1 {
   [k: string]: string | number | boolean | number[] | null;
+}
+/**
+ * One entry of a Config node: the key and the type its value is written as.
+ */
+export interface ConfigKey {
+  name: Name1;
+  type?: PortType;
+  [k: string]: unknown;
 }
 export interface Edge {
   source: Source;
@@ -161,7 +213,7 @@ export interface BringToBackStep {
 }
 export interface SectionStep {
   kind?: Kind6;
-  name?: Name1;
+  name?: Name2;
   skip_animations?: SkipAnimations;
   [k: string]: unknown;
 }
@@ -186,5 +238,37 @@ export interface UpdatingStep {
   kind?: Kind9;
   mobjects: Mobjects4;
   action?: Action;
+  [k: string]: unknown;
+}
+/**
+ * ThreeDScene camera: ``set_camera_orientation``, or ``move_camera`` over time.
+ */
+export interface CameraStep {
+  kind?: Kind10;
+  action?: Action1;
+  phi?: Phi;
+  theta?: Theta;
+  gamma?: Gamma;
+  zoom?: Zoom;
+  focal_distance?: FocalDistance;
+  run_time?: RunTime1;
+  [k: string]: unknown;
+}
+/**
+ * ``add_fixed_in_frame_mobjects`` or ``remove_fixed_in_frame_mobjects``.
+ */
+export interface FixedInFrameStep {
+  kind?: Kind11;
+  mobjects: Mobjects5;
+  action?: Action2;
+  [k: string]: unknown;
+}
+/**
+ * A reusable subgraph. Input and Output nodes inside it are its ports.
+ */
+export interface GroupDefinition {
+  name: Name3;
+  nodes?: Nodes1;
+  edges?: Edges1;
   [k: string]: unknown;
 }

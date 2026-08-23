@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { HEADER_HEIGHT, placeBands, placeBars, placeMarkers, ROW_HEIGHT, rowLabels, stepAt, ticks, timeToX, xToTime } from '../model/timeline'
-import { currentScene, useDocumentStore } from '../store/document'
+import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 
 const LABEL_WIDTH = 108
@@ -17,7 +17,8 @@ export function Timeline() {
   const frame = useEngineResults((s) => s.frame)
   const previewTime = useEngineResults((s) => s.previewTime)
   const setPreviewTime = useEngineResults((s) => s.setPreviewTime)
-  const scene = useDocumentStore(currentScene)
+  const scene = useDocumentStore(previewScene)
+  const editingGroup = useDocumentStore((s) => s.editingGroup)
   const store = useDocumentStore()
   const selectedStep = useDocumentStore((s) => s.selectedStep)
   const selected = useDocumentStore((s) => s.selected)
@@ -27,6 +28,16 @@ export function Timeline() {
   const area = useRef<HTMLDivElement>(null)
   const geometry = { labelWidth: LABEL_WIDTH, pixelsPerSecond }
 
+  if (editingGroup) {
+    return (
+      <section className="panel timeline">
+        <div className="panel-head">
+          <span>Timeline</span>
+          <span className="mono timeline-meta">groups have no steps; the timeline belongs to the scene</span>
+        </div>
+      </section>
+    )
+  }
   if (!layout) {
     return (
       <section className="panel timeline">
@@ -98,6 +109,16 @@ export function Timeline() {
           <button className="button small" onClick={() => store.addStep({ kind: 'subcaption', content: 'caption', duration: 1, offset: 0 })}>
             + subcaption
           </button>
+          {scene.scene_type === 'ThreeDScene' && (
+            <>
+              <button className="button small" onClick={() => store.addStep({ kind: 'camera', action: 'orient', phi: 1.2, theta: -0.8 })}>
+                + camera orientation
+              </button>
+              <button className="button small" onClick={() => store.addStep({ kind: 'camera', action: 'move', theta: 0.5, run_time: 2 })}>
+                + move camera
+              </button>
+            </>
+          )}
           <button className="button small" onClick={() => setPixelsPerSecond((p) => Math.max(24, p / 1.5))}>
             −
           </button>
@@ -176,12 +197,14 @@ export function Timeline() {
           {bars.map((bar) => (
             <div
               key={`${bar.step}-${bar.node}`}
-              className={`timeline-bar${bar.group ? ' group' : ''}${selected === bar.node ? ' selected' : ''} depth-${Math.min(bar.depth, 2)}`}
+              className={`timeline-bar${bar.group ? ' group' : ''}${selected === bar.node ? ' selected' : ''}${bar.node ? '' : ' scene-level'} depth-${Math.min(bar.depth, 2)}`}
               style={{ left: bar.x, top: HEADER_HEIGHT + bar.y, width: bar.width, height: bar.height }}
               onPointerDown={(e) => {
                 e.stopPropagation()
-                store.select(bar.node)
                 store.selectStep(bar.step)
+                // A scene-level bar (move_camera) has no node; edit it through its step.
+                if (!bar.node) return
+                store.select(bar.node)
                 // Only top-level animations belong to the play step; children belong to their group.
                 if (!bar.group && bar.depth === 0) setDrag({ kind: 'move', node: bar.node, step: bar.step })
               }}
@@ -189,7 +212,7 @@ export function Timeline() {
             >
               <span className="bar-label">{bar.label}</span>
               {bar.rateFunc && bar.width > 110 && <span className="bar-rate mono">{bar.rateFunc}</span>}
-              {!bar.group && (
+              {!bar.group && bar.node && (
                 <span
                   className="bar-edge"
                   onPointerDown={(e) => {

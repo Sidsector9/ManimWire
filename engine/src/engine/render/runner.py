@@ -11,8 +11,13 @@ from collections.abc import Callable
 from typing import Any
 
 from manim import tempconfig
+from manim.camera.camera import Camera
+from manim.camera.moving_camera import MovingCamera
+from manim.camera.three_d_camera import ThreeDCamera
 from manim.renderer.cairo_renderer import CairoRenderer
+from manim.scene.moving_camera_scene import MovingCameraScene
 from manim.scene.scene_file_writer import SceneFileWriter
+from manim.scene.three_d_scene import ThreeDScene
 
 from engine.codegen import GeneratedCode, SourceMap
 
@@ -54,12 +59,14 @@ def run_scene[R: CairoRenderer](
     generated: GeneratedCode,
     scene_name: str,
     overrides: dict[str, Any],
-    make_renderer: Callable[[], R],
+    make_renderer: Callable[[type[Camera]], R],
 ) -> tuple[Any, dict[str, Any], R]:
     """Run the generated scene. Returns the scene, construct's locals, and the renderer.
 
     The renderer is created inside ``tempconfig`` because Manim's camera reads
-    the resolution and frame rate from the global config when it is built.
+    the resolution and frame rate from the global config when it is built. It
+    gets the camera class the scene type would choose itself (``Scene.__init__``
+    only does that when no renderer is passed).
     """
     namespace: dict[str, Any] = {}
     captured: dict[str, Any] = {}
@@ -72,7 +79,7 @@ def run_scene[R: CairoRenderer](
                 captured.update(frame.f_locals)
 
         with tempconfig(overrides):
-            renderer = make_renderer()
+            renderer = make_renderer(camera_class_for(namespace[scene_name]))
             instance = namespace[scene_name](renderer=renderer)
             previous = sys.getprofile()
             sys.setprofile(profiler)
@@ -83,6 +90,14 @@ def run_scene[R: CairoRenderer](
     except Exception as exc:
         raise locate(exc, generated.source_map) from exc
     return instance, captured, renderer
+
+
+def camera_class_for(scene_class: type) -> type[Camera]:
+    if issubclass(scene_class, ThreeDScene):
+        return ThreeDCamera
+    if issubclass(scene_class, MovingCameraScene):
+        return MovingCamera
+    return Camera
 
 
 def locate(exc: Exception, source_map: SourceMap) -> RenderError:

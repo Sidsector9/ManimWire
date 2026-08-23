@@ -6,6 +6,10 @@ from engine.catalogue.model import PortType, TypeRef, is_class_reference
 from engine.document.model import JsonValue
 
 
+def kind_is_number(type_ref: TypeRef) -> bool:
+    return type_ref.type is PortType.NUMBER
+
+
 class LiteralFormatter:
     def __init__(self, color_names: set[str]) -> None:
         self.color_names = color_names
@@ -14,7 +18,9 @@ class LiteralFormatter:
     def format(self, value: JsonValue, type_ref: TypeRef) -> str:
         if value is None:
             return "None"
-        if type_ref.collection and isinstance(value, list):
+        if isinstance(value, list) and (
+            type_ref.collection or kind_is_number(type_ref)
+        ):
             element = type_ref.model_copy(update={"collection": False})
             return "[" + ", ".join(self.format(item, element) for item in value) + "]"
         kind = type_ref.type

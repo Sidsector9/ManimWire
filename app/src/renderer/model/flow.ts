@@ -3,7 +3,7 @@
 import type { Edge as FlowEdge, Node as FlowNode } from '@xyflow/react'
 import type { Descriptor, Issue } from '../../shared/engine'
 import { TYPE_COLOR } from '../store/catalogue'
-import { connectedPorts, type DocNode, type Scene } from './document'
+import { connectedPorts, containerSize, isContainer, type DocNode, type Scene } from './document'
 import { effectiveDescriptor } from './live'
 import type { DescriptorIndex } from './types'
 
@@ -17,10 +17,25 @@ export interface ManimNodeData extends Record<string, unknown> {
   issues: Issue[]
 }
 
-export type ManimFlowNode = FlowNode<ManimNodeData, 'manim'>
+export type ManimFlowNode = FlowNode<ManimNodeData, 'manim' | 'container'>
 
 export function edgeId(source: string, target: string, port: string): string {
   return `${source}->${target}.${port}`
+}
+
+/** Containers before their children: xyflow resolves parentId in array order. */
+function parentsFirst(nodes: DocNode[]): DocNode[] {
+  const byId = new Map(nodes.map((n) => [n.id, n]))
+  const depth = (node: DocNode): number => {
+    let count = 0
+    let current = node.parent ? byId.get(node.parent) : undefined
+    while (current && count < nodes.length) {
+      count += 1
+      current = current.parent ? byId.get(current.parent) : undefined
+    }
+    return count
+  }
+  return [...nodes].sort((a, b) => depth(a) - depth(b))
 }
 
 export function toFlow(
@@ -32,16 +47,20 @@ export function toFlow(
 ): { nodes: ManimFlowNode[]; edges: FlowEdge[] } {
   const nodes: ManimFlowNode[] = []
   const descriptors = new Map<string, Descriptor>()
-  for (const node of scene.nodes) {
+  for (const node of parentsFirst(scene.nodes)) {
     const descriptor = index.get(node.catalogue)
     if (!descriptor) continue
     const effective = effectiveDescriptor(node, descriptor, scene, expressionNames, index)
     descriptors.set(node.id, effective)
+    const container = isContainer(node)
+    const [width, height] = containerSize(node)
     nodes.push({
       id: node.id,
-      type: 'manim',
+      type: container ? 'container' : 'manim',
       position: { x: node.position[0], y: node.position[1] },
       selected: node.id === selected,
+      ...(node.parent ? { parentId: node.parent } : {}),
+      ...(container ? { style: { width, height } } : {}),
       data: {
         node,
         descriptor: effective,

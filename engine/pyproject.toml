@@ -31,3 +31,7 @@ python_version = "3.12"
 files = ["src/engine", "tests"]
 explicit_package_bases = true
 mypy_path = "src"
+
+[[tool.mypy.overrides]]
+module = "manimpango"
+ignore_missing_imports = true

@@ -66,6 +66,118 @@
       "title": "BringToFrontStep",
       "type": "object"
     },
+    "CameraStep": {
+      "description": "ThreeDScene camera: ``set_camera_orientation``, or ``move_camera`` over time.",
+      "properties": {
+        "kind": {
+          "const": "camera",
+          "default": "camera",
+          "title": "Kind",
+          "type": "string"
+        },
+        "action": {
+          "default": "orient",
+          "enum": [
+            "orient",
+            "move"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "phi": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Phi"
+        },
+        "theta": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Theta"
+        },
+        "gamma": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Gamma"
+        },
+        "zoom": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Zoom"
+        },
+        "focal_distance": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Focal Distance"
+        },
+        "run_time": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Time"
+        }
+      },
+      "title": "CameraStep",
+      "type": "object"
+    },
+    "ConfigKey": {
+      "description": "One entry of a Config node: the key and the type its value is written as.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/PortType",
+          "default": "number"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "ConfigKey",
+      "type": "object"
+    },
     "Edge": {
       "properties": {
         "source": {
@@ -94,6 +206,68 @@
       "title": "Edge",
       "type": "object"
     },
+    "FixedInFrameStep": {
+      "description": "``add_fixed_in_frame_mobjects`` or ``remove_fixed_in_frame_mobjects``.",
+      "properties": {
+        "kind": {
+          "const": "fixed_in_frame",
+          "default": "fixed_in_frame",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mobjects": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Mobjects",
+          "type": "array"
+        },
+        "action": {
+          "default": "add",
+          "enum": [
+            "add",
+            "remove"
+          ],
+          "title": "Action",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mobjects"
+      ],
+      "title": "FixedInFrameStep",
+      "type": "object"
+    },
+    "GroupDefinition": {
+      "description": "A reusable subgraph. Input and Output nodes inside it are its ports.",
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "nodes": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Node"
+          },
+          "title": "Nodes",
+          "type": "array"
+        },
+        "edges": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/Edge"
+          },
+          "title": "Edges",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "GroupDefinition",
+      "type": "object"
+    },
     "MethodCall": {
       "description": "One step of an Animate chain: ``.method(**values)``.",
       "properties": {
@@ -108,17 +282,24 @@
                 "type": "string"
               },
               {
-                "type": "number"
+                "type": "integer"
               },
               {
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "boolean"
               },
               {
                 "items": {
-                  "type": "number"
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
                 },
                 "type": "array"
               },
@@ -155,17 +336,24 @@
                 "type": "string"
               },
               {
-                "type": "number"
+                "type": "integer"
               },
               {
-                "type": "integer"
+                "type": "number"
               },
               {
                 "type": "boolean"
               },
               {
                 "items": {
-                  "type": "number"
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
                 },
                 "type": "array"
               },
@@ -220,6 +408,48 @@
           },
           "title": "Chain",
           "type": "array"
+        },
+        "config": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ConfigKey"
+          },
+          "title": "Config",
+          "type": "array"
+        },
+        "parent": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent"
+        },
+        "size": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Size"
         }
       },
       "required": [
@@ -317,6 +547,26 @@
       "title": "PlayStep",
       "type": "object"
     },
+    "PortType": {
+      "enum": [
+        "mobject",
+        "coordinate_system",
+        "number",
+        "live_number",
+        "vector",
+        "color",
+        "function",
+        "animation",
+        "text",
+        "boolean",
+        "config",
+        "scene",
+        "none",
+        "any"
+      ],
+      "title": "PortType",
+      "type": "string"
+    },
     "RemoveStep": {
       "properties": {
         "kind": {
@@ -346,6 +596,17 @@
           "title": "Name",
           "type": "string"
         },
+        "scene_type": {
+          "default": "Scene",
+          "enum": [
+            "Scene",
+            "MovingCameraScene",
+            "ThreeDScene",
+            "ZoomedScene"
+          ],
+          "title": "Scene Type",
+          "type": "string"
+        },
         "nodes": {
           "default": [],
           "items": {
@@ -370,6 +631,8 @@
                 "add": "#/$defs/AddStep",
                 "bring_to_back": "#/$defs/BringToBackStep",
                 "bring_to_front": "#/$defs/BringToFrontStep",
+                "camera": "#/$defs/CameraStep",
+                "fixed_in_frame": "#/$defs/FixedInFrameStep",
                 "play": "#/$defs/PlayStep",
                 "remove": "#/$defs/RemoveStep",
                 "section": "#/$defs/SectionStep",
@@ -410,6 +673,12 @@
               },
               {
                 "$ref": "#/$defs/UpdatingStep"
+              },
+              {
+                "$ref": "#/$defs/CameraStep"
+              },
+              {
+                "$ref": "#/$defs/FixedInFrameStep"
               }
             ]
           },
@@ -462,6 +731,18 @@
         "background_color": {
           "default": "BLACK",
           "title": "Background Color",
+          "type": "string"
+        },
+        "output_format": {
+          "default": "mp4",
+          "enum": [
+            "mp4",
+            "mov",
+            "webm",
+            "gif",
+            "png"
+          ],
+          "title": "Output Format",
           "type": "string"
         }
       },
@@ -597,13 +878,15 @@
         "pixel_width": 1920,
         "pixel_height": 1080,
         "frame_rate": 60.0,
-        "background_color": "BLACK"
+        "background_color": "BLACK",
+        "output_format": "mp4"
       }
     },
     "scenes": {
       "default": [
         {
           "name": "Scene1",
+          "scene_type": "Scene",
           "nodes": [],
           "edges": [],
           "steps": []
@@ -613,6 +896,14 @@
         "$ref": "#/$defs/SceneDocument"
       },
       "title": "Scenes",
+      "type": "array"
+    },
+    "groups": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/GroupDefinition"
+      },
+      "title": "Groups",
       "type": "array"
     }
   },

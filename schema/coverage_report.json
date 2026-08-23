@@ -1,0 +1,67 @@
+{
+  "$defs": {
+    "EntryCoverage": {
+      "properties": {
+        "qualname": {
+          "title": "Qualname",
+          "type": "string"
+        },
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "unpresentable": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unpresentable",
+          "type": "array"
+        }
+      },
+      "required": [
+        "qualname",
+        "kind",
+        "unpresentable"
+      ],
+      "title": "EntryCoverage",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "entries": {
+      "title": "Entries",
+      "type": "integer"
+    },
+    "parameters": {
+      "title": "Parameters",
+      "type": "integer"
+    },
+    "unpresentable": {
+      "title": "Unpresentable",
+      "type": "integer"
+    },
+    "incomplete": {
+      "items": {
+        "$ref": "#/$defs/EntryCoverage"
+      },
+      "title": "Incomplete",
+      "type": "array"
+    },
+    "unknown_annotations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Unknown Annotations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "entries",
+    "parameters",
+    "unpresentable",
+    "incomplete",
+    "unknown_annotations"
+  ],
+  "title": "CoverageReport",
+  "type": "object"
+}

@@ -1,29 +1,42 @@
-import { Handle, Position, type NodeProps } from '@xyflow/react'
-import { SELF_PORT, visiblePorts } from '../model/document'
+import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
+import { SELF_PORT, isContainer, visiblePorts } from '../model/document'
 import type { ManimFlowNode } from '../model/flow'
 import { ANIMATE, chainSummary, isObjectType } from '../model/live'
 import { portType } from '../model/types'
-import { TYPE_COLOR, selectIndex, useCatalogueStore } from '../store/catalogue'
+import { TYPE_COLOR } from '../store/catalogue'
+import { useDescriptorIndex } from '../store/descriptors'
 import { useDocumentStore } from '../store/document'
+import { useEngineStore } from '../store/engine'
 import { PortEditor } from './PortEditor'
 
 /** One node for any catalogue descriptor. Collapsed by default; +N reveals the rest. */
-export function ManimNode({ data }: NodeProps<ManimFlowNode>) {
+export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
   const { node, descriptor, connected, live, issues } = data
-  const index = useCatalogueStore(selectIndex)
+  const index = useDescriptorIndex()
   const setValue = useDocumentStore((s) => s.setValue)
   const updateNode = useDocumentStore((s) => s.updateNode)
   const setPortLive = useDocumentStore((s) => s.setPortLive)
+  const latex = useEngineStore((s) => s.status.info?.latex)
   const connectedSet = new Set(connected)
   const visible = visiblePorts(node, descriptor, connectedSet)
   const hidden = (descriptor.parameters.length + (descriptor.kind === 'method' ? 1 : 0)) - visible.length
   const category = TYPE_COLOR[descriptor.returns.type]
-  const title = node.label ?? (descriptor.kind === 'method' ? descriptor.name : descriptor.name)
+  const title = node.label ?? descriptor.name
+  const container = isContainer(node)
+  const needsLatex = descriptor.requires_latex && latex === false
 
   return (
-    <div className={`node${issues.length ? ' has-issue' : ''}`} style={{ borderLeftColor: category }}>
+    <div className={`node${container ? ' container' : ''}${issues.length ? ' has-issue' : ''}`} style={{ borderLeftColor: category }}>
+      {container && <NodeResizer isVisible={selected} minWidth={240} minHeight={140} onResizeEnd={(_, params) => updateNode(id, { size: [params.width, params.height] })} />}
       <div className="node-head">
         <span className={descriptor.kind === 'method' ? 'node-title mono' : 'node-title'}>{title}</span>
+        {descriptor.kind === 'group' && <span className="node-tag">group</span>}
+        {container && <span className="node-tag">{descriptor.name === 'Map' ? 'for each item' : 'repeat'}</span>}
+        {needsLatex && (
+          <span className="node-badge latex" title="This node renders through LaTeX, which is not installed">
+            LaTeX
+          </span>
+        )}
         {issues.length > 0 && <span className="node-badge" title={issues.map((i) => i.message).join('\n')}>{issues.length}</span>}
         {descriptor.returns.type !== 'none' && (
           <Handle
@@ -47,7 +60,7 @@ export function ManimNode({ data }: NodeProps<ManimFlowNode>) {
             <Handle type="target" position={Position.Left} id={port} className="socket" style={{ borderColor: color, background: isConnected ? color : 'var(--panel)' }} />
             <span className="node-label">{port === SELF_PORT ? 'object' : port}</span>
             <span className="node-value">
-              {isConnected && type && !isObjectType(type) ? (
+              {isConnected && type && !isObjectType(type) && type.type !== 'any' ? (
                 <button
                   className={`port-connected link${live.includes(port) ? ' live' : ''}`}
                   style={{ color }}
@@ -77,6 +90,7 @@ export function ManimNode({ data }: NodeProps<ManimFlowNode>) {
           collapse
         </button>
       )}
+      {container && <div className="container-hint">Drop nodes here. Add a Result node for what each run produces.</div>}
     </div>
   )
 }

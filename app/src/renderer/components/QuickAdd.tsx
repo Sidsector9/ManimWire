@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Descriptor, TypeRef } from '../../shared/engine'
 import { acceptingPorts, type DescriptorIndex } from '../model/types'
-import { groupLabel, TYPE_COLOR, selectEntries, selectIndex, useCatalogueStore } from '../store/catalogue'
+import { groupLabel, TYPE_COLOR } from '../store/catalogue'
+import { useDescriptorIndex, useEntries } from '../store/descriptors'
 
 interface Props {
   at: { x: number; y: number }
@@ -31,8 +32,8 @@ function rank(entry: Descriptor, needle: string): number {
 }
 
 export function QuickAdd({ at, acceptType, onChoose, onClose }: Props) {
-  const entries = useCatalogueStore(selectEntries)
-  const index = useCatalogueStore(selectIndex)
+  const entries = useEntries()
+  const index = useDescriptorIndex()
   const [query, setQuery] = useState('')
   const [cursor, setCursor] = useState(0)
   const input = useRef<HTMLInputElement>(null)

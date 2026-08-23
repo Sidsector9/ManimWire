@@ -1,10 +1,10 @@
-import type { Step } from '../model/document'
+import { CAMERA_FIELDS, type Step } from '../model/document'
 import { selectEntries, useCatalogueStore } from '../store/catalogue'
-import { currentScene, useDocumentStore } from '../store/document'
+import { previewScene, useDocumentStore } from '../store/document'
 
 /** Fields of the selected timeline step. */
 export function StepInspector({ index }: { index: number }) {
-  const scene = useDocumentStore(currentScene)
+  const scene = useDocumentStore(previewScene)
   const store = useDocumentStore()
   const entries = useCatalogueStore(selectEntries)
   const step = scene.steps[index]
@@ -94,6 +94,40 @@ export function StepInspector({ index }: { index: number }) {
                   <option value="suspend">suspend_updating</option>
                   <option value="resume">resume_updating</option>
                   <option value="clear">clear_updaters</option>
+                </select>
+              </span>
+            </div>
+          </>
+        )}
+        {step.kind === 'camera' && (
+          <>
+            <div className="inspector-doc">
+              {step.action === 'orient' ? 'set_camera_orientation: jump to these angles.' : 'move_camera: animate the camera to these angles over run_time.'} Empty fields keep their current value.
+            </div>
+            <div className="field">
+              <span className="field-label">action</span>
+              <span className="field-value">
+                <select className="port-select mono" value={step.action} onChange={(e) => update({ action: e.target.value as typeof step.action })}>
+                  <option value="orient">set_camera_orientation</option>
+                  <option value="move">move_camera</option>
+                </select>
+              </span>
+            </div>
+            {CAMERA_FIELDS.map((field) => (
+              <NumberField key={field} label={field} value={step[field]} placeholder="unchanged" onChange={(v) => update({ [field]: v })} />
+            ))}
+            {step.action === 'move' && <NumberField label="run_time" value={step.run_time} placeholder="1" onChange={(v) => update({ run_time: v })} />}
+          </>
+        )}
+        {step.kind === 'fixed_in_frame' && (
+          <>
+            <div className="inspector-doc">Objects fixed in frame stay in place while the 3D camera moves: {step.mobjects.map(nameOf).join(', ')}</div>
+            <div className="field">
+              <span className="field-label">action</span>
+              <span className="field-value">
+                <select className="port-select mono" value={step.action} onChange={(e) => update({ action: e.target.value as typeof step.action })}>
+                  <option value="add">add_fixed_in_frame_mobjects</option>
+                  <option value="remove">remove_fixed_in_frame_mobjects</option>
                 </select>
               </span>
             </div>

@@ -10,6 +10,7 @@ and the n-th child of a group is the n-th connection into its animations port.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,11 +19,16 @@ from manim.animation.composition import AnimationGroup
 from manim.renderer.cairo_renderer import CairoRenderer
 from pydantic import BaseModel
 
+from engine.catalogue.builtins import CONTAINERS
 from engine.catalogue.model import Catalogue, Descriptor, PortType
 from engine.codegen import ManimCodeGenerator
+from engine.document.analysis import Graph
 from engine.document.model import (
     SELF_PORT,
     AddStep,
+    CameraStep,
+    FixedInFrameStep,
+    GroupDefinition,
     PlayStep,
     RemoveStep,
     SceneDocument,
@@ -153,13 +159,20 @@ class _Context:
         return node_id
 
 
-def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayout:
-    generated = ManimCodeGenerator().generate(scene, catalogue)
+def layout_timeline(
+    scene: SceneDocument,
+    catalogue: Catalogue,
+    groups: Iterable[GroupDefinition] = (),
+) -> TimelineLayout:
+    generated = ManimCodeGenerator().generate(scene, catalogue, groups)
     if generated.issues:
         return _empty(generated.issues[0].message)
     try:
         _, _, renderer = run_scene(
-            generated, scene.name, {**QUIET, "dry_run": True}, _TimingRenderer
+            generated,
+            scene.name,
+            {**QUIET, "dry_run": True},
+            lambda camera: _TimingRenderer(camera_class=camera),
         )
     except RenderError as exc:
         return _empty(str(exc))
@@ -170,6 +183,7 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
     )
     for edge in scene.edges:
         context.inputs.setdefault((edge.target, edge.port), []).append(edge.source)
+    graph = Graph(scene, catalogue, groups)
 
     bars: list[Bar] = []
     markers: list[Marker] = []
@@ -180,8 +194,10 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
     time = 0.0
     for position, step in enumerate(scene.steps):
         end = time
-        if isinstance(step, PlayStep | WaitStep):
-            play = next(plays)
+        if isinstance(step, PlayStep | WaitStep) or (
+            isinstance(step, CameraStep) and step.action == "move"
+        ):
+            play = next(plays)  # move_camera plays its own animations
             time, end = play.start, play.start + play.duration
         if isinstance(step, PlayStep):
             pairs = list(zip(step.animations, play.animations, strict=False))
@@ -211,6 +227,35 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
             label = step.content
             markers.append(
                 Marker(step=position, kind="subcaption", time=time, label=step.content)
+            )
+        elif isinstance(step, CameraStep):
+            label = "move camera" if step.action == "move" else "camera orientation"
+            if step.action == "move":
+                bars.append(
+                    Bar(
+                        step=position,
+                        node="",
+                        rows=[],
+                        start=time,
+                        end=end,
+                        label=label,
+                    )
+                )
+            else:
+                markers.append(
+                    Marker(step=position, kind="camera", time=time, label=label)
+                )
+        elif isinstance(step, FixedInFrameStep):
+            rows = [context.root(m) for m in step.mobjects if m in context.nodes]
+            label = f"{step.action} fixed in frame"
+            markers.append(
+                Marker(
+                    step=position,
+                    kind="fixed_in_frame",
+                    time=time,
+                    label=label,
+                    rows=rows,
+                )
             )
         elif isinstance(step, UpdatingStep):
             rows = [context.root(m) for m in step.mobjects if m in context.nodes]
@@ -251,7 +296,7 @@ def layout_timeline(scene: SceneDocument, catalogue: Catalogue) -> TimelineLayou
     }
     bands = _bands(live_rows, events, renderer.time)
     return TimelineLayout(
-        rows=_rows(context, bars, markers, bands),
+        rows=_rows(context, graph, bars, markers, bands),
         steps=spans,
         bars=bars,
         markers=markers,
@@ -403,18 +448,27 @@ def _row_label(node_id: str, context: _Context) -> str:
 
 
 def _rows(
-    context: _Context, bars: list[Bar], markers: list[Marker], bands: list[Band]
+    context: _Context,
+    graph: Graph,
+    bars: list[Bar],
+    markers: list[Marker],
+    bands: list[Band],
 ) -> list[Row]:
-    """Constructed mobjects in document order, then anything else bars mention."""
+    """Constructed mobjects in document order, then anything else bars mention.
+
+    Nodes inside a Map or Repeat build one object per run, so the container is
+    the row (when its runs produce objects), not its children.
+    """
     ids: list[str] = []
     for node in context.scene.nodes:
         descriptor = context.descriptor(node.id)
-        if (
-            descriptor is not None
-            and descriptor.kind != "builtin"
-            and descriptor.returns.type in _MOBJECT_TYPES
-            and (descriptor.kind != "method" or descriptor.returns.annotation != "Self")
-        ):
+        if descriptor is None or node.parent is not None:
+            continue
+        if descriptor.kind == "builtin" and descriptor.name not in CONTAINERS:
+            continue
+        if descriptor.kind == "method" and descriptor.returns.annotation == "Self":
+            continue
+        if graph.output_type(node.id).type in _MOBJECT_TYPES:
             ids.append(node.id)
     for bar in bars:
         ids.extend(bar.rows)

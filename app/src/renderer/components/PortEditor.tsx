@@ -1,6 +1,6 @@
 import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
-import { selectColors, selectDirections, selectEntries, useCatalogueStore } from '../store/catalogue'
+import { selectColors, selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
 
 interface Props {
   param: Parameter
@@ -14,6 +14,7 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
   const colors = useCatalogueStore(selectColors)
   const entries = useCatalogueStore(selectEntries)
   const directions = useCatalogueStore(selectDirections)
+  const fonts = useCatalogueStore(selectFonts)
   const { type } = param
   const placeholder = param.display ?? ''
   const stop = (e: React.SyntheticEvent): void => e.stopPropagation()
@@ -92,6 +93,26 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
               </option>
             ))}
           </select>
+        )
+      }
+      if (param.name === 'font' && fonts.length > 0) {
+        // Fonts Pango can render on this machine, from manimpango.
+        return (
+          <>
+            <input
+              className="port-input"
+              list="manim-fonts"
+              value={typeof value === 'string' ? value : ''}
+              placeholder="system default"
+              onMouseDown={stop}
+              onChange={(e) => onChange(e.target.value === '' ? undefined : e.target.value)}
+            />
+            <datalist id="manim-fonts">
+              {fonts.map((f) => (
+                <option key={f} value={f} />
+              ))}
+            </datalist>
+          </>
         )
       }
       return (

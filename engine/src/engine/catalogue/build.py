@@ -11,10 +11,13 @@ from types import ModuleType
 from typing import Any
 
 import manim
+import manimpango
 from manim.animation.animation import Animation
 from manim.mobject.graphing.coordinate_systems import CoordinateSystem
 from manim.mobject.mobject import Mobject
 from manim.mobject.opengl.opengl_mobject import OpenGLMobject
+from manim.mobject.text.numbers import DecimalNumber
+from manim.mobject.text.tex_mobject import SingleStringMathTex
 from manim.mobject.types.vectorized_mobject import VMobject
 from manim.mobject.value_tracker import ValueTracker
 from manim.scene.scene import Scene
@@ -85,6 +88,10 @@ _SKIP_NAMES = {
     "triggers_refreshed_triangulation",
     "assert_is_mobject_method",
 }
+
+
+# Classes whose text goes through LaTeX (DecimalNumber renders digits with MathTex).
+_LATEX_CLASSES = (SingleStringMathTex, DecimalNumber)
 
 
 def category_for(module: str) -> str:
@@ -166,18 +173,18 @@ def build_catalogue() -> Catalogue:
     for name, (cls, module) in classes.items():
         output = class_types.get(name, PortType.ANY)
         category = category_for(module.__name__)
-        entries.append(
-            class_descriptor(
-                cls,
-                module.__name__,
-                category,
-                context,
-                output,
-                issubclass(cls, VMobject),
-                exported,
-                name in _HIDDEN or output is PortType.ANY,
-            )
+        descriptor = class_descriptor(
+            cls,
+            module.__name__,
+            category,
+            context,
+            output,
+            issubclass(cls, VMobject),
+            exported,
+            name in _HIDDEN or output is PortType.ANY,
         )
+        descriptor.requires_latex = issubclass(cls, _LATEX_CLASSES)
+        entries.append(descriptor)
         for method_name, function in vars(cls).items():
             if method_name.startswith("_") or not inspect.isfunction(function):
                 continue
@@ -205,12 +212,14 @@ def build_catalogue() -> Catalogue:
         and isinstance(value := getattr(manim_colors, name), ManimColor)
     ]
     entries.extend(BUILTINS)
+    fonts = sorted(name for name in manimpango.list_fonts() if not name.startswith("."))
     return Catalogue(
         manim_version=version("manim"),
         entries=entries,
         colors=colors,
         directions=list(DIRECTION_NAMES),
         expression_names=sorted([*FUNCTIONS, *CONSTANTS]),
+        fonts=fonts,
         unknown_annotations=sorted(context.unknown),
     )
 

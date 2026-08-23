@@ -6,9 +6,11 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
+from engine.catalogue.model import PortType
+
 # Literal port values as stored in the document. The catalogue parameter type
 # decides how a value is written as Manim source.
-JsonValue = str | float | int | bool | list[float] | None
+JsonValue = str | int | float | bool | list[int | float] | None
 
 # Port name for the object a method node is called on.
 SELF_PORT = "self"
@@ -21,6 +23,13 @@ class MethodCall(BaseModel):
     values: dict[str, JsonValue] = {}
 
 
+class ConfigKey(BaseModel):
+    """One entry of a Config node: the key and the type its value is written as."""
+
+    name: str
+    type: PortType = PortType.NUMBER
+
+
 class Node(BaseModel):
     id: str
     catalogue: str
@@ -30,6 +39,12 @@ class Node(BaseModel):
     collapsed: bool = True
     # Animate nodes only: the methods applied through mobject.animate, in order.
     chain: list[MethodCall] = []
+    # Config nodes only: the keys of the dict, each a port.
+    config: list[ConfigKey] = []
+    # Map and Repeat children: the container this node runs inside.
+    parent: str | None = None
+    # Map and Repeat only: the frame size on the graph.
+    size: tuple[float, float] | None = None
 
 
 class Edge(BaseModel):
@@ -105,6 +120,27 @@ class UpdatingStep(BaseModel):
     action: Literal["suspend", "resume", "clear"] = "suspend"
 
 
+class CameraStep(BaseModel):
+    """ThreeDScene camera: ``set_camera_orientation``, or ``move_camera`` over time."""
+
+    kind: Literal["camera"] = "camera"
+    action: Literal["orient", "move"] = "orient"
+    phi: float | None = None
+    theta: float | None = None
+    gamma: float | None = None
+    zoom: float | None = None
+    focal_distance: float | None = None
+    run_time: float | None = None
+
+
+class FixedInFrameStep(BaseModel):
+    """``add_fixed_in_frame_mobjects`` or ``remove_fixed_in_frame_mobjects``."""
+
+    kind: Literal["fixed_in_frame"] = "fixed_in_frame"
+    mobjects: list[str]
+    action: Literal["add", "remove"] = "add"
+
+
 Step = Annotated[
     PlayStep
     | WaitStep
@@ -115,9 +151,18 @@ Step = Annotated[
     | SectionStep
     | SoundStep
     | SubcaptionStep
-    | UpdatingStep,
+    | UpdatingStep
+    | CameraStep
+    | FixedInFrameStep,
     Field(discriminator="kind"),
 ]
+
+CAMERA_METHODS = {"orient": "set_camera_orientation", "move": "move_camera"}
+FIXED_IN_FRAME_METHODS = {
+    "add": "add_fixed_in_frame_mobjects",
+    "remove": "remove_fixed_in_frame_mobjects",
+}
+CAMERA_FIELDS = ("phi", "theta", "gamma", "zoom", "focal_distance")
 
 UPDATING_METHODS = {
     "suspend": "suspend_updating",
@@ -134,11 +179,37 @@ MOBJECT_STEP_METHODS = {
 }
 
 
+SceneType = Literal["Scene", "MovingCameraScene", "ThreeDScene", "ZoomedScene"]
+SCENE_TYPES: tuple[SceneType, ...] = (
+    "Scene",
+    "MovingCameraScene",
+    "ThreeDScene",
+    "ZoomedScene",
+)
+# Scene types whose camera has a movable frame mobject (self.camera.frame).
+FRAME_SCENE_TYPES = {"MovingCameraScene", "ZoomedScene"}
+
+
 class SceneDocument(BaseModel):
     name: str = "Scene1"
+    scene_type: SceneType = "Scene"
     nodes: list[Node] = []
     edges: list[Edge] = []
     steps: list[Step] = []
+
+
+class GroupDefinition(BaseModel):
+    """A reusable subgraph. Input and Output nodes inside it are its ports."""
+
+    name: str
+    nodes: list[Node] = []
+    edges: list[Edge] = []
+
+
+# Catalogue name of a node that instantiates a group: "group:" + the group name.
+GROUP_PREFIX = "group:"
+
+ExportFormat = Literal["mp4", "mov", "webm", "gif", "png"]
 
 
 class Settings(BaseModel):
@@ -146,9 +217,11 @@ class Settings(BaseModel):
     pixel_height: int = 1080
     frame_rate: float = 60
     background_color: str = "BLACK"
+    output_format: ExportFormat = "mp4"
 
 
 class Document(BaseModel):
     version: Literal[1] = 1
     settings: Settings = Settings()
     scenes: list[SceneDocument] = [SceneDocument()]
+    groups: list[GroupDefinition] = []

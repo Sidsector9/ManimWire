@@ -3,11 +3,25 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 
 from pydantic import BaseModel
 
-from engine.catalogue.builtins import ANIMATE, EXPRESSION, STATE
+from engine.catalogue.builtins import (
+    ANIMATE,
+    CAMERA_FRAME,
+    CONFIG,
+    CONTAINER_LOCALS,
+    CONTAINERS,
+    EXPRESSION,
+    GROUP_PORTS,
+    INPUT,
+    ITEM,
+    MAP,
+    OUTPUT,
+    RESULT,
+    STATE,
+)
 from engine.catalogue.defaults import DIRECTION_NAMES
 from engine.catalogue.model import (
     Catalogue,
@@ -19,8 +33,12 @@ from engine.catalogue.model import (
 )
 from engine.document.analysis import Graph, chain_port
 from engine.document.model import (
+    FRAME_SCENE_TYPES,
     SELF_PORT,
+    CameraStep,
     Document,
+    FixedInFrameStep,
+    GroupDefinition,
     Node,
     PlayStep,
     SceneDocument,
@@ -47,6 +65,8 @@ class Issue(BaseModel):
     node: str | None = None
     port: str | None = None
     step: int | None = None
+    # Set when the issue is inside a reusable group's definition.
+    group: str | None = None
 
 
 def compatible(source: TypeRef, target: TypeRef) -> bool:
@@ -66,7 +86,35 @@ def receiver_type(descriptor: Descriptor, index: dict[str, Descriptor]) -> TypeR
 def validate_document(document: Document, catalogue: Catalogue) -> list[Issue]:
     issues = document_issues(document, catalogue)
     for scene in document.scenes:
-        issues.extend(validate_scene(scene, catalogue))
+        issues.extend(validate_scene(scene, catalogue, document.groups))
+    return issues
+
+
+def validate_group(
+    definition: GroupDefinition, catalogue: Catalogue, groups: Iterable[GroupDefinition]
+) -> list[Issue]:
+    """Problems inside a reusable group, tagged with the group's name."""
+    scene = SceneDocument(
+        name=definition.name, nodes=definition.nodes, edges=definition.edges
+    )
+    issues = validate_scene(scene, catalogue, groups, in_group=True)
+    outputs = [n for n in definition.nodes if n.catalogue == OUTPUT.name]
+    if len(outputs) != 1:
+        issues.append(
+            Issue(code="bad_group", message="a group needs exactly one Output")
+        )
+    names: set[str] = set()
+    for node in definition.nodes:
+        if node.catalogue != INPUT.name:
+            continue
+        name = str(node.values.get("name", "input"))
+        if not name.isidentifier() or name in names:
+            issues.append(
+                _issue("bad_group", f"input name {name!r} is not usable", node.id)
+            )
+        names.add(name)
+    for issue in issues:
+        issue.group = definition.name
     return issues
 
 
@@ -75,6 +123,16 @@ def document_issues(document: Document, catalogue: Catalogue) -> list[Issue]:
     reserved = {e.name for e in catalogue.entries if e.kind != "method"}
     reserved |= {c.name for c in catalogue.colors} | set(DIRECTION_NAMES) | {"Scene"}
     issues = _settings_issues(document.settings, {c.name for c in catalogue.colors})
+    for definition in document.groups:
+        if not definition.name.isidentifier() or definition.name in reserved:
+            issues.append(
+                Issue(
+                    code="bad_group",
+                    message=f"{definition.name!r} is not a usable group name",
+                    group=definition.name,
+                )
+            )
+        issues.extend(validate_group(definition, catalogue, document.groups))
     for scene in document.scenes:
         if not scene.name.isidentifier() or scene.name in reserved:
             issues.append(
@@ -86,13 +144,20 @@ def document_issues(document: Document, catalogue: Catalogue) -> list[Issue]:
     return issues
 
 
-def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
-    graph = Graph(scene, catalogue)
+def validate_scene(
+    scene: SceneDocument,
+    catalogue: Catalogue,
+    groups: Iterable[GroupDefinition] = (),
+    in_group: bool = False,
+) -> list[Issue]:
+    graph = Graph(scene, catalogue, groups)
     colors = {c.name for c in catalogue.colors}
     functions = function_signatures(catalogue)
     classes = {e.name for e in catalogue.entries if e.kind == "class"}
     nodes = graph.nodes
-    issues: list[Issue] = []
+    issues: list[Issue] = [
+        _issue(code, message, node) for code, message, node in graph.problems
+    ]
 
     descriptors: dict[str, Descriptor] = {}
     for node in scene.nodes:
@@ -129,6 +194,7 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
                 issues.append(_issue("bad_literal", problem, node.id, port))
         if descriptor.name == ANIMATE.name:
             issues.extend(_animate_issues(node, graph, colors, functions, classes))
+        issues.extend(_placement_issues(node, descriptor, graph, scene, in_group))
 
     connected: dict[tuple[str, str], list[str]] = {}
     for edge in scene.edges:
@@ -146,6 +212,9 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
         if source is None or target is None:
             continue
         produced = graph.output_type(edge.source)
+        scope = _scope_problem(edge.source, edge.target, graph)
+        if scope is not None:
+            issues.append(_issue("bad_scope", scope, edge.target, edge.port))
         if edge.port == SELF_PORT:
             if target.kind != "method":
                 issues.append(
@@ -184,6 +253,10 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
             issues.append(
                 _mismatch(source, produced, target, edge.port, param.type, edge.target)
             )
+        elif (
+            problem := _connection_problem(produced, param, edge.source, graph)
+        ) is not None:
+            issues.append(_issue("type_mismatch", problem, edge.target, edge.port))
 
     for node in scene.nodes:
         descriptor = descriptors.get(node.id)
@@ -230,8 +303,10 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
         descriptor = descriptors.get(node_id)
         if descriptor is None or len(sources) < 2:
             continue
-        param = next((p for p in descriptor.parameters if p.name == port), None)
-        if param is None or param.kind != "var_positional":
+        param = next((p for p in graph.parameters(node_id) if p.name == port), None)
+        if param is None or (
+            param.kind != "var_positional" and not param.type.collection
+        ):
             issues.append(
                 _issue(
                     "duplicate_connection",
@@ -245,7 +320,113 @@ def validate_scene(scene: SceneDocument, catalogue: Catalogue) -> list[Issue]:
 
     for position, step in enumerate(scene.steps):
         issues.extend(_step_issues(position, step, graph, descriptors, functions))
+        if (
+            isinstance(step, CameraStep | FixedInFrameStep)
+            and scene.scene_type != "ThreeDScene"
+        ):
+            issues.append(
+                Issue(
+                    code="bad_scene_type",
+                    message=f"{step.kind} steps need a ThreeDScene",
+                    step=position,
+                )
+            )
     return issues
+
+
+def _placement_issues(
+    node: Node,
+    descriptor: Descriptor,
+    graph: Graph,
+    scene: SceneDocument,
+    in_group: bool,
+) -> list[Issue]:
+    """Nodes that only mean something in one place: containers, groups, scene types."""
+    issues: list[Issue] = []
+    name = descriptor.name
+    if name == ITEM.name and graph.nearest(node.id, MAP.name) is None:
+        issues.append(_issue("misplaced", "Item must be inside a Map", node.id))
+    elif name in CONTAINER_LOCALS and name != ITEM.name and node.parent is None:
+        issues.append(
+            _issue("misplaced", f"{name} must be inside a Map or Repeat", node.id)
+        )
+    if name in CONTAINERS:
+        results = [c for c in graph.children(node.id) if c.catalogue == RESULT.name]
+        if len(results) != 1:
+            issues.append(
+                _issue(
+                    "missing_required",
+                    f"{name} needs exactly one Result inside it",
+                    node.id,
+                )
+            )
+    if name in GROUP_PORTS and not in_group:
+        issues.append(
+            _issue("misplaced", f"{name} only works inside a reusable group", node.id)
+        )
+    if (
+        name == CAMERA_FRAME.name
+        and scene.scene_type not in FRAME_SCENE_TYPES
+        and not in_group
+    ):
+        issues.append(
+            _issue(
+                "bad_scene_type",
+                "CameraFrame needs a MovingCameraScene or ZoomedScene",
+                node.id,
+            )
+        )
+    if name == CONFIG.name:
+        seen: set[str] = set()
+        for key in node.config:
+            if not key.name.isidentifier() or key.name in seen:
+                issues.append(
+                    _issue("bad_config", f"key {key.name!r} is not usable", node.id)
+                )
+            seen.add(key.name)
+    if node.parent is not None:
+        container = graph.descriptor(node.parent)
+        if container is None or container.name not in CONTAINERS:
+            issues.append(
+                _issue(
+                    "misplaced", "the node's container is not a Map or Repeat", node.id
+                )
+            )
+    return issues
+
+
+def _scope_problem(source: str, target: str, graph: Graph) -> str | None:
+    """A node inside a Map or Repeat is only usable inside it (or through Result)."""
+    scope = graph.container_of(source)
+    if scope is None or graph.container_of(target) == scope:
+        return None
+    current = graph.container_of(target)
+    while current is not None:
+        if current == scope:
+            return None
+        current = graph.container_of(current)
+    return "a node inside a Map or Repeat cannot be used outside it"
+
+
+_WORD = re.compile(r"[A-Za-z_]+")
+
+
+def _connection_problem(
+    produced: TypeRef, param: Parameter, source: str, graph: Graph
+) -> str | None:
+    """Collection and VMobject rules, after the plain type check passed."""
+    if (
+        produced.collection
+        and not param.type.collection
+        and param.kind != "var_positional"
+    ):
+        return f"{param.name} takes one value, not a collection"
+    tokens = set(_WORD.findall(param.type.annotation))
+    if "VMobject" in tokens and "Mobject" not in tokens:
+        cls = graph.class_of(source)
+        if cls is not None and not cls.is_vmobject:
+            return f"{param.name} only takes VMobjects, {cls.name} is not one"
+    return None
 
 
 def _is_updater(node_id: str, graph: Graph) -> bool:
@@ -382,6 +563,7 @@ def _step_issues(
 
 
 _HEX_COLOR = re.compile(r"^#[0-9A-Fa-f]{6}$")
+_SEQUENCE = re.compile(r"\b(Sequence|list|tuple|Iterable)\[")
 RATE_FUNCTION = "(float) -> float"
 
 
@@ -450,6 +632,8 @@ def _literal_problem(
             return "expected a list"
         return None
     if kind is PortType.NUMBER:
+        if isinstance(value, list) and _SEQUENCE.search(type_ref.annotation):
+            return None  # int | Sequence[int]: a list is one of the accepted forms
         return (
             None
             if isinstance(value, int | float) and not isinstance(value, bool)

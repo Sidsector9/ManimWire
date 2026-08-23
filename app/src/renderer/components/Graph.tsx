@@ -11,17 +11,18 @@ import {
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Descriptor, TypeRef } from '../../shared/engine'
-import { starterDocument } from '../model/document'
+import { absolutePosition, starterDocument } from '../model/document'
 import { toFlow, type ManimFlowNode } from '../model/flow'
 import { effectiveDescriptor, isObjectType, liveByDefault, producedType } from '../model/live'
 import { acceptsManyConnections, compatible, portType } from '../model/types'
-import { selectExpressionNames, selectIndex, useCatalogueStore } from '../store/catalogue'
+import { selectExpressionNames, useCatalogueStore } from '../store/catalogue'
+import { useDescriptorIndex } from '../store/descriptors'
 import { currentScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { ManimNode } from './ManimNode'
 import { QuickAdd } from './QuickAdd'
 
-const nodeTypes = { manim: ManimNode }
+const nodeTypes = { manim: ManimNode, container: ManimNode }
 
 interface QuickAddState {
   screen: { x: number; y: number }
@@ -33,10 +34,13 @@ interface QuickAddState {
 export function Graph() {
   const scene = useDocumentStore(currentScene)
   const selected = useDocumentStore((s) => s.selected)
+  const editingGroup = useDocumentStore((s) => s.editingGroup)
   const store = useDocumentStore()
-  const index = useCatalogueStore(selectIndex)
+  const index = useDescriptorIndex()
   const expressionNames = useCatalogueStore(selectExpressionNames)
-  const issues = useEngineResults((s) => s.issues)
+  const allIssues = useEngineResults((s) => s.issues)
+  // Issues carry the group they belong to; the graph shows the ones for what it displays.
+  const issues = useMemo(() => allIssues.filter((i) => (editingGroup ? i.group === editingGroup : !i.group)), [allIssues, editingGroup])
   const derived = useMemo(() => toFlow(scene, index, issues, selected, expressionNames), [scene, index, issues, selected, expressionNames])
   const describe = useCallback(
     (id: string | null | undefined): Descriptor | undefined => {
@@ -59,7 +63,10 @@ export function Graph() {
       setNodes((current) => applyNodeChanges(changes, current))
       for (const change of changes) {
         if (change.type === 'position' && change.position && change.dragging === false) {
-          store.moveNode(change.id, [change.position.x, change.position.y])
+          // xyflow positions children relative to their container; the document decides the container.
+          const parent = scene.nodes.find((n) => n.id === change.id)?.parent
+          const [ox, oy] = parent ? absolutePosition(scene, parent) : [0, 0]
+          store.placeNode(change.id, [change.position.x + ox, change.position.y + oy])
         } else if (change.type === 'remove') {
           store.removeNodes([change.id])
         } else if (change.type === 'select' && change.selected) {
@@ -67,7 +74,7 @@ export function Graph() {
         }
       }
     },
-    [store]
+    [store, scene]
   )
 
   const isValidConnection = useCallback(
@@ -81,7 +88,7 @@ export function Graph() {
       const accepted = portType(target, port, index)
       if (!accepted || !compatible(producedType(source), accepted)) return false
       const already = scene.edges.some((e) => e.target === connection.target && e.port === port && e.source !== connection.source)
-      return !already || acceptsManyConnections(target, port)
+      return !already || acceptsManyConnections(target, port) || accepted.collection === true
     },
     [index, scene, describe]
   )
@@ -123,7 +130,9 @@ export function Graph() {
 
   const choose = (descriptor: Descriptor): void => {
     if (!quickAdd) return
-    store.addCatalogueNode(descriptor, [quickAdd.flow.x, quickAdd.flow.y], index, quickAdd.from)
+    const id = store.addCatalogueNode(descriptor, [quickAdd.flow.x, quickAdd.flow.y], index, quickAdd.from)
+    // A node dropped over a Map or Repeat joins it.
+    if (!quickAdd.from) store.placeNode(id, [quickAdd.flow.x, quickAdd.flow.y])
     setQuickAdd(null)
   }
 
@@ -158,7 +167,7 @@ export function Graph() {
       >
         <Background gap={24} size={1} color="#1a1e24" />
       </ReactFlow>
-      {scene.nodes.length === 0 && (
+      {scene.nodes.length === 0 && !editingGroup && (
         <div className="graph-empty">
           <div>Press Tab to add a node</div>
           <button className="button" onClick={() => useDocumentStore.getState().replace(starterDocument(), useDocumentStore.getState().filePath)}>

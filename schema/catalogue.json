@@ -37,7 +37,8 @@
             "class",
             "method",
             "function",
-            "builtin"
+            "builtin",
+            "group"
           ],
           "title": "Kind",
           "type": "string"
@@ -89,6 +90,11 @@
         "is_vmobject": {
           "default": false,
           "title": "Is Vmobject",
+          "type": "boolean"
+        },
+        "requires_latex": {
+          "default": false,
+          "title": "Requires Latex",
           "type": "boolean"
         },
         "hidden": {
@@ -292,6 +298,14 @@
         "type": "string"
       },
       "title": "Expression Names",
+      "type": "array"
+    },
+    "fonts": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Fonts",
       "type": "array"
     },
     "unknown_annotations": {

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { currentScene, useDocumentStore } from '../store/document'
+import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineStore } from '../store/engine'
 import { useEngineResults } from '../store/preview'
 
@@ -15,7 +15,7 @@ export function Canvas() {
   const issues = useEngineResults((s) => s.issues)
   const setPreviewWidth = useEngineResults((s) => s.setPreviewWidth)
   const engine = useEngineStore((s) => s.status)
-  const scene = useDocumentStore(currentScene)
+  const scene = useDocumentStore(previewScene)
   const select = useDocumentStore((s) => s.select)
   const selectStep = useDocumentStore((s) => s.selectStep)
   const host = useRef<HTMLDivElement>(null)

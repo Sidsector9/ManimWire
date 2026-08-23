@@ -4,7 +4,7 @@ export type ManimVersion = string;
 export type Name = string;
 export type Qualname = string;
 export type Module = string;
-export type Kind = "class" | "method" | "function" | "builtin";
+export type Kind = "class" | "method" | "function" | "builtin" | "group";
 export type Category = string;
 export type Owner = string | null;
 export type Bases = string[];
@@ -38,6 +38,7 @@ export type Parameters = Parameter[];
 export type AcceptsKwargs = boolean;
 export type Doc = string;
 export type IsVmobject = boolean;
+export type RequiresLatex = boolean;
 export type Hidden = boolean;
 export type Signature1 = string | null;
 export type Entries = Descriptor[];
@@ -46,6 +47,7 @@ export type Hex = string;
 export type Colors = ColorEntry[];
 export type Directions = string[];
 export type ExpressionNames = string[];
+export type Fonts = string[];
 export type UnknownAnnotations = string[];
 
 export interface Catalogue {
@@ -54,6 +56,7 @@ export interface Catalogue {
   colors: Colors;
   directions: Directions;
   expression_names: ExpressionNames;
+  fonts?: Fonts;
   unknown_annotations: UnknownAnnotations;
   [k: string]: unknown;
 }
@@ -70,6 +73,7 @@ export interface Descriptor {
   returns: TypeRef;
   doc?: Doc;
   is_vmobject?: IsVmobject;
+  requires_latex?: RequiresLatex;
   hidden?: Hidden;
   signature?: Signature1;
   [k: string]: unknown;

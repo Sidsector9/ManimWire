@@ -1,10 +1,12 @@
 import { create } from 'zustand'
-import type { Catalogue, Descriptor, PortType } from '../../shared/engine'
+import type { Catalogue, CoverageReport, Descriptor, PortType } from '../../shared/engine'
 import { call } from '../engine/client'
 import { indexDescriptors, type DescriptorIndex } from '../model/types'
 
 interface CatalogueStore {
   catalogue: Catalogue | null
+  /** The parity metric: parameters the UI cannot present yet. */
+  coverage: CoverageReport | null
   /** Descriptors by qualname, built once per catalogue load. */
   index: DescriptorIndex
   error: string | null
@@ -15,6 +17,7 @@ const NO_ENTRIES: Descriptor[] = []
 const NO_COLORS: Catalogue['colors'] = []
 const NO_DIRECTIONS: string[] = []
 const NO_NAMES: string[] = []
+const NO_FONTS: string[] = []
 
 /** Selectors must return stable references; these avoid a fresh [] per render. */
 export const selectEntries = (s: CatalogueStore): Descriptor[] => s.catalogue?.entries ?? NO_ENTRIES
@@ -23,15 +26,18 @@ export const selectIndex = (s: CatalogueStore): DescriptorIndex => s.index
 export const selectDirections = (s: CatalogueStore): string[] => s.catalogue?.directions ?? NO_DIRECTIONS
 /** Names an Expression may use without declaring a variable: functions and constants. */
 export const selectExpressionNames = (s: CatalogueStore): string[] => s.catalogue?.expression_names ?? NO_NAMES
+export const selectFonts = (s: CatalogueStore): string[] => s.catalogue?.fonts ?? NO_FONTS
 
 export const useCatalogueStore = create<CatalogueStore>((set) => ({
   catalogue: null,
+  coverage: null,
   index: new Map(),
   error: null,
   load: async () => {
     try {
       const catalogue = await call<Catalogue>('catalogue.list')
       set({ catalogue, index: indexDescriptors(catalogue.entries), error: null })
+      set({ coverage: await call<CoverageReport>('catalogue.coverage') })
     } catch (error) {
       set({ error: String(error) })
     }
@@ -46,6 +52,8 @@ const GROUP_LABELS: Array<[prefix: string, label: string]> = [
   ['types', 'Groups'],
   ['three_d', '3D'],
   ['logic', 'Logic'],
+  ['group', 'Reusable groups'],
+  ['query', 'Object queries'],
   ['value', 'Values'],
   ['svg', 'SVG and braces'],
   ['mobject', 'Other objects'],

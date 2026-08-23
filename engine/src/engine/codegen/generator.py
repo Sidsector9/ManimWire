@@ -4,35 +4,60 @@ Construction statements come first in dependency order, then the steps. A live
 node (see engine.document.analysis) becomes ``always_redraw`` when it builds a
 mobject and ``add_updater`` when it is a method acting on one, so live
 connections in the graph turn into Manim updaters without the user writing a
-function (goal.md section 23).
+function (goal.md section 23). Map and Repeat containers become ``for`` loops;
+reusable groups are expanded in place (engine.document.analysis).
 """
 
 from __future__ import annotations
 
+import keyword
 import re
+from collections.abc import Iterable
 from typing import Protocol
 
 from pydantic import BaseModel
 
 from engine.catalogue.builtins import (
     ANIMATE,
+    CAMERA_FRAME,
+    COLOR,
+    CONFIG,
+    CONTAINERS,
     DERIVATIVE,
     EXPRESSION,
     FRAME_DELTA,
+    IF,
+    INDEX,
+    INPUT,
+    ITEM,
+    MAP,
+    NUMBER,
+    OUTPUT,
+    POINT,
+    RANGE,
+    REPEAT,
+    RESULT,
     SCENE_TIME,
     STATE,
+    SUBMOBJECT,
+    SUBMOBJECTS,
 )
 from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType, TypeRef
 from engine.codegen.literals import LiteralFormatter
-from engine.document.analysis import OBJECT_TYPES, Graph, chain_port
+from engine.document.analysis import OBJECT_TYPES, RESULT_PORT, Graph, chain_port
 from engine.document.model import (
+    CAMERA_FIELDS,
+    CAMERA_METHODS,
+    FIXED_IN_FRAME_METHODS,
     MOBJECT_STEP_METHODS,
     SELF_PORT,
     UPDATING_METHODS,
     AddStep,
     BringToBackStep,
     BringToFrontStep,
-    JsonValue,
+    CameraStep,
+    FixedInFrameStep,
+    GroupDefinition,
     Node,
     PlayStep,
     RemoveStep,
@@ -57,7 +82,21 @@ AnyStep = (
     | SoundStep
     | SubcaptionStep
     | UpdatingStep
+    | CameraStep
+    | FixedInFrameStep
 )
+
+# Nodes that are read where they are used and never get a statement of their own.
+_INLINE_ONLY = {
+    SCENE_TIME.name,
+    FRAME_DELTA.name,
+    ITEM.name,
+    INDEX.name,
+    RESULT.name,
+    INPUT.name,
+    OUTPUT.name,
+    CAMERA_FRAME.name,
+}
 
 
 class SourceMap(BaseModel):
@@ -79,7 +118,12 @@ class GeneratedCode(BaseModel):
 
 
 class CodeGenerator(Protocol):
-    def generate(self, scene: SceneDocument, catalogue: Catalogue) -> GeneratedCode: ...
+    def generate(
+        self,
+        scene: SceneDocument,
+        catalogue: Catalogue,
+        groups: Iterable[GroupDefinition] = (),
+    ) -> GeneratedCode: ...
 
 
 _CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
@@ -90,40 +134,43 @@ def snake_case(name: str) -> str:
 
 
 class ManimCodeGenerator:
-    def generate(self, scene: SceneDocument, catalogue: Catalogue) -> GeneratedCode:
-        issues = validate_scene(scene, catalogue)
+    def generate(
+        self,
+        scene: SceneDocument,
+        catalogue: Catalogue,
+        groups: Iterable[GroupDefinition] = (),
+    ) -> GeneratedCode:
+        groups = list(groups)
+        issues = validate_scene(scene, catalogue, groups)
         if issues:
             return GeneratedCode(code="", source_map=SourceMap(), issues=issues)
-        return _Build(scene, catalogue).run()
+        return _Build(scene, catalogue, groups).run()
 
 
 class _Build:
-    def __init__(self, scene: SceneDocument, catalogue: Catalogue) -> None:
+    def __init__(
+        self, scene: SceneDocument, catalogue: Catalogue, groups: list[GroupDefinition]
+    ) -> None:
         self.scene = scene
-        self.graph = Graph(scene, catalogue)
+        self.graph = Graph(scene, catalogue, groups)
         self.formatter = LiteralFormatter({c.name for c in catalogue.colors})
         self.variables: dict[str, str] = {}
         self.taken: set[str] = {"self", "mob", "dt"}
         self.body: list[str] = []
         self.map = SourceMap()
         self.uses_dt = False
+        self.indent = 0
+        # Loop variables of the containers being emitted, innermost last: (item, index).
+        self.loops: dict[str, tuple[str, str]] = {}
+        # Names assigned inside the loops being emitted; lambdas must bind them.
+        self.scoped: list[str] = []
 
     # ---- driver -----------------------------------------------------------------
 
     def run(self) -> GeneratedCode:
         for node in self.ordered_nodes():
-            descriptor = self.descriptor(node)
-            if descriptor.returns.type is PortType.ANIMATION:
-                continue  # animations are written inline where they are played
-            if descriptor.name in (SCENE_TIME.name, FRAME_DELTA.name):
-                continue  # read inline as self.time and dt
-            if (
-                self.graph.is_live(node.id)
-                and self.graph.is_value_node(node.id)
-                and descriptor.name != STATE.name
-            ):
-                continue  # live values are inlined into the updater that reads them
-            self.emit_construction(node)
+            if node.parent is None:
+                self.emit_node(node)
         for position, step in enumerate(self.scene.steps):
             self.emit_step(position, step)
         return self.assemble()
@@ -131,20 +178,60 @@ class _Build:
     def descriptor(self, node: Node) -> Descriptor:
         return self.graph.index[node.catalogue]
 
-    def ordered_nodes(self) -> list[Node]:
+    def emit_node(self, node: Node) -> None:
+        descriptor = self.descriptor(node)
+        if descriptor.returns.type is PortType.ANIMATION:
+            return  # animations are written inline where they are played
+        if descriptor.name in _INLINE_ONLY:
+            return
+        if (
+            self.graph.is_live(node.id)
+            and self.graph.is_value_node(node.id)
+            and descriptor.name != STATE.name
+        ):
+            return  # live values are inlined into the updater that reads them
+        if self.graph.is_instance(node.id):
+            self.emit_instance(node)
+        elif descriptor.name in CONTAINERS:
+            self.emit_container(node, descriptor)
+        else:
+            self.emit_construction(node)
+
+    def dependencies(self, node_id: str) -> list[str]:
+        """Sources of a node; for a container, also what its children read outside."""
+        sources = [e.source for e in self.graph.edges_in.get(node_id, [])]
+        descriptor = self.graph.descriptor(node_id)
+        if descriptor is not None and descriptor.name in CONTAINERS:
+            inside = {c.id for c in self.descendants(node_id)}
+            for child in inside:
+                for edge in self.graph.edges_in.get(child, []):
+                    if edge.source not in inside:
+                        sources.append(edge.source)
+        return sources
+
+    def descendants(self, container_id: str) -> list[Node]:
+        found: list[Node] = []
+        for child in self.graph.children(container_id):
+            found.append(child)
+            found.extend(self.descendants(child.id))
+        return found
+
+    def ordered_nodes(self, among: Iterable[Node] | None = None) -> list[Node]:
         """Dependencies first, document order otherwise."""
         order: list[Node] = []
         done: set[str] = set()
+        allowed = None if among is None else {n.id for n in among}
 
         def visit(node_id: str) -> None:
-            if node_id in done:
+            if node_id in done or node_id not in self.graph.nodes:
                 return
             done.add(node_id)
-            for edge in self.graph.edges_in.get(node_id, []):
-                visit(edge.source)
+            for source in self.dependencies(node_id):
+                if allowed is None or source in allowed:
+                    visit(source)
             order.append(self.graph.nodes[node_id])
 
-        for node in self.scene.nodes:
+        for node in among if among is not None else self.scene.nodes:
             visit(node.id)
         return order
 
@@ -166,41 +253,93 @@ class _Build:
                     params = "mob, dt" if self.uses_dt else "mob"
                     call = f"mob.{descriptor.name}({arguments})"
                     self.line(
-                        f"{receiver}.add_updater(lambda {params}: {call})", node.id
+                        f"{receiver}.add_updater({self.closure(params, call)})", node.id
                     )
                     self.map.live.append(node.id)
                 else:
                     self.line(f"{receiver}.{descriptor.name}({arguments})", node.id)
                 return
             call = f"{receiver}.{descriptor.name}({self.arguments(node, descriptor)})"
-        elif descriptor.name == EXPRESSION.name:
-            call = self.expression_source(node)
-        elif descriptor.name == DERIVATIVE.name:
-            call = self.derivative_source(node)
         else:
-            call = f"{descriptor.name}({self.arguments(node, descriptor)})"
-        name = self.new_variable(node, descriptor)
+            call = self.value_source(node, descriptor)
+        name = self.new_variable(node.label or descriptor.name)
         self.variables[node.id] = name
         if live:
-            self.line(f"{name} = always_redraw(lambda: {call})", node.id)
+            self.line(f"{name} = always_redraw({self.closure('', call)})", node.id)
             self.map.live.append(node.id)
         else:
             self.line(f"{name} = {call}", node.id)
 
+    def value_source(self, node: Node, descriptor: Descriptor) -> str:
+        """The Python expression that builds a non-method node's value."""
+        name = descriptor.name
+        if name == EXPRESSION.name:
+            return self.expression_source(node)
+        if name == DERIVATIVE.name:
+            return self.derivative_source(node)
+        if name == CONFIG.name:
+            return self.config_source(node)
+        if name == RANGE.name:
+            return self.range_source(node)
+        if name == IF.name:
+            return self.if_source(node)
+        if name == SUBMOBJECT.name:
+            return self.submobject_source(node)
+        if name in (NUMBER.name, COLOR.name):
+            return self.argument(node, descriptor.parameters[0]) or "0"
+        if name == POINT.name:
+            self.formatter.uses_numpy = True
+            parts = [self.argument(node, p) or "0" for p in POINT.parameters]
+            return f"np.array([{', '.join(parts)}])"
+        if name == SUBMOBJECTS.name:
+            owner = self.expression(self.graph.sources(node.id, "mobject")[0])
+            return f"{owner}.submobjects"
+        return f"{name}({self.arguments(node, descriptor)})"
+
     def emit_state(self, node: Node) -> None:
-        name = self.new_variable(node, STATE)
+        name = self.new_variable(node.label or STATE.name)
         self.variables[node.id] = name
         params = {p.name: p for p in STATE.parameters}
-        initial = self.argument(node, params["initial"], default=0.0)
-        self.line(f"{name} = [{initial}]", node.id)
+        self.line(f"{name} = [{self.argument(node, params['initial'])}]", node.id)
         sources = self.graph.sources(node.id, "next")
         if sources:
             self.uses_dt = False
             value = self.expression(sources[0], params["next"].type)
-            self.line(
-                f"self.add_updater(lambda dt: {name}.__setitem__(0, {value}))", node.id
-            )
+            body = f"{name}.__setitem__(0, {value})"
+            self.line(f"self.add_updater({self.closure('dt', body)})", node.id)
             self.map.live.append(node.id)
+
+    def emit_container(self, node: Node, descriptor: Descriptor) -> None:
+        name = self.new_variable(node.label or descriptor.name)
+        self.variables[node.id] = name
+        item = self.new_variable("item")
+        index = self.new_variable("index")
+        self.line(f"{name} = []", node.id)
+        if descriptor.name == MAP.name:
+            items = self.expression(self.graph.sources(node.id, "items")[0])
+            self.line(f"for {index}, {item} in enumerate({items}):", node.id)
+        else:
+            count = self.argument(node, REPEAT.parameters[0])
+            self.line(f"for {index} in range(int({count})):", node.id)
+        self.loops[node.id] = (item, index)
+        outer = len(self.scoped)
+        self.scoped += [item, index]
+        self.indent += 1
+        children = self.graph.children(node.id)
+        for child in self.ordered_nodes(children):
+            self.emit_node(child)
+        result = next(c for c in children if c.catalogue == RESULT.name)
+        value = self.expression(self.graph.sources(result.id, "value")[0])
+        self.line(f"{name}.append({value})", node.id)
+        self.indent -= 1
+        del self.scoped[outer:]
+        del self.loops[node.id]
+
+    def emit_instance(self, node: Node) -> None:
+        """A group instance stands for the value its Output copy receives."""
+        outputs = self.graph.sources(node.id, RESULT_PORT)
+        sources = self.graph.sources(outputs[0], "value") if outputs else []
+        self.variables[node.id] = self.expression(sources[0]) if sources else "None"
 
     # ---- expressions ------------------------------------------------------------
 
@@ -208,32 +347,56 @@ class _Build:
         """Python for a node's output where it is used, honouring the port it feeds."""
         node = self.graph.nodes[node_id]
         descriptor = self.descriptor(node)
-        if descriptor.name == SCENE_TIME.name:
+        name = descriptor.name
+        if name == SCENE_TIME.name:
             return "self.time"
-        if descriptor.name == FRAME_DELTA.name:
+        if name == FRAME_DELTA.name:
             self.uses_dt = True
             return "dt"
+        if name == CAMERA_FRAME.name:
+            return "self.camera.frame"
+        if name == ITEM.name:
+            container = self.graph.nearest(node_id, MAP.name)
+            return self.loops[container][0] if container else "None"
+        if name == INDEX.name:
+            container = self.graph.container_of(node_id)
+            return self.loops[container][1] if container else "None"
+        if name in (RESULT.name, OUTPUT.name):
+            sources = self.graph.sources(node_id, "value")
+            return self.expression(sources[0], expected) if sources else "None"
+        if name == INPUT.name:
+            return self.input_source(node)
         if node_id in self.variables:
-            name = self.variables[node_id]
-            if descriptor.name == STATE.name:
-                return f"{name}[0]"
+            variable = self.variables[node_id]
+            if name == STATE.name:
+                return f"{variable}[0]"
             # A ValueTracker is an object on mobject ports and a number elsewhere.
             wants_value = expected is not None and expected.type not in OBJECT_TYPES
             is_tracker = (
                 descriptor.returns.type is PortType.LIVE_NUMBER
                 and descriptor.kind == "class"
             )
-            return f"{name}.get_value()" if is_tracker and wants_value else name
-        if descriptor.name == EXPRESSION.name:
-            return self.expression_source(node)
-        if descriptor.name == DERIVATIVE.name:
-            return self.derivative_source(node)
-        if descriptor.name == ANIMATE.name:
+            return f"{variable}.get_value()" if is_tracker and wants_value else variable
+        if name == ANIMATE.name:
             return self.animate_source(node)
         if descriptor.kind == "method":
             receiver = self.expression(self.graph.sources(node_id, SELF_PORT)[0])
-            return f"{receiver}.{descriptor.name}({self.arguments(node, descriptor)})"
-        return f"{descriptor.name}({self.arguments(node, descriptor)})"
+            return f"{receiver}.{name}({self.arguments(node, descriptor)})"
+        return self.value_source(node, descriptor)
+
+    def input_source(self, node: Node) -> str:
+        sources = self.graph.sources(node.id, "value")
+        type_name = str(node.values.get("type", "number"))
+        try:
+            port = PortType(type_name)
+        except ValueError:
+            port = PortType.ANY
+        declared = TypeRef(type=port, annotation=port.value)
+        if sources:
+            return self.expression(sources[0], declared)
+        if "value" in node.values:
+            return self.formatter.format(node.values["value"], declared)
+        return "None"
 
     def expression_source(self, node: Node) -> str:
         parsed = parse_expression(str(node.values.get("expr", "")))
@@ -249,13 +412,46 @@ class _Build:
                 )
         result = to_source(parsed, bindings)
         self.formatter.uses_numpy |= result.uses_numpy
+        if result.free:
+            head, body = result.source.split(": ", 1)
+            return self.closure(head.removeprefix("lambda "), body)
         return result.source
 
     def derivative_source(self, node: Node) -> str:
         function = self.expression(self.graph.sources(node.id, "function")[0])
         if function.startswith("lambda"):
             function = f"({function})"
-        return f"lambda x: ({function}(x + 1e-4) - {function}(x - 1e-4)) / 2e-4"
+        body = f"({function}(x + 1e-4) - {function}(x - 1e-4)) / 2e-4"
+        return self.closure("x", body)
+
+    def config_source(self, node: Node) -> str:
+        entries = []
+        for param in self.graph.parameters(node.id):
+            value = self.argument(node, param)
+            if value is not None:
+                entries.append(f"{param.name!r}: {value}")
+        return "{" + ", ".join(entries) + "}"
+
+    def range_source(self, node: Node) -> str:
+        self.formatter.uses_numpy = True
+        params = {p.name: p for p in RANGE.parameters}
+        parts = [self.argument(node, params[n]) for n in ("start", "stop", "step")]
+        return f"np.arange({', '.join(str(p) for p in parts)})"
+
+    def if_source(self, node: Node) -> str:
+        params = {p.name: p for p in IF.parameters}
+        condition = self.argument(node, params["condition"])
+        then = self.argument(node, params["then"]) or "None"
+        otherwise = self.argument(node, params["else"]) or "None"
+        return f"({then} if {condition} else {otherwise})"
+
+    def submobject_source(self, node: Node) -> str:
+        params = {p.name: p for p in SUBMOBJECT.parameters}
+        mobject = self.expression(self.graph.sources(node.id, "mobject")[0])
+        index = self.argument(node, params["index"]) or "0"
+        if self.graph.sources(node.id, "index"):
+            index = f"int({index})"
+        return f"{mobject}.submobjects[{index}]"
 
     def animate_source(self, node: Node) -> str:
         params = {p.name: p for p in ANIMATE.parameters}
@@ -288,29 +484,41 @@ class _Build:
             chain += f".{call.method}({', '.join(parts)})"
         return chain
 
-    def argument(
-        self, node: Node, param: Parameter, default: JsonValue = None
-    ) -> str | None:
-        """One argument: the connected value, else the literal, else ``default``."""
+    def argument(self, node: Node, param: Parameter) -> str | None:
+        """One argument: the connection, else the literal, else the Manim default."""
         sources = self.graph.sources(node.id, param.name)
         if sources:
+            return self.collected(node, param, sources)
+        if param.name in node.values:
+            return self.formatter.format(node.values[param.name], param.type)
+        if param.default not in (None, "None"):
+            return param.default
+        return None
+
+    def collected(self, node: Node, param: Parameter, sources: list[str]) -> str:
+        """A collection port takes several values, or one collection, as a list."""
+        if not param.type.collection:
             return self.expression(sources[0], param.type)
-        value = node.values.get(param.name, default)
-        return None if value is None else self.formatter.format(value, param.type)
+        element = param.type.model_copy(update={"collection": False})
+        if len(sources) == 1 and self.graph.output_type(sources[0]).collection:
+            return self.expression(sources[0], param.type)
+        return "[" + ", ".join(self.expression(s, element) for s in sources) + "]"
 
     def arguments(self, node: Node, descriptor: Descriptor) -> str:
         parts: list[str] = []
         for param in descriptor.parameters:
             sources = self.graph.sources(node.id, param.name)
             if param.kind == "var_positional":
-                parts.extend(self.expression(s, param.type) for s in sources)
+                for source in sources:
+                    spread = "*" if self.graph.output_type(source).collection else ""
+                    parts.append(spread + self.expression(source, param.type))
                 if param.name in node.values:
                     parts.append(
                         self.formatter.format(node.values[param.name], param.type)
                     )
                 continue
             if sources:
-                value = self.expression(sources[0], param.type)
+                value = self.collected(node, param, sources)
             elif param.name in node.values:
                 value = self.formatter.format(node.values[param.name], param.type)
             else:
@@ -319,17 +527,27 @@ class _Build:
             parts.append(value if positional else f"{param.name}={value}")
         return ", ".join(parts)
 
-    def new_variable(self, node: Node, descriptor: Descriptor) -> str:
-        base = snake_case(node.label or descriptor.name)
+    def closure(self, params: str, body: str) -> str:
+        """A lambda binding the loop-scoped names it reads: each run keeps its own."""
+        bound = [
+            f"{name}={name}" for name in self.scoped if re.search(rf"\b{name}\b", body)
+        ]
+        head = ", ".join(p for p in [params, *bound] if p)
+        return f"lambda {head}: {body}" if head else f"lambda: {body}"
+
+    def new_variable(self, label: str) -> str:
+        base = snake_case(label)
         base = re.sub(r"\W+", "_", base).strip("_") or "value"
         if not base[0].isalpha():
             base = f"v_{base}"
         name = base
         counter = 2
-        while name in self.taken:
+        while name in self.taken or keyword.iskeyword(name):
             name = f"{base}_{counter}"
             counter += 1
         self.taken.add(name)
+        if self.indent:
+            self.scoped.append(name)
         return name
 
     # ---- steps ------------------------------------------------------------------
@@ -370,18 +588,41 @@ class _Build:
         elif isinstance(step, UpdatingStep):
             method = UPDATING_METHODS[step.action]
             for mobject in step.mobjects:
-                self.line(f"{self.expression(mobject)}.{method}()", step=position)
+                if self.graph.output_type(mobject).collection:
+                    self.line(f"for mob in {self.expression(mobject)}:", step=position)
+                    self.line(f"    mob.{method}()", step=position)
+                else:
+                    self.line(f"{self.expression(mobject)}.{method}()", step=position)
             return
+        elif isinstance(step, CameraStep):
+            parts = [
+                f"{field}={getattr(step, field)!r}"
+                for field in CAMERA_FIELDS
+                if getattr(step, field) is not None
+            ]
+            if step.action == "move" and step.run_time is not None:
+                parts.append(f"run_time={step.run_time!r}")
+            text = f"self.{CAMERA_METHODS[step.action]}({', '.join(parts)})"
+        elif isinstance(step, FixedInFrameStep):
+            method = FIXED_IN_FRAME_METHODS[step.action]
+            text = f"self.{method}({self.mobject_arguments(step.mobjects)})"
         else:
             method = MOBJECT_STEP_METHODS[step.kind]
-            mobjects = ", ".join(self.expression(m) for m in step.mobjects)
-            text = f"self.{method}({mobjects})"
+            text = f"self.{method}({self.mobject_arguments(step.mobjects)})"
         self.line(text, step=position)
+
+    def mobject_arguments(self, ids: list[str]) -> str:
+        """Objects for a Scene method; a collection (a Map's output) is spread."""
+        parts = []
+        for node_id in ids:
+            spread = "*" if self.graph.output_type(node_id).collection else ""
+            parts.append(spread + self.expression(node_id))
+        return ", ".join(parts)
 
     # ---- output -----------------------------------------------------------------
 
     def line(self, text: str, node: str | None = None, step: int | None = None) -> None:
-        self.body.append(text)
+        self.body.append("    " * self.indent + text)
         number = len(self.body)  # relative; offset applied in assemble
         if node is not None:
             self.map.nodes.setdefault(node, []).append(number)
@@ -395,7 +636,7 @@ class _Build:
         header += [
             "",
             "",
-            f"class {self.scene.name}(Scene):",
+            f"class {self.scene.name}({self.scene.scene_type}):",
             "    def construct(self):",
         ]
         offset = len(header)

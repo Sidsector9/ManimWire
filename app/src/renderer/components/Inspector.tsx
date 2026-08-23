@@ -1,9 +1,10 @@
 import type { Descriptor, Parameter } from '../../shared/engine'
-import { SELF_PORT, connectedPorts, type DocNode, type JsonValue, type MethodCall, type Scene, type UpdatingAction } from '../model/document'
+import { GROUP_PREFIX, SELF_PORT, connectedPorts, type ConfigKey, type DocNode, type JsonValue, type MethodCall, type Scene, type UpdatingAction } from '../model/document'
 import { ANIMATE, chainMethods, chainPort, effectiveDescriptor, isLiveSource, rootOf } from '../model/live'
 import type { DescriptorIndex } from '../model/types'
-import { TYPE_COLOR, selectExpressionNames, selectIndex, useCatalogueStore } from '../store/catalogue'
-import { currentScene, useDocumentStore } from '../store/document'
+import { TYPE_COLOR, selectExpressionNames, useCatalogueStore } from '../store/catalogue'
+import { useDescriptorIndex } from '../store/descriptors'
+import { currentScene, previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { PortEditor } from './PortEditor'
 import { StepInspector } from './StepInspector'
@@ -20,7 +21,9 @@ export function Inspector() {
   const selected = useDocumentStore((s) => s.selected)
   const selectedStep = useDocumentStore((s) => s.selectedStep)
   const store = useDocumentStore()
-  const index = useCatalogueStore(selectIndex)
+  const index = useDescriptorIndex()
+  const sceneType = useDocumentStore((s) => previewScene(s).scene_type)
+  const editingGroup = useDocumentStore((s) => s.editingGroup)
   const expressionNames = useCatalogueStore(selectExpressionNames)
   const code = useEngineResults((s) => s.code)
   const sourceMap = useEngineResults((s) => s.sourceMap)
@@ -49,6 +52,7 @@ export function Inspector() {
   const live = isLiveSource(scene, node.id, index)
   // Only Manim objects have suspend_updating and friends; a State runs a scene updater.
   const hasUpdaters = catalogued.kind !== 'builtin' && sourceMap.live.some((id) => rootOf(scene, id, index) === node.id)
+  const isMobject = descriptor.returns.type === 'mobject' || descriptor.returns.type === 'coordinate_system'
 
   return (
     <section className="panel inspector">
@@ -100,6 +104,19 @@ export function Inspector() {
             ))}
           </div>
         ))}
+        {descriptor.name === 'Config' && <ConfigEditor keys={node.config ?? []} onChange={(config) => store.updateNode(node.id, { config })} />}
+        {descriptor.kind === 'group' && (
+          <button className="button" onClick={() => store.editGroup(node.catalogue.slice(GROUP_PREFIX.length))}>
+            Edit group {descriptor.name}
+          </button>
+        )}
+        {isMobject && sceneType === 'ThreeDScene' && !editingGroup && (
+          <div className="inspector-actions">
+            <button className="button small" onClick={() => store.addStep({ kind: 'fixed_in_frame', mobjects: [node.id], action: 'add' })}>
+              fix in frame
+            </button>
+          </div>
+        )}
         {descriptor.name === ANIMATE && (
           <ChainEditor node={node} scene={scene} index={index} connected={connected} onChange={(chain) => store.updateNode(node.id, { chain })} />
         )}
@@ -195,6 +212,39 @@ function ChainEditor({
           ))}
         </select>
       )}
+    </div>
+  )
+}
+
+const KEY_TYPES: ConfigKey['type'][] = ['number', 'text', 'boolean', 'color', 'vector', 'function', 'config', 'mobject']
+
+/** The keys of a Config node. Each key becomes a port typed as chosen here. */
+function ConfigEditor({ keys, onChange }: { keys: ConfigKey[]; onChange(keys: ConfigKey[]): void }) {
+  return (
+    <div>
+      <div className="group-head">Keys</div>
+      {keys.map((key, at) => (
+        <div key={at} className="field">
+          <span className="field-value">
+            <input className="port-input mono" value={key.name} placeholder="key" onChange={(e) => onChange(keys.map((k, i) => (i === at ? { ...k, name: e.target.value } : k)))} />
+          </span>
+          <span className="field-value">
+            <select className="port-select mono" value={key.type} onChange={(e) => onChange(keys.map((k, i) => (i === at ? { ...k, type: e.target.value as ConfigKey['type'] } : k)))}>
+              {KEY_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </span>
+          <button className="link" onClick={() => onChange(keys.filter((_, i) => i !== at))}>
+            remove
+          </button>
+        </div>
+      ))}
+      <button className="button small" onClick={() => onChange([...keys, { name: `key${keys.length + 1}`, type: 'number' }])}>
+        + add key
+      </button>
     </div>
   )
 }

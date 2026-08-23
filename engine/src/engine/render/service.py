@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import shutil
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from engine.catalogue.model import Catalogue
 from engine.codegen import GeneratedCode, ManimCodeGenerator, SourceMap
-from engine.document.model import SceneDocument, Settings
+from engine.document.model import GroupDefinition, SceneDocument, Settings
 from engine.render.runner import (
     QUIET,
     PreviewFileWriter,
@@ -77,6 +77,7 @@ class Renderer(Protocol):
         settings: Settings,
         time: float,
         width: int | None = None,
+        groups: Iterable[GroupDefinition] = (),
     ) -> FrameResult: ...
 
     def export(
@@ -87,6 +88,7 @@ class Renderer(Protocol):
         directory: Path,
         fmt: str = "mp4",
         progress: Progress | None = None,
+        groups: Iterable[GroupDefinition] = (),
     ) -> ExportResult: ...
 
 
@@ -119,8 +121,9 @@ class CairoRenderService:
         settings: Settings,
         time: float,
         width: int | None = None,
+        groups: Iterable[GroupDefinition] = (),
     ) -> FrameResult:
-        generated = self._generate(scene, catalogue)
+        generated = self._generate(scene, catalogue, groups)
         overrides = _config_for(settings, width)
         key = hashlib.sha1(
             f"{generated.code}|{time}|{sorted(overrides.items())}".encode()
@@ -133,7 +136,9 @@ class CairoRenderService:
             generated,
             scene.name,
             {**overrides, "dry_run": True},
-            lambda: _StopAtRenderer(time, None, file_writer_class=PreviewFileWriter),
+            lambda camera: _StopAtRenderer(
+                time, None, camera_class=camera, file_writer_class=PreviewFileWriter
+            ),
         )
         self.render_count += 1
         Image.fromarray(renderer.get_frame(), "RGBA").save(path)
@@ -153,10 +158,11 @@ class CairoRenderService:
         directory: Path,
         fmt: str = "mp4",
         progress: Progress | None = None,
+        groups: Iterable[GroupDefinition] = (),
     ) -> ExportResult:
         if fmt not in _EXPORT_FORMATS:
             raise RenderError(f"unsupported export format {fmt}", None, None, None)
-        generated = self._generate(scene, catalogue)
+        generated = self._generate(scene, catalogue, groups)
         work = self.cache_dir / f"export-{scene.name}"
         shutil.rmtree(work, ignore_errors=True)
         overrides = {
@@ -171,7 +177,7 @@ class CairoRenderService:
             generated,
             scene.name,
             overrides,
-            lambda: _StopAtRenderer(float("inf"), progress),
+            lambda camera: _StopAtRenderer(float("inf"), progress, camera_class=camera),
         )
         produced = Path(getattr(instance.renderer.file_writer, _OUTPUT_ATTRIBUTE[fmt]))
         directory.mkdir(parents=True, exist_ok=True)
@@ -189,8 +195,13 @@ class CairoRenderService:
             subtitles=str(moved_subtitles) if moved_subtitles else None,
         )
 
-    def _generate(self, scene: SceneDocument, catalogue: Catalogue) -> GeneratedCode:
-        generated = self.generator.generate(scene, catalogue)
+    def _generate(
+        self,
+        scene: SceneDocument,
+        catalogue: Catalogue,
+        groups: Iterable[GroupDefinition] = (),
+    ) -> GeneratedCode:
+        generated = self.generator.generate(scene, catalogue, groups)
         if generated.issues:
             first = generated.issues[0]
             raise RenderError(first.message, first.node, first.step, None)

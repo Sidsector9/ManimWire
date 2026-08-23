@@ -9,6 +9,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
+from engine.catalogue.coverage import CoverageReport
 from engine.catalogue.model import Catalogue, PortType, TypeRef
 from engine.codegen import GeneratedCode
 from engine.document import Document, Issue
@@ -26,6 +27,7 @@ MODELS: dict[str, type[BaseModel]] = {
     "frame_result": FrameResult,
     "export_result": ExportResult,
     "timeline_layout": TimelineLayout,
+    "coverage_report": CoverageReport,
 }
 
 

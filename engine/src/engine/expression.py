@@ -36,6 +36,7 @@ CONSTANTS = {"pi": "PI", "tau": "TAU", "e": "np.e"}
 # Names the generated code uses around an expression; a variable would shadow them.
 RESERVED = {"expr", "np", "self", "mob", "PI", "TAU"}
 _OPERATORS = (ast.Add, ast.Sub, ast.Mult, ast.Div, ast.Pow, ast.Mod, ast.FloorDiv)
+_COMPARISONS = (ast.Lt, ast.LtE, ast.Gt, ast.GtE, ast.Eq, ast.NotEq)
 
 
 class ExpressionError(ValueError):
@@ -47,6 +48,13 @@ class ParsedExpression:
     text: str
     variables: list[str]
     tree: ast.expr
+
+    @property
+    def boolean(self) -> bool:
+        """Whether the value is a truth value (comparison, and, or, not)."""
+        return isinstance(self.tree, ast.Compare | ast.BoolOp) or (
+            isinstance(self.tree, ast.UnaryOp) and isinstance(self.tree.op, ast.Not)
+        )
 
 
 def parse_expression(text: str) -> ParsedExpression:
@@ -63,8 +71,15 @@ def parse_expression(text: str) -> ParsedExpression:
             if not isinstance(node.op, _OPERATORS):
                 raise ExpressionError("only + - * / ^ % and // are allowed")
         elif isinstance(node, ast.UnaryOp):
-            if not isinstance(node.op, ast.UAdd | ast.USub):
-                raise ExpressionError("only unary + and - are allowed")
+            if not isinstance(node.op, ast.UAdd | ast.USub | ast.Not):
+                raise ExpressionError("only unary + and - and not are allowed")
+        elif isinstance(node, ast.Compare):
+            if not all(isinstance(op, _COMPARISONS) for op in node.ops):
+                raise ExpressionError(
+                    "only < <= > >= == and != comparisons are allowed"
+                )
+        elif isinstance(node, ast.BoolOp):
+            pass  # and, or
         elif isinstance(node, ast.Constant):
             if not isinstance(node.value, int | float) or isinstance(node.value, bool):
                 raise ExpressionError("only numbers are allowed as constants")
@@ -80,7 +95,9 @@ def parse_expression(text: str) -> ParsedExpression:
             if node.id not in FUNCTIONS and node.id not in CONSTANTS:
                 if node.id not in variables:
                     variables.append(node.id)
-        elif not isinstance(node, ast.expr_context | ast.operator | ast.unaryop):
+        elif not isinstance(
+            node, ast.expr_context | ast.operator | ast.unaryop | ast.cmpop | ast.boolop
+        ):
             raise ExpressionError(
                 f"{type(node).__name__} is not allowed in an expression"
             )
@@ -132,5 +149,6 @@ def to_source(parsed: ParsedExpression, bindings: dict[str, str]) -> ExpressionS
     return ExpressionSource(source=source, free=free, uses_numpy=rewrite.uses_numpy)
 
 
-def signature(free: list[str]) -> str:
-    return "(" + ", ".join("float" for _ in free) + ") -> float"
+def signature(free: list[str], boolean: bool = False) -> str:
+    result = "bool" if boolean else "float"
+    return "(" + ", ".join("float" for _ in free) + f") -> {result}"

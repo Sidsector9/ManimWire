@@ -146,6 +146,21 @@ ipcMain.handle('file:chooseDirectory', async () => {
   const directory = result.filePaths[0]
   return result.canceled || !directory ? null : directory
 })
+ipcMain.handle('file:saveText', async (_event, defaultName: string, extension: string, content: string) => {
+  const result = await dialog.showSaveDialog({
+    defaultPath: path.join(app.getPath('documents'), defaultName),
+    filters: [{ name: `${extension} file`, extensions: [extension] }]
+  })
+  if (result.canceled || !result.filePath) return null
+  await writeFile(result.filePath, content, 'utf8')
+  return result.filePath
+})
+ipcMain.handle('file:openText', async (_event, extension: string) => {
+  const result = await dialog.showOpenDialog({ filters: [{ name: `${extension} file`, extensions: [extension] }], properties: ['openFile'] })
+  const filePath = result.filePaths[0]
+  if (result.canceled || !filePath) return null
+  return { path: filePath, content: await readFile(filePath, 'utf8') }
+})
 ipcMain.handle('file:reveal', (_event, filePath: string) => shell.showItemInFolder(filePath))
 
 app.whenReady().then(() => {

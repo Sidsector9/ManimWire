@@ -9,6 +9,7 @@ export type { GeneratedCode } from './generated/generated_code'
 export type { FrameResult } from './generated/frame_result'
 export type { ExportResult } from './generated/export_result'
 export type { TimelineLayout } from './generated/timeline_layout'
+export type { CoverageReport } from './generated/coverage_report'
 export type { EngineInfo }
 
 export type EngineState = 'starting' | 'ready' | 'restarting' | 'stopped'
@@ -38,6 +39,10 @@ export interface FilesApi {
   saveAs(current: string | null): Promise<string | null>
   write(path: string, content: string): Promise<void>
   chooseDirectory(): Promise<string | null>
+  /** Save text to a file the user picks; returns the path or null. */
+  saveText(defaultName: string, extension: string, content: string): Promise<string | null>
+  /** Read a file the user picks; returns null when cancelled. */
+  openText(extension: string): Promise<{ path: string; content: string } | null>
   reveal(path: string): Promise<void>
   onMenu(listener: (action: MenuAction) => void): () => void
   onOpened(listener: (file: { path: string; content: string }) => void): () => void

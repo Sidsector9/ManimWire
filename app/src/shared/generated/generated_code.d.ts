@@ -7,6 +7,7 @@ export type Message = string;
 export type Node = string | null;
 export type Port = string | null;
 export type Step = number | null;
+export type Group = string | null;
 export type Issues = Issue[];
 
 /**
@@ -43,5 +44,6 @@ export interface Issue {
   node?: Node;
   port?: Port;
   step?: Step;
+  group?: Group;
   [k: string]: unknown;
 }

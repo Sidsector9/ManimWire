@@ -21,6 +21,8 @@ const files: FilesApi = {
   saveAs: (current) => ipcRenderer.invoke('file:saveAs', current),
   write: (path, content) => ipcRenderer.invoke('file:write', path, content),
   chooseDirectory: () => ipcRenderer.invoke('file:chooseDirectory'),
+  saveText: (defaultName, extension, content) => ipcRenderer.invoke('file:saveText', defaultName, extension, content),
+  openText: (extension) => ipcRenderer.invoke('file:openText', extension),
   reveal: (path) => ipcRenderer.invoke('file:reveal', path),
   onMenu: (listener) => {
     const handler = (_event: unknown, action: MenuAction): void => listener(action)

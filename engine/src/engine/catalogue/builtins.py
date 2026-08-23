@@ -20,6 +20,8 @@ def _param(
     annotation: str = "",
     signature: str | None = None,
     accepts: list[PortType] | None = None,
+    collection: bool = False,
+    choices: list[str] | None = None,
 ) -> Parameter:
     return Parameter(
         name=name,
@@ -29,6 +31,8 @@ def _param(
             optional=default == "None",
             accepts=accepts or [],
             signature=signature,
+            collection=collection,
+            choices=choices,
         ),
         default=default,
         display=default,
@@ -138,7 +142,190 @@ ANIMATE = _node(
     TypeRef(type=PortType.ANIMATION, annotation="Animation"),
 )
 
-BUILTINS = [EXPRESSION, DERIVATIVE, SCENE_TIME, FRAME_DELTA, STATE, ANIMATE]
+CONFIG = _node(
+    "Config",
+    "logic",
+    "A dict of named values for parameters such as axis_config or t2c. "
+    "Add keys in the inspector; each key is a port.",
+    [],
+    TypeRef(type=PortType.CONFIG, annotation="dict"),
+)
+
+RANGE = _node(
+    "Range",
+    "logic",
+    "Numbers from start to stop (excluded) in steps, like np.arange.",
+    [
+        _param("start", PortType.NUMBER, "0", "float"),
+        _param("stop", PortType.NUMBER, None, "float"),
+        _param("step", PortType.NUMBER, "1", "float"),
+    ],
+    TypeRef(type=PortType.NUMBER, annotation="list[float]", collection=True),
+)
+
+IF = _node(
+    "If",
+    "logic",
+    "One of two values, chosen by a condition (an Expression such as x > 0).",
+    [
+        _param("condition", PortType.BOOLEAN, None, "bool"),
+        _param("then", PortType.ANY, None, "Any"),
+        _param("else", PortType.ANY, None, "Any"),
+    ],
+    TypeRef(type=PortType.ANY, annotation="Any"),
+)
+
+MAP = _node(
+    "Map",
+    "logic",
+    "Runs the nodes inside it once per item of a collection and collects the "
+    "Result of each run. Item and Index give the current item and its position.",
+    [_param("items", PortType.ANY, None, "Iterable", collection=True)],
+    TypeRef(type=PortType.ANY, annotation="list", collection=True),
+)
+
+REPEAT = _node(
+    "Repeat",
+    "logic",
+    "Runs the nodes inside it count times and collects the Result of each run. "
+    "Index gives the current position.",
+    [_param("count", PortType.NUMBER, None, "int")],
+    TypeRef(type=PortType.ANY, annotation="list", collection=True),
+)
+
+ITEM = _node(
+    "Item",
+    "logic",
+    "The current item of the Map this node is inside.",
+    [],
+    TypeRef(type=PortType.ANY, annotation="Any"),
+)
+
+INDEX = _node(
+    "Index",
+    "logic",
+    "The position of the current run of the Map or Repeat this node is inside.",
+    [],
+    TypeRef(type=PortType.NUMBER, annotation="int"),
+)
+
+RESULT = _node(
+    "Result",
+    "logic",
+    "What each run of the Map or Repeat this node is inside contributes.",
+    [_param("value", PortType.ANY, None, "Any")],
+    TypeRef(type=PortType.NONE, annotation="None"),
+)
+
+PORT_TYPE_NAMES = [
+    t.value for t in PortType if t not in (PortType.NONE, PortType.SCENE)
+]
+
+INPUT = _node(
+    "Input",
+    "group",
+    "An input of the reusable group this node is inside, with its name and type.",
+    [
+        _param("name", PortType.TEXT, "'input'", "str"),
+        _param("type", PortType.TEXT, "'number'", "str", choices=PORT_TYPE_NAMES),
+    ],
+    TypeRef(type=PortType.ANY, annotation="Any"),
+)
+
+OUTPUT = _node(
+    "Output",
+    "group",
+    "The output of the reusable group this node is inside.",
+    [_param("value", PortType.ANY, None, "Any")],
+    TypeRef(type=PortType.NONE, annotation="None"),
+)
+
+SUBMOBJECT = _node(
+    "Submobject",
+    "query",
+    "One part of an object by position (mobject.submobjects[index]).",
+    [
+        _param("mobject", PortType.MOBJECT, None, "Mobject"),
+        _param("index", PortType.NUMBER, "0", "int"),
+    ],
+    TypeRef(type=PortType.MOBJECT, annotation="Mobject"),
+)
+
+SUBMOBJECTS = _node(
+    "Submobjects",
+    "query",
+    "The direct parts of an object (mobject.submobjects), a collection.",
+    [_param("mobject", PortType.MOBJECT, None, "Mobject")],
+    TypeRef(type=PortType.MOBJECT, annotation="list[Mobject]", collection=True),
+)
+
+CAMERA_FRAME = _node(
+    "CameraFrame",
+    "camera",
+    "The camera's frame as an object (MovingCameraScene and ZoomedScene): "
+    "move or scale it to pan and zoom.",
+    [],
+    TypeRef(type=PortType.MOBJECT, annotation="ScreenRectangle"),
+)
+
+NUMBER = _node(
+    "Number",
+    "value",
+    "A number you type, to share between ports or feed an If.",
+    [_param("value", PortType.NUMBER, "0", "float")],
+    TypeRef(type=PortType.NUMBER, annotation="float"),
+)
+
+POINT = _node(
+    "Coordinates",
+    "value",
+    "A point or direction from x, y, z (Manim's Point is a point cloud object).",
+    [
+        _param("x", PortType.NUMBER, "0", "float"),
+        _param("y", PortType.NUMBER, "0", "float"),
+        _param("z", PortType.NUMBER, "0", "float"),
+    ],
+    TypeRef(type=PortType.VECTOR, annotation="Point3D"),
+)
+
+COLOR = _node(
+    "Color",
+    "value",
+    "A colour from Manim's palette or a hex value, to share or choose with an If.",
+    [_param("color", PortType.COLOR, "WHITE", "ParsableManimColor")],
+    TypeRef(type=PortType.COLOR, annotation="ManimColor"),
+)
+
+BUILTINS = [
+    EXPRESSION,
+    NUMBER,
+    POINT,
+    COLOR,
+    DERIVATIVE,
+    SCENE_TIME,
+    FRAME_DELTA,
+    STATE,
+    ANIMATE,
+    CONFIG,
+    RANGE,
+    IF,
+    MAP,
+    REPEAT,
+    ITEM,
+    INDEX,
+    RESULT,
+    INPUT,
+    OUTPUT,
+    SUBMOBJECT,
+    SUBMOBJECTS,
+    CAMERA_FRAME,
+]
+
+CONTAINERS = {MAP.name, REPEAT.name}
+# Nodes that only mean something inside a Map or Repeat.
+CONTAINER_LOCALS = {ITEM.name, INDEX.name, RESULT.name}
+# Nodes that only mean something inside a reusable group.
+GROUP_PORTS = {INPUT.name, OUTPUT.name}
 
 # Builtins whose output changes every frame without any live input.
 ALWAYS_LIVE = {SCENE_TIME.name, FRAME_DELTA.name, STATE.name}

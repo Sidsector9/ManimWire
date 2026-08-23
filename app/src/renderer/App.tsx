@@ -5,6 +5,7 @@ import { CodeView } from './components/CodeView'
 import { Graph } from './components/Graph'
 import { Inspector } from './components/Inspector'
 import { Library } from './components/Library'
+import { SettingsDialog } from './components/SettingsDialog'
 import { StatusBar } from './components/StatusBar'
 import { Timeline } from './components/Timeline'
 import { useEngineSync } from './engine/useEngineSync'
@@ -20,7 +21,11 @@ export function App() {
   const filePath = useDocumentStore((s) => s.filePath)
   const dirty = useDocumentStore((s) => s.dirty)
   const sceneName = useDocumentStore((s) => s.doc.scenes[s.sceneIndex]?.name ?? '')
+  const editingGroup = useDocumentStore((s) => s.editingGroup)
+  const editGroup = useDocumentStore((s) => s.editGroup)
+  const removeGroup = useDocumentStore((s) => s.removeGroup)
   const [tab, setTab] = useState<'canvas' | 'code'>('canvas')
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const files = useFiles()
   useEngineSync()
 
@@ -42,8 +47,23 @@ export function App() {
           {projectName}
           {dirty && <span className="dirty" title="Unsaved changes" />}
         </span>
-        <span className="mono" style={{ color: 'var(--text-secondary)' }}>
-          {sceneName}
+        <span className="breadcrumb mono">
+          <span>{sceneName}</span>
+          {editingGroup && (
+            <>
+              <span>›</span>
+              <span>group {editingGroup}</span>
+              <button className="button small" onClick={() => editGroup(null)}>
+                Done
+              </button>
+              <button className="button small" onClick={() => void files.exportGroup(editingGroup)}>
+                Export group
+              </button>
+              <button className="button small danger" onClick={() => removeGroup(editingGroup)}>
+                Delete group
+              </button>
+            </>
+          )}
         </span>
         <span className="tabs">
           <button className={`tab${tab === 'canvas' ? ' active' : ''}`} onClick={() => setTab('canvas')}>
@@ -54,11 +74,14 @@ export function App() {
           </button>
         </span>
         <span className="spacer" />
+        <button className="button" onClick={() => setSettingsOpen(true)}>
+          Settings
+        </button>
         <button className="button" onClick={() => void files.exportVideo()} disabled={state !== 'ready'}>
           Export
         </button>
       </header>
-      <Library />
+      <Library onImportGroup={() => void files.importGroup()} />
       <div className="center">
         {tab === 'canvas' ? <Canvas /> : <CodeView />}
         <div className="divider" />
@@ -69,6 +92,7 @@ export function App() {
       <Inspector />
       <Timeline />
       <StatusBar />
+      {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   )
 }

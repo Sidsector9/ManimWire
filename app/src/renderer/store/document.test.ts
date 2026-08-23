@@ -29,7 +29,7 @@ describe('document store', () => {
   it('moving a node does not create a history entry', () => {
     const id = useDocumentStore.getState().addNode('Circle', [0, 0])
     const before = useDocumentStore.getState().past.length
-    useDocumentStore.getState().moveNode(id, [100, 50])
+    useDocumentStore.getState().placeNode(id, [100, 50])
     expect(currentScene(useDocumentStore.getState()).nodes[0]!.position).toEqual([100, 50])
     expect(useDocumentStore.getState().past).toHaveLength(before)
   })

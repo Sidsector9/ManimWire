@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react'
 import type { ExportResult } from '../../shared/engine'
 import { call } from './client'
-import { emptyDocument, parseDocument } from '../model/document'
+import { emptyDocument, parseDocument, parseGroup } from '../model/document'
 import { useDocumentStore } from '../store/document'
 import { useEngineStore } from '../store/engine'
 
@@ -58,6 +58,23 @@ export function useFiles() {
     }
   }, [setMessage])
 
+  const exportGroup = useCallback(async (name: string): Promise<void> => {
+    const group = useDocumentStore.getState().doc.groups.find((g) => g.name === name)
+    if (!group) return
+    const saved = await window.files.saveText(`${name}.mnwg`, 'mnwg', JSON.stringify(group, null, 2))
+    if (saved) setMessage(`exported group ${name} to ${saved}`)
+  }, [setMessage])
+
+  const importGroup = useCallback(async (): Promise<void> => {
+    const result = await window.files.openText('mnwg')
+    if (!result) return
+    try {
+      useDocumentStore.getState().importGroup(parseGroup(result.content))
+    } catch (error) {
+      setMessage(`could not import ${result.path}: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }, [setMessage])
+
   useEffect(() => {
     return window.files.onMenu((action) => {
       const state = useDocumentStore.getState()
@@ -87,5 +104,5 @@ export function useFiles() {
     return () => clearTimeout(timer)
   }, [doc, dirty, filePath, save])
 
-  return { save, open, exportVideo }
+  return { save, open, exportVideo, exportGroup, importGroup }
 }

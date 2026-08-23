@@ -1,16 +1,22 @@
 import { describe, expect, it } from 'vitest'
 import type { Descriptor } from '../../shared/engine'
 import {
+  absolutePosition,
+  addGroup,
   addNode,
   addStep,
   connect,
   connectedPorts,
   disconnect,
   emptyDocument,
+  graphOf,
+  importGroup,
   moveAnimation,
   moveStep,
   nextPosition,
   parseDocument,
+  placeNode,
+  removeGroup,
   removeNodes,
   removeStep,
   setValue,
@@ -110,7 +116,7 @@ describe('parseDocument', () => {
   it('fills defaults for a minimal file', () => {
     const doc = parseDocument('{"version": 1, "scenes": [{"name": "S"}]}')
     expect(doc.settings.pixel_width).toBe(1920)
-    expect(doc.scenes[0]).toEqual({ name: 'S', nodes: [], edges: [], steps: [] })
+    expect(doc.scenes[0]).toEqual({ name: 'S', scene_type: 'Scene', nodes: [], edges: [], steps: [] })
   })
 
   it('refuses files the engine could not use', () => {
@@ -121,7 +127,7 @@ describe('parseDocument', () => {
   })
 
   it('places library nodes to the right of the last one', () => {
-    expect(nextPosition({ name: 'S', nodes: [], edges: [], steps: [] })).toEqual([40, 60])
+    expect(nextPosition({ name: 'S', scene_type: 'Scene', nodes: [], edges: [], steps: [] })).toEqual([40, 60])
     expect(nextPosition(starterDocument().scenes[0]!)).toEqual([740, 60])
   })
 })
@@ -161,5 +167,35 @@ describe('moveAnimation and moveStep', () => {
   it('reorders steps', () => {
     const doc = moveStep(base(), 0, 2, 0)
     expect(doc.scenes[0]!.steps.map((s) => s.kind)).toEqual(['play', 'play', 'wait'])
+  })
+})
+
+describe('containers and groups', () => {
+  it('drops a node into the container under it and stores a relative position', () => {
+    let doc = addNode(emptyDocument(), 0, 'Map', [100, 100], {}, 'm')
+    doc = addNode(doc, 0, 'Dot', [0, 0], {}, 'd')
+    doc = placeNode(doc, 0, 'd', [150, 150])
+    const dot = doc.scenes[0]!.nodes.find((n) => n.id === 'd')!
+    expect(dot.parent).toBe('m')
+    expect(dot.position).toEqual([50, 50])
+    expect(absolutePosition(doc.scenes[0]!, 'd')).toEqual([150, 150])
+    doc = placeNode(doc, 0, 'd', [900, 900])
+    expect(doc.scenes[0]!.nodes.find((n) => n.id === 'd')!.parent).toBeNull()
+    doc = removeNodes(doc, 0, ['m'])
+    expect(doc.scenes[0]!.nodes.map((n) => n.id)).toEqual(['d'])
+  })
+
+  it('edits a group through the same operations as a scene, and removes its instances with it', () => {
+    let doc = addGroup(emptyDocument(), 'Blob')
+    expect(doc.groups[0]!.nodes.map((n) => n.catalogue)).toEqual(['Output'])
+    doc = addNode(doc, 'Blob', 'Circle', [0, 0], {}, 'c')
+    doc = connect(doc, 'Blob', { source: 'c', target: doc.groups[0]!.nodes[0]!.id, port: 'value', live: false })
+    expect(graphOf(doc, 'Blob')!.edges).toHaveLength(1)
+    expect(addStep(doc, 'Blob', { kind: 'wait', duration: 1 })).toBe(doc)
+    doc = addNode(doc, 0, 'group:Blob', [0, 0], {}, 'inst')
+    doc = removeGroup(doc, 'Blob')
+    expect(doc.groups).toEqual([])
+    expect(doc.scenes[0]!.nodes).toEqual([])
+    expect(importGroup(importGroup(doc, { name: 'X', nodes: [], edges: [] }), { name: 'X', nodes: [], edges: [] }).groups.map((g) => g.name)).toEqual(['X', 'X2'])
   })
 })

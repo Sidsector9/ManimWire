@@ -55,7 +55,7 @@ class Descriptor(BaseModel):
     name: str
     qualname: str
     module: str
-    kind: Literal["class", "method", "function", "builtin"]
+    kind: Literal["class", "method", "function", "builtin", "group"]
     category: str
     owner: str | None = None
     bases: list[str] = []
@@ -64,6 +64,8 @@ class Descriptor(BaseModel):
     returns: TypeRef
     doc: str = ""
     is_vmobject: bool = False
+    # Text classes rendered through LaTeX (Tex, MathTex, DecimalNumber, ...).
+    requires_latex: bool = False
     hidden: bool = False
     # Functions only: the shape a Function port compares against, "(float) -> float".
     signature: str | None = None
@@ -82,4 +84,6 @@ class Catalogue(BaseModel):
     directions: list[str]
     # Names the Expression node treats as functions or constants, not variables.
     expression_names: list[str]
+    # Font families Pango can render, for Text and MarkupText.
+    fonts: list[str] = []
     unknown_annotations: list[str]

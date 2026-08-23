@@ -43,6 +43,18 @@
       ],
       "default": null,
       "title": "Step"
+    },
+    "group": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Group"
     }
   },
   "required": [

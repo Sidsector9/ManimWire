@@ -40,7 +40,7 @@ describe('expression ports', () => {
 
   it('adds one number port per variable and types the output by the free ones', () => {
     const expression = node('e', 'Expression', { expr: 'a * x', a: 2 })
-    const scene: Scene = { name: 'S', nodes: [expression], edges: [], steps: [] }
+    const scene: Scene = { name: 'S', scene_type: 'Scene', nodes: [expression], edges: [], steps: [] }
     const effective = effectiveDescriptor(expression, index.get('Expression')!, scene, RESERVED, index)
     expect(effective.parameters.map((p) => p.name)).toEqual(['expr', 'a', 'x'])
     expect(effective.parameters[2]!.type.accepts).toEqual(['number', 'live_number'])
@@ -53,6 +53,7 @@ describe('expression ports', () => {
 describe('liveness', () => {
   const scene: Scene = {
     name: 'S',
+    scene_type: 'Scene',
     nodes: [node('v', 'ValueTracker'), node('e', 'Expression', { expr: 'x * 2' }), node('c', 'Circle'), node('t', 'SceneTime'), node('k', 'Expression', { expr: '3' })],
     edges: [
       { source: 'v', target: 'e', port: 'x', live: true },
@@ -89,6 +90,7 @@ describe('liveness', () => {
 describe('object roots and animate methods', () => {
   const scene: Scene = {
     name: 'S',
+    scene_type: 'Scene',
     nodes: [node('c', 'Circle'), node('s', 'Mobject.shift'), node('g', 'Mobject.get_center'), node('p', 'CoordinateSystem.plot')],
     edges: [
       { source: 'c', target: 's', port: SELF_PORT, live: false },
