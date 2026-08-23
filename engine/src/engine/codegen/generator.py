@@ -312,8 +312,8 @@ class _Build:
     def emit_container(self, node: Node, descriptor: Descriptor) -> None:
         name = self.new_variable(node.label or descriptor.name)
         self.variables[node.id] = name
-        item = self.new_variable("item")
         index = self.new_variable("index")
+        item = self.new_variable("item") if descriptor.name == MAP.name else ""
         self.line(f"{name} = []", node.id)
         if descriptor.name == MAP.name:
             items = self.expression(self.graph.sources(node.id, "items")[0])
@@ -323,7 +323,7 @@ class _Build:
             self.line(f"for {index} in range(int({count})):", node.id)
         self.loops[node.id] = (item, index)
         outer = len(self.scoped)
-        self.scoped += [item, index]
+        self.scoped += [n for n in (item, index) if n]
         self.indent += 1
         children = self.graph.children(node.id)
         for child in self.ordered_nodes(children):
@@ -366,6 +366,10 @@ class _Build:
             return self.expression(sources[0], expected) if sources else "None"
         if name == INPUT.name:
             return self.input_source(node)
+        if self.graph.is_instance(node_id):
+            outputs = self.graph.sources(node_id, RESULT_PORT)
+            sources = self.graph.sources(outputs[0], "value") if outputs else []
+            return self.expression(sources[0], expected) if sources else "None"
         if node_id in self.variables:
             variable = self.variables[node_id]
             if name == STATE.name:
@@ -449,7 +453,8 @@ class _Build:
         params = {p.name: p for p in SUBMOBJECT.parameters}
         mobject = self.expression(self.graph.sources(node.id, "mobject")[0])
         index = self.argument(node, params["index"]) or "0"
-        if self.graph.sources(node.id, "index"):
+        literal = node.values.get("index")
+        if self.graph.sources(node.id, "index") or not isinstance(literal, int):
             index = f"int({index})"
         return f"{mobject}.submobjects[{index}]"
 

@@ -33,6 +33,7 @@ from engine.catalogue.model import (
 )
 from engine.document.analysis import Graph, chain_port
 from engine.document.model import (
+    CAMERA_FIELDS,
     FRAME_SCENE_TYPES,
     SELF_PORT,
     CameraStep,
@@ -318,8 +319,41 @@ def validate_scene(
 
     issues.extend(_cycles(scene))
 
+    for node in scene.nodes:
+        descriptor = descriptors.get(node.id)
+        if descriptor is None or descriptor.name not in CONTAINERS:
+            continue
+        # A container runs once when the scene is built; it cannot redraw every frame.
+        for edge in graph.edges_in.get(node.id, []):
+            if edge.live or (
+                graph.is_value_node(edge.source) and graph.is_live(edge.source)
+            ):
+                issues.append(
+                    _issue(
+                        "bad_live",
+                        f"{descriptor.name} reads its inputs once; "
+                        "a live value cannot feed it",
+                        node.id,
+                        edge.port,
+                    )
+                )
+                break
+
     for position, step in enumerate(scene.steps):
         issues.extend(_step_issues(position, step, graph, descriptors, functions))
+        if (
+            isinstance(step, CameraStep)
+            and step.action == "move"
+            and not any(getattr(step, field) is not None for field in CAMERA_FIELDS)
+        ):
+            issues.append(
+                Issue(
+                    code="bad_step",
+                    message="move camera needs at least one of "
+                    "phi, theta, gamma, zoom, focal_distance",
+                    step=position,
+                )
+            )
         if (
             isinstance(step, CameraStep | FixedInFrameStep)
             and scene.scene_type != "ThreeDScene"
@@ -545,6 +579,13 @@ def _step_issues(
         descriptor = descriptors.get(node_id)
         if node_id not in nodes:
             bad("unknown_node", f"step {position} names a missing node")
+        elif nodes[node_id].parent is not None:
+            bad(
+                "bad_scope",
+                "a node inside a Map or Repeat builds one object per run; "
+                "use the container's output",
+                node_id,
+            )
         elif descriptor is None:
             continue
         elif isinstance(step, PlayStep):

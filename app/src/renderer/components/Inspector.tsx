@@ -100,11 +100,34 @@ export function Inspector() {
                 connected={connected.has(param.name)}
                 value={node.values[param.name]}
                 onChange={(v) => store.setValue(node.id, param.name, v)}
+                onConfig={
+                  param.type.type === 'config' && !connected.has(param.name)
+                    ? () => {
+                        const config = index.get('Config')
+                        if (!config) return
+                        const id = store.addCatalogueNode(config, [node.position[0] - 220, node.position[1] + 40], index)
+                        store.connect({ source: id, target: node.id, port: param.name, live: false })
+                      }
+                    : undefined
+                }
               />
             ))}
           </div>
         ))}
-        {descriptor.name === 'Config' && <ConfigEditor keys={node.config ?? []} onChange={(config) => store.updateNode(node.id, { config })} />}
+        {node.parent && <div className="inspector-doc">Inside a Map or Repeat: this builds one object per run. The canvas shows the last run's object.</div>}
+        {descriptor.name === 'Config' && (
+          <ConfigEditor
+            keys={node.config ?? []}
+            onChange={(config, renamed) => {
+              const values = { ...node.values }
+              if (renamed && renamed.from in values) {
+                values[renamed.to] = values[renamed.from]!
+                delete values[renamed.from]
+              }
+              store.updateNode(node.id, { config, values })
+            }}
+          />
+        )}
         {descriptor.kind === 'group' && (
           <button className="button" onClick={() => store.editGroup(node.catalogue.slice(GROUP_PREFIX.length))}>
             Edit group {descriptor.name}
@@ -219,14 +242,19 @@ function ChainEditor({
 const KEY_TYPES: ConfigKey['type'][] = ['number', 'text', 'boolean', 'color', 'vector', 'function', 'config', 'mobject']
 
 /** The keys of a Config node. Each key becomes a port typed as chosen here. */
-function ConfigEditor({ keys, onChange }: { keys: ConfigKey[]; onChange(keys: ConfigKey[]): void }) {
+function ConfigEditor({ keys, onChange }: { keys: ConfigKey[]; onChange(keys: ConfigKey[], renamed?: { from: string; to: string }): void }) {
   return (
     <div>
       <div className="group-head">Keys</div>
       {keys.map((key, at) => (
         <div key={at} className="field">
           <span className="field-value">
-            <input className="port-input mono" value={key.name} placeholder="key" onChange={(e) => onChange(keys.map((k, i) => (i === at ? { ...k, name: e.target.value } : k)))} />
+            <input
+              className="port-input mono"
+              value={key.name}
+              placeholder="key"
+              onChange={(e) => onChange(keys.map((k, i) => (i === at ? { ...k, name: e.target.value } : k)), { from: key.name, to: e.target.value })}
+            />
           </span>
           <span className="field-value">
             <select className="port-select mono" value={key.type} onChange={(e) => onChange(keys.map((k, i) => (i === at ? { ...k, type: e.target.value as ConfigKey['type'] } : k)))}>
@@ -253,12 +281,15 @@ function Field({
   param,
   connected,
   value,
-  onChange
+  onChange,
+  onConfig
 }: {
   param: Parameter
   connected: boolean
   value: JsonValue | undefined
   onChange(value: JsonValue | undefined): void
+  /** For dict parameters: create a Config node and connect it here. */
+  onConfig?(): void
 }) {
   const isSet = value !== undefined
   return (
@@ -268,7 +299,15 @@ function Field({
         {param.name}
       </span>
       <span className="field-value">
-        {connected ? <span className="muted">connected</span> : <PortEditor param={param} value={value} onChange={onChange} />}
+        {connected ? (
+          <span className="muted">connected</span>
+        ) : onConfig ? (
+          <button className="link" onClick={onConfig}>
+            + Config
+          </button>
+        ) : (
+          <PortEditor param={param} value={value} onChange={onChange} />
+        )}
       </span>
       <span className="field-default mono">
         {isSet && !connected ? (

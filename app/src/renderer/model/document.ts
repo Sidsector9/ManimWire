@@ -338,10 +338,11 @@ export function addGroup(doc: Doc, name: string): Doc {
 export function removeGroup(doc: Doc, name: string): Doc {
   const catalogue = GROUP_PREFIX + name
   let next: Doc = { ...doc, groups: doc.groups.filter((g) => g.name !== name) }
-  next.scenes.forEach((scene, i) => {
-    const instances = scene.nodes.filter((n) => n.catalogue === catalogue).map((n) => n.id)
-    if (instances.length) next = removeNodes(next, i, instances)
-  })
+  const targets: Target[] = [...next.scenes.map((_, i) => i), ...next.groups.map((g) => g.name)]
+  for (const target of targets) {
+    const instances = graphOf(next, target)!.nodes.filter((n) => n.catalogue === catalogue).map((n) => n.id)
+    if (instances.length) next = removeNodes(next, target, instances)
+  }
   return next
 }
 

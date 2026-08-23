@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 from engine.catalogue import Catalogue
@@ -22,6 +23,7 @@ from engine.document import (
     Settings,
     validate_group,
 )
+from engine.document.analysis import Graph
 from engine.render import CairoRenderService
 from engine.timeline import layout_timeline
 
@@ -241,6 +243,71 @@ def test_group_used_twice(catalogue: Catalogue, tmp_path: Path) -> None:
     assert layout.error is None and [r.id for r in layout.rows] == ["a", "b"]
 
 
+def test_group_output_tracker_and_many_groups(catalogue: Catalogue) -> None:
+    tracker = GroupDefinition(
+        name="T",
+        nodes=[node("v", "ValueTracker", values={"value": 2}), node("o", "Output")],
+        edges=[edge("v", "o", "value")],
+    )
+    scene = SceneDocument(
+        nodes=[node("g", "group:T"), node("c", "Circle")],
+        edges=[edge("g", "c", "radius")],
+        steps=[AddStep(mobjects=["c"])],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue, [tracker])
+    assert "        circle = Circle(radius=t.get_value())\n" in generated.code
+    many = [
+        GroupDefinition(
+            name=f"G{i}",
+            nodes=[node("c", "Circle"), node("o", "Output")],
+            edges=[edge("c", "o", "value")],
+        )
+        for i in range(12)
+    ]
+    started = time.perf_counter()
+    Graph(SceneDocument(), catalogue, many)
+    assert time.perf_counter() - started < 1.0
+
+
+def test_container_boundaries(catalogue: Catalogue) -> None:
+    """Live values cannot feed a container, and steps cannot reach inside one."""
+    scene = SceneDocument(
+        nodes=[
+            node("t", "ValueTracker"),
+            node("r", "Range", values={"stop": 3}),
+            node("m", "Map"),
+            node("d", "Dot", parent="m"),
+            node("res", "Result", parent="m"),
+            node("cr", "Create", parent="m"),
+        ],
+        edges=[
+            edge("t", "r", "stop", live=True),
+            edge("r", "m", "items"),
+            edge("d", "res", "value"),
+            edge("d", "cr", "mobject"),
+        ],
+        steps=[PlayStep(animations=["cr"])],
+    )
+    issues = ManimCodeGenerator().generate(scene, catalogue).issues
+    assert sorted((i.code, i.node) for i in issues) == [
+        ("bad_live", "m"),
+        ("bad_scope", "cr"),
+    ]
+    scene.edges[0] = edge("t", "r", "stop")
+    scene.nodes = [n for n in scene.nodes if n.id != "cr"] + [
+        node("g", "VGroup"),
+        node("sm", "Submobject", values={"index": 1.0}),
+    ]
+    scene.edges = [e for e in scene.edges if e.target != "cr"] + [
+        edge("m", "g", "vmobjects"),
+        edge("g", "sm", "mobject"),
+    ]
+    scene.steps = [AddStep(mobjects=["sm"])]
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert "        submobject = vgroup.submobjects[int(1.0)]\n" in generated.code
+
+
 def test_group_problems(catalogue: Catalogue) -> None:
     loop = GroupDefinition(
         name="Loop",
@@ -371,6 +438,9 @@ def test_three_d_scene_with_camera_steps(catalogue: Catalogue, tmp_path: Path) -
         ("move camera", 0.0, 1.0)
     ]
     render_ok(scene, catalogue, tmp_path)
+    scene.steps.append(CameraStep(action="move"))
+    issues = ManimCodeGenerator().generate(scene, catalogue).issues
+    assert [i.code for i in issues] == ["bad_step"]
 
 
 def test_catalogue_breadth_and_coverage(catalogue: Catalogue) -> None:

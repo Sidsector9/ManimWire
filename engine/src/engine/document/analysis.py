@@ -58,13 +58,30 @@ def chain_port(position: int, method: str, parameter: str) -> str:
     return f"{position + 1}.{method}.{parameter}"
 
 
+def group_index(
+    catalogue: Catalogue, groups: Iterable[GroupDefinition]
+) -> dict[str, Descriptor]:
+    """One descriptor per group, in two passes so groups used inside groups resolve."""
+    groups = list(groups)
+    index: dict[str, Descriptor] = {}
+    for _ in range(2):
+        index = {
+            GROUP_PREFIX + g.name: group_descriptor(g, catalogue, groups, index)
+            for g in groups
+        }
+    return index
+
+
 def group_descriptor(
     definition: GroupDefinition,
     catalogue: Catalogue,
     groups: Iterable[GroupDefinition],
-    stack: tuple[str, ...] = (),
+    known: Mapping[str, Descriptor],
 ) -> Descriptor:
-    """A descriptor for group instances: Inputs are parameters, Output is the return."""
+    """A descriptor for group instances: Inputs are parameters, Output is the return.
+
+    ``known`` holds the descriptors of the other groups from the previous pass.
+    """
     parameters: list[Parameter] = []
     for node in definition.nodes:
         if node.catalogue != INPUT.name:
@@ -86,19 +103,18 @@ def group_descriptor(
             )
         )
     returns = TypeRef(type=PortType.NONE, annotation="None")
-    if definition.name not in stack:
-        inner = Graph(
-            SceneDocument(
-                name=definition.name, nodes=definition.nodes, edges=definition.edges
-            ),
-            catalogue,
-            groups,
-            stack=(*stack, definition.name),
-        )
-        output = next((n for n in definition.nodes if n.catalogue == OUTPUT.name), None)
-        sources = inner.sources(output.id, "value") if output else []
-        if sources:
-            returns = inner.output_type(sources[0])
+    inner = Graph(
+        SceneDocument(
+            name=definition.name, nodes=definition.nodes, edges=definition.edges
+        ),
+        catalogue,
+        groups,
+        group_descriptors=known,
+    )
+    output = next((n for n in definition.nodes if n.catalogue == OUTPUT.name), None)
+    sources = inner.sources(output.id, "value") if output else []
+    if sources:
+        returns = inner.output_type(sources[0])
     return Descriptor(
         name=definition.name,
         qualname=GROUP_PREFIX + definition.name,
@@ -117,20 +133,19 @@ class Graph:
         scene: SceneDocument,
         catalogue: Catalogue,
         groups: Iterable[GroupDefinition] = (),
-        stack: tuple[str, ...] = (),
+        group_descriptors: Mapping[str, Descriptor] | None = None,
     ) -> None:
         self.scene = scene
         self.groups = {g.name: g for g in groups}
         self.index = {e.qualname: e for e in catalogue.entries}
-        for definition in self.groups.values():
-            self.index[GROUP_PREFIX + definition.name] = group_descriptor(
-                definition, catalogue, self.groups.values(), stack
-            )
+        if group_descriptors is None:
+            group_descriptors = group_index(catalogue, self.groups.values())
+        self.index.update(group_descriptors)
         self.nodes = {n.id: n for n in scene.nodes}
         self.edges = list(scene.edges)
         # (code, message, node) found while expanding groups; validation reports them.
         self.problems: list[tuple[str, str, str]] = []
-        self._expand_groups(list(scene.nodes), stack)
+        self._expand_groups(list(scene.nodes), ())
         self.inputs: dict[tuple[str, str], list[str]] = {}
         self.edges_in: dict[str, list[Edge]] = {}
         for edge in self.edges:
@@ -376,7 +391,7 @@ class Graph:
         descriptor = self.descriptor(node_id)
         if descriptor is None:
             return False
-        if descriptor.kind in ("class", "group"):
+        if descriptor.kind in ("class", "group") or descriptor.name in CONTAINERS:
             return False  # a ValueTracker is an object; only its live edges are live
         return descriptor.returns.type not in OBJECT_TYPES
 
