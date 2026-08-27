@@ -21,6 +21,8 @@ class LiteralFormatter:
         if isinstance(value, list) and (
             type_ref.collection or kind_is_number(type_ref)
         ):
+            if all(isinstance(item, str) for item in value):
+                return "[" + ", ".join(repr(item) for item in value) + "]"
             element = type_ref.model_copy(update={"collection": False})
             return "[" + ", ".join(self.format(item, element) for item in value) + "]"
         kind = type_ref.type

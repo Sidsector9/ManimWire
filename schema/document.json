@@ -292,6 +292,12 @@
               },
               {
                 "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
                   "anyOf": [
                     {
                       "type": "integer"
@@ -300,6 +306,12 @@
                       "type": "number"
                     }
                   ]
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "string"
                 },
                 "type": "array"
               },
@@ -346,6 +358,12 @@
               },
               {
                 "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
                   "anyOf": [
                     {
                       "type": "integer"
@@ -354,6 +372,12 @@
                       "type": "number"
                     }
                   ]
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "type": "string"
                 },
                 "type": "array"
               },

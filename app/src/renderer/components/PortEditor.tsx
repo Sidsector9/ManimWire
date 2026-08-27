@@ -83,6 +83,23 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
         </select>
       )
     case 'text':
+      if (param.kind === 'var_positional') {
+        // Several strings for one *args port (Tex takes one string per part): one per line.
+        const lines = Array.isArray(value) ? value.map(String).join('\n') : typeof value === 'string' ? value : ''
+        return (
+          <textarea
+            className="port-input"
+            rows={compact ? 1 : 3}
+            value={lines}
+            placeholder="one item per line"
+            onMouseDown={stop}
+            onChange={(e) => {
+              const items = e.target.value.split('\n')
+              onChange(e.target.value === '' ? undefined : items.length === 1 ? items[0] : items)
+            }}
+          />
+        )
+      }
       if (type.choices) {
         return (
           <select className="port-select mono" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>

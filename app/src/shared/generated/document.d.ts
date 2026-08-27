@@ -144,7 +144,7 @@ export interface Node {
   [k: string]: unknown;
 }
 export interface Values {
-  [k: string]: string | number | boolean | number[] | null;
+  [k: string]: string | number | boolean | number[] | string[] | null;
 }
 /**
  * One step of an Animate chain: ``.method(**values)``.
@@ -155,7 +155,7 @@ export interface MethodCall {
   [k: string]: unknown;
 }
 export interface Values1 {
-  [k: string]: string | number | boolean | number[] | null;
+  [k: string]: string | number | boolean | number[] | string[] | null;
 }
 /**
  * One entry of a Config node: the key and the type its value is written as.

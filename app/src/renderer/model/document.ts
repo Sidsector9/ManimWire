@@ -3,7 +3,8 @@
 
 import type { Descriptor, PortType } from '../../shared/engine'
 
-export type JsonValue = string | number | boolean | number[] | null
+/** A list of strings is only meaningful on a *args port that takes several strings. */
+export type JsonValue = string | number | boolean | number[] | string[] | null
 
 /** One call in an Animate node's chain: mobject.animate.method(values). */
 export interface MethodCall {

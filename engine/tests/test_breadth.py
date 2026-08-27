@@ -451,3 +451,18 @@ def test_catalogue_breadth_and_coverage(catalogue: Catalogue) -> None:
     report = coverage_report(catalogue)
     assert report.unpresentable == sum(len(e.unpresentable) for e in report.incomplete)
     assert report.unpresentable <= 203  # the parity metric: only ever lower this number
+
+
+def test_star_args_take_several_strings_but_one_point(catalogue: Catalogue) -> None:
+    scene = SceneDocument(
+        nodes=[
+            node("t", "Text", values={"text": "a"}),
+            node("shift", "Mobject.shift", values={"vectors": [1, 2, 0]}),
+            node("tex", "Tex", values={"tex_strings": ["a ", "b"]}),
+        ],
+        edges=[edge("t", "shift", "self")],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert "        text.shift(np.array([1.0, 2.0, 0.0]))\n" in generated.code
+    assert "        tex = Tex('a ', 'b')\n" in generated.code

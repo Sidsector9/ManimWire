@@ -189,7 +189,12 @@ def validate_scene(
                 )
             elif (
                 problem := _literal_problem(
-                    value, param.type, colors, functions, classes
+                    value,
+                    param.type,
+                    colors,
+                    functions,
+                    classes,
+                    many=param.kind == "var_positional",
                 )
             ) is not None:
                 issues.append(_issue("bad_literal", problem, node.id, port))
@@ -664,9 +669,18 @@ def _literal_problem(
     colors: set[str],
     functions: Mapping[str, str],
     classes: set[str],
+    many: bool = False,
 ) -> str | None:
     if value is None:
         return None if type_ref.optional else "value must not be empty"
+    if many and isinstance(value, list) and all(isinstance(v, str) for v in value):
+        # A *args port takes several string literals (Tex parts), checked one by one.
+        # A list of numbers stays one literal: a point for a vector port.
+        for item in value:
+            problem = _literal_problem(item, type_ref, colors, functions, classes)
+            if problem is not None:
+                return problem
+        return None
     kind = type_ref.type
     if type_ref.collection:
         if not isinstance(value, list):

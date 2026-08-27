@@ -517,7 +517,13 @@ class _Build:
                 for source in sources:
                     spread = "*" if self.graph.output_type(source).collection else ""
                     parts.append(spread + self.expression(source, param.type))
-                if param.name in node.values:
+                literal = node.values.get(param.name)
+                if isinstance(literal, list) and all(
+                    isinstance(v, str) for v in literal
+                ):
+                    # Several string literals for one *args port (Tex's parts).
+                    parts.extend(self.formatter.format(v, param.type) for v in literal)
+                elif param.name in node.values:
                     parts.append(
                         self.formatter.format(node.values[param.name], param.type)
                     )
