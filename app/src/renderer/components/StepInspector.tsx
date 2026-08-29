@@ -1,6 +1,7 @@
 import { CAMERA_FIELDS, type Step } from '../model/document'
 import { selectEntries, useCatalogueStore } from '../store/catalogue'
 import { previewScene, useDocumentStore } from '../store/document'
+import { NumberInput } from './inputs'
 
 /** Fields of the selected timeline step. */
 export function StepInspector({ index }: { index: number }) {
@@ -157,14 +158,7 @@ function NumberField({ label, value, placeholder, onChange }: { label: string; v
     <div className="field">
       <span className="field-label">{label}</span>
       <span className="field-value">
-        <input
-          className="port-input mono"
-          type="number"
-          step="any"
-          value={value ?? ''}
-          placeholder={placeholder}
-          onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
-        />
+        <NumberInput value={value} placeholder={placeholder} onChange={(v) => onChange(v ?? null)} />
       </span>
     </div>
   )

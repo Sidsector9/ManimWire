@@ -77,7 +77,7 @@ describe('ManimNode', () => {
     expect(screen.queryByText('color')).toBeNull()
     expect(screen.queryByText('fill_opacity')).toBeNull()
     expect(screen.getByText('+2')).toBeTruthy()
-    expect((screen.getByDisplayValue('2') as HTMLInputElement).type).toBe('number')
+    expect((screen.getByDisplayValue('2') as HTMLInputElement).type).toBe('text') // a draft text field, so a lone '-' can be typed
   })
 
   it('expanded: shows every port and a collapse control', () => {

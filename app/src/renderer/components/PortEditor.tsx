@@ -1,6 +1,7 @@
 import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
 import { selectColors, selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
+import { NumberInput, NumberListInput } from './inputs'
 
 interface Props {
   param: Parameter
@@ -20,34 +21,12 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
   const stop = (e: React.SyntheticEvent): void => e.stopPropagation()
 
   if (type.collection && type.type === 'number') {
-    const text = Array.isArray(value) ? value.join(', ') : ''
-    return (
-      <input
-        className="port-input mono"
-        value={text}
-        placeholder={placeholder}
-        onMouseDown={stop}
-        onChange={(e) => {
-          const parts = e.target.value.split(',').map((s) => s.trim()).filter((s) => s !== '')
-          const numbers = parts.map(Number)
-          onChange(parts.length === 0 ? undefined : numbers.every((n) => !Number.isNaN(n)) ? numbers : value)
-        }}
-      />
-    )
+    const numbers = Array.isArray(value) && value.every((v) => typeof v === 'number') ? (value as number[]) : undefined
+    return <NumberListInput value={numbers} placeholder={placeholder} onChange={onChange} />
   }
   switch (type.type) {
     case 'number':
-      return (
-        <input
-          className="port-input mono"
-          type="number"
-          step="any"
-          value={typeof value === 'number' ? value : ''}
-          placeholder={placeholder}
-          onMouseDown={stop}
-          onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
-        />
-      )
+      return <NumberInput value={typeof value === 'number' ? value : undefined} placeholder={placeholder} onChange={onChange} />
     case 'boolean':
       return (
         <input

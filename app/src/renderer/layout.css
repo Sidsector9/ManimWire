@@ -1231,3 +1231,7 @@ button.port-connected.live {
   flex: 1;
   min-width: 0;
 }
+
+.port-input.draft {
+  border-color: var(--type-number);
+}
