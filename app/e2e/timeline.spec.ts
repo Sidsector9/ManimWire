@@ -1,11 +1,13 @@
 import { _electron as electron, expect, test } from '@playwright/test'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 // Runs against the built app: `pnpm build` first.
 test('timeline shows rows and bars, scrubs the preview, and edits run_time by dragging', async () => {
   const app = await electron.launch({
     args: [path.resolve('.')],
-    env: { ...process.env, MNW_OPEN: path.resolve('../examples/lagged-dots.mnw') }
+    env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')), MNW_OPEN: path.resolve('../examples/lagged-dots.mnw') }
   })
   const window = await app.firstWindow()
   try {
@@ -19,13 +21,13 @@ test('timeline shows rows and bars, scrubs the preview, and edits run_time by dr
     const ticks = window.locator('.timeline-ticks')
     const box = (await ticks.boundingBox())!
     await ticks.click({ position: { x: 108 + 1.5 * 96, y: box.height / 2 } })
-    await expect(window.locator('.canvas-foot')).toContainText('t = 1.5')
+    await expect(window.locator('.canvas-chip.time')).toContainText('t = 1.5')
 
     // Click the top-level FadeIn bar of the first dot: node selected, inspector shows it.
     const bar = window.locator('.timeline-bar', { hasText: 'FadeIn' }).first()
     await bar.click()
     await expect(window.locator('.inspector .panel-head')).toContainText('animation')
-    await expect(window.locator('.inspector-title .mono')).toHaveText('FadeIn')
+    await expect(window.locator('.inspector-path')).toHaveText('FadeIn')
 
     // Drag its right edge one second further: run_time 2 -> 3 in the generated code.
     const barBox = (await bar.boundingBox())!

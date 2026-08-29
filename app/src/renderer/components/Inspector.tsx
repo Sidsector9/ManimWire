@@ -1,5 +1,6 @@
-import type { Descriptor, Parameter } from '../../shared/engine'
+import type { Parameter } from '../../shared/engine'
 import { GROUP_PREFIX, SELF_PORT, connectedPorts, type ConfigKey, type DocNode, type JsonValue, type MethodCall, type Scene, type UpdatingAction } from '../model/document'
+import { conceptGroups } from '../model/groups'
 import { ANIMATE, chainMethods, chainPort, effectiveDescriptor, isLiveSource, rootOf } from '../model/live'
 import type { DescriptorIndex } from '../model/types'
 import { TYPE_COLOR, selectExpressionNames, useCatalogueStore } from '../store/catalogue'
@@ -45,7 +46,9 @@ export function Inspector() {
 
   const descriptor = effectiveDescriptor(node, catalogued, scene, expressionNames, index)
   const connected = connectedPorts(scene, node.id)
-  const groups = groupByOwner(descriptor)
+  const groups = conceptGroups(descriptor)
+  const pinned = new Set(node.pinned ?? [])
+  const togglePin = (port: string): void => store.updateNode(node.id, { pinned: pinned.has(port) ? [...pinned].filter((p) => p !== port) : [...pinned, port] })
   const lines = (sourceMap.nodes[node.id] ?? []).map((n) => code.split('\n')[n - 1] ?? '').map((l) => l.trim())
   const nodeIssues = issues.filter((i) => i.node === node.id)
   const inPlay = scene.steps.some((s) => s.kind === 'play' && s.animations.includes(node.id))
@@ -65,14 +68,18 @@ export function Inspector() {
       </div>
       <div className="inspector-body">
         <div className="inspector-title">
+          <span className="swatch-bar" style={{ background: TYPE_COLOR[descriptor.returns.type] }} />
           <input
             className="port-input"
             value={node.label ?? ''}
             placeholder={descriptor.name}
             onChange={(e) => store.updateNode(node.id, { label: e.target.value || null })}
           />
-          <span className="mono muted">{descriptor.qualname}</span>
+          <span className="mono muted" title={descriptor.qualname}>
+            {node.id}
+          </span>
         </div>
+        <div className="mono inspector-path">{descriptor.qualname}</div>
         {descriptor.doc && <div className="inspector-doc">{descriptor.doc}</div>}
         {nodeIssues.map((issue, i) => (
           <div key={i} className="inspector-issue">
@@ -90,16 +97,23 @@ export function Inspector() {
             <span className="field-value muted">{connected.has(SELF_PORT) ? 'connected' : 'connect a mobject'}</span>
           </div>
         )}
-        {groups.map(([owner, params]) => (
-          <div key={owner}>
-            <div className="group-head">{owner}</div>
-            {params.map((param) => (
+        {groups.map((group) => (
+          <div key={group.label}>
+            <div className="group-head">{group.label}</div>
+            {group.description && <div className="group-desc">{group.description}</div>}
+            {group.params.map((param) => (
               <Field
                 key={param.name}
                 param={param}
                 connected={connected.has(param.name)}
                 value={node.values[param.name]}
                 onChange={(v) => store.setValue(node.id, param.name, v)}
+                pinned={pinned.has(param.name)}
+                onPin={() => togglePin(param.name)}
+                onTurnIntoPort={() => {
+                  store.setValue(node.id, param.name, undefined)
+                  if (!pinned.has(param.name)) togglePin(param.name)
+                }}
                 onConfig={
                   param.type.type === 'config' && !connected.has(param.name)
                     ? () => {
@@ -282,7 +296,10 @@ function Field({
   connected,
   value,
   onChange,
-  onConfig
+  onConfig,
+  pinned = false,
+  onPin,
+  onTurnIntoPort
 }: {
   param: Parameter
   connected: boolean
@@ -290,45 +307,47 @@ function Field({
   onChange(value: JsonValue | undefined): void
   /** For dict parameters: create a Config node and connect it here. */
   onConfig?(): void
+  /** The socket at the far right: shown on the collapsed node when pinned. */
+  pinned?: boolean
+  onPin?(): void
+  onTurnIntoPort?(): void
 }) {
   const isSet = value !== undefined
   return (
-    <div className={`field${isSet ? ' set' : ''}`}>
-      <span className="field-label" title={param.type.annotation}>
-        <span className="dot" style={{ background: TYPE_COLOR[param.type.type] }} />
+    <div className={`field${isSet ? ' set' : ''}${onPin ? ' with-socket' : ''}`}>
+      <span className="field-label" title={`${param.type.annotation}${param.display ? ` · default ${param.display}` : ''}`}>
         {param.name}
       </span>
       <span className="field-value">
         {connected ? (
-          <span className="muted">connected</span>
+          <span className="muted mono">driven</span>
         ) : onConfig ? (
           <button className="link" onClick={onConfig}>
             + Config
           </button>
         ) : (
-          <PortEditor param={param} value={value} onChange={onChange} />
+          <PortEditor param={param} value={value} onChange={onChange} onTurnIntoPort={onTurnIntoPort} />
         )}
       </span>
+      {onPin && (
+        <button
+          className={`field-socket${connected || pinned ? ' on' : ''}`}
+          style={{ borderColor: TYPE_COLOR[param.type.type], background: connected ? TYPE_COLOR[param.type.type] : pinned ? 'var(--surface)' : 'transparent' }}
+          title={connected ? 'Driven by a connection' : pinned ? 'Shown as a port on the node. Click to hide it when empty.' : 'Show as a port on the node, so another node can drive it.'}
+          onClick={onPin}
+        />
+      )}
       <span className="field-default mono">
         {isSet && !connected ? (
-          <button className="link" title="Reset to the Manim default" onClick={() => onChange(undefined)}>
+          <button className="link" title={`Reset to the Manim default${param.display ? ` (${param.display})` : ''}`} onClick={() => onChange(undefined)}>
             reset
           </button>
+        ) : !connected && param.default === null && !isSet ? (
+          'required'
         ) : (
-          (param.display ?? 'required')
+          ''
         )}
       </span>
     </div>
   )
-}
-
-function groupByOwner(descriptor: Descriptor): [string, Parameter[]][] {
-  const groups = new Map<string, Parameter[]>()
-  for (const param of descriptor.parameters) {
-    if (param.display === 'chain') continue // shown with its call in the chain editor
-    const list = groups.get(param.owner) ?? []
-    list.push(param)
-    groups.set(param.owner, list)
-  }
-  return [...groups.entries()]
 }

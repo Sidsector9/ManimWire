@@ -1,11 +1,13 @@
 import { _electron as electron, expect, test } from '@playwright/test'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 // Runs against the built app: `pnpm build` first. The derivative scene from goal.md section 35.
 test('live edges become updaters: bands on the timeline, always_redraw in the code, dot moves when scrubbed', async () => {
   const app = await electron.launch({
     args: [path.resolve('.')],
-    env: { ...process.env, MNW_OPEN: path.resolve('../examples/derivative.mnw') }
+    env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')), MNW_OPEN: path.resolve('../examples/derivative.mnw') }
   })
   const window = await app.firstWindow()
   try {
@@ -19,7 +21,7 @@ test('live edges become updaters: bands on the timeline, always_redraw in the co
     const ticks = window.locator('.timeline-ticks')
     const box = (await ticks.boundingBox())!
     await ticks.click({ position: { x: 108 + 5 * 96, y: box.height / 2 } })
-    await expect(window.locator('.canvas-foot')).toContainText('t = 5.0')
+    await expect(window.locator('.canvas-chip.time')).toContainText('t = 5.0')
     await expect(window.locator('.frame img')).toBeVisible()
 
     // The Animate node shows its chain; its inspector lists the call with the value.

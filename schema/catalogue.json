@@ -308,6 +308,17 @@
       "title": "Fonts",
       "type": "array"
     },
+    "rate_curves": {
+      "additionalProperties": {
+        "items": {
+          "type": "number"
+        },
+        "type": "array"
+      },
+      "default": {},
+      "title": "Rate Curves",
+      "type": "object"
+    },
     "unknown_annotations": {
       "items": {
         "type": "string"

@@ -474,6 +474,14 @@
           ],
           "default": null,
           "title": "Size"
+        },
+        "pinned": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Pinned",
+          "type": "array"
         }
       },
       "required": [

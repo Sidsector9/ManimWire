@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { GROUP_PREFIX, nextPosition } from '../model/document'
 import { groupLibrary, TYPE_COLOR, useCatalogueStore } from '../store/catalogue'
 import { useDescriptorIndex, useEntries } from '../store/descriptors'
@@ -18,20 +18,31 @@ export function Library({ onImportGroup }: { onImportGroup(): void }) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
   const [newGroup, setNewGroup] = useState<string | null>(null)
   const groups = useMemo(() => groupLibrary(entries, query), [entries, query])
-  const total = entries.filter((e) => e.kind !== 'method' && !e.hidden).length
+  const mobjects = entries.filter((e) => e.kind === 'class' && !e.hidden && e.returns.type === 'mobject').length
+  const animations = entries.filter((e) => e.kind === 'class' && !e.hidden && e.returns.type === 'animation').length
+  const search = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        search.current?.focus()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <section className="panel library">
       <div className="panel-head">
         <span>Library</span>
-        <span className="mono" style={{ fontWeight: 400 }}>
-          {catalogue ? `${total} entries` : ''}
-        </span>
+        <span className="library-head-key" title="Focus the search">⌘K</span>
       </div>
       <div className="library-search">
         <input
+          ref={search}
           type="search"
-          placeholder={catalogue ? `Search Manim CE ${catalogue.manim_version}` : 'Loading catalogue…'}
+          placeholder={catalogue ? `Search ${mobjects} mobjects, ${animations} animations` : 'Loading catalogue…'}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           disabled={!catalogue}

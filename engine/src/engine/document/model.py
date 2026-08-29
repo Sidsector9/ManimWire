@@ -46,6 +46,8 @@ class Node(BaseModel):
     parent: str | None = None
     # Map and Repeat only: the frame size on the graph.
     size: tuple[float, float] | None = None
+    # Ports shown on the collapsed node even without a value or connection.
+    pinned: list[str] = []
 
 
 class Edge(BaseModel):

@@ -1,11 +1,11 @@
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
 import { SELF_PORT, isContainer, visiblePorts } from '../model/document'
 import type { ManimFlowNode } from '../model/flow'
-import { ANIMATE, chainSummary, isObjectType } from '../model/live'
+import { ANIMATE, chainSummary, isLiveSource, isObjectType } from '../model/live'
 import { portType } from '../model/types'
 import { TYPE_COLOR } from '../store/catalogue'
 import { useDescriptorIndex } from '../store/descriptors'
-import { useDocumentStore } from '../store/document'
+import { currentScene, useDocumentStore } from '../store/document'
 import { useEngineStore } from '../store/engine'
 import { PortEditor } from './PortEditor'
 
@@ -17,6 +17,8 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
   const updateNode = useDocumentStore((s) => s.updateNode)
   const setPortLive = useDocumentStore((s) => s.setPortLive)
   const latex = useEngineStore((s) => s.status.info?.latex)
+  const scene = useDocumentStore(currentScene)
+  const hasLiveInput = live.length > 0 || scene.edges.some((e) => e.target === node.id && isLiveSource(scene, e.source, index))
   const connectedSet = new Set(connected)
   const visible = visiblePorts(node, descriptor, connectedSet)
   const hidden = (descriptor.parameters.length + (descriptor.kind === 'method' ? 1 : 0)) - visible.length
@@ -30,6 +32,7 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
       {container && <NodeResizer isVisible={selected} minWidth={240} minHeight={140} onResizeEnd={(_, params) => updateNode(id, { size: [params.width, params.height] })} />}
       <div className="node-head">
         <span className={descriptor.kind === 'method' ? 'node-title mono' : 'node-title'}>{title}</span>
+        {hasLiveInput && <span className="node-live" title="Has a live input: rebuilt every frame" />}
         {descriptor.kind === 'group' && <span className="node-tag">group</span>}
         {container && <span className="node-tag">{descriptor.name === 'Map' ? 'for each item' : 'repeat'}</span>}
         {needsLatex && (
@@ -71,7 +74,7 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
                 </button>
               ) : isConnected ? (
                 <span className="port-connected" style={{ color }}>
-                  connected
+                  driven
                 </span>
               ) : param ? (
                 <PortEditor param={param} value={node.values[port]} onChange={(v) => setValue(node.id, port, v)} compact />

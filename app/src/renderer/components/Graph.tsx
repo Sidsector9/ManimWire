@@ -148,6 +148,10 @@ export function Graph() {
       }}
       tabIndex={0}
     >
+      <div className="graph-head">
+        <span>{editingGroup ? `GROUP ${editingGroup}` : 'GRAPH'}</span>
+        <span className="meta">{scene.nodes.length} nodes · Tab to add</span>
+      </div>
       <ReactFlow<ManimFlowNode>
         nodes={nodes}
         edges={derived.edges}

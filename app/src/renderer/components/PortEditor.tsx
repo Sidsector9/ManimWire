@@ -1,6 +1,7 @@
 import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
 import { selectColors, selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
+import { ColorPicker, RateFuncPicker, VectorEditor } from './editors'
 import { NumberInput, NumberListInput } from './inputs'
 
 interface Props {
@@ -8,10 +9,12 @@ interface Props {
   value: JsonValue | undefined
   onChange(value: JsonValue | undefined): void
   compact?: boolean
+  /** Inspector only: expose the field as a port on the node (rate_func "custom"). */
+  onTurnIntoPort?(): void
 }
 
 /** Inline editor for one literal port, chosen by the catalogue type. */
-export function PortEditor({ param, value, onChange, compact = false }: Props) {
+export function PortEditor({ param, value, onChange, compact = false, onTurnIntoPort }: Props) {
   const colors = useCatalogueStore(selectColors)
   const entries = useCatalogueStore(selectEntries)
   const directions = useCatalogueStore(selectDirections)
@@ -37,6 +40,7 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
         />
       )
     case 'color':
+      if (!compact) return <ColorPicker value={typeof value === 'string' ? value : undefined} placeholder={placeholder} onChange={onChange} />
       return (
         <span className="port-color">
           <span className="swatch" style={{ background: swatch(value, colors) }} />
@@ -51,6 +55,7 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
         </span>
       )
     case 'vector':
+      if (!compact) return <VectorEditor value={typeof value === 'string' || Array.isArray(value) ? (value as string | number[]) : undefined} placeholder={placeholder} onChange={onChange} />
       return (
         <select className="port-select mono" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>
           <option value="">{placeholder || 'default'}</option>
@@ -124,6 +129,9 @@ export function PortEditor({ param, value, onChange, compact = false }: Props) {
       // Catalogue functions whose signature matches the port, for example rate functions.
       const names = type.signature ? entries.filter((e) => e.kind === 'function' && e.signature === type.signature).map((e) => e.name) : []
       if (names.length === 0) return <span className="port-connect">{compact ? '' : 'connect'}</span>
+      if (!compact && type.signature === '(float) -> float') {
+        return <RateFuncPicker value={typeof value === 'string' ? value : undefined} placeholder={placeholder} onChange={onChange} onTurnIntoPort={onTurnIntoPort} />
+      }
       return (
         <select className="port-select mono" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>
           <option value="">{placeholder || 'default'}</option>

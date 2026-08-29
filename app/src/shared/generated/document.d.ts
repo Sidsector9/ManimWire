@@ -38,6 +38,7 @@ export type PortType =
 export type Config = ConfigKey[];
 export type Parent = string | null;
 export type Size = [unknown, unknown] | null;
+export type Pinned = string[];
 export type Nodes = Node[];
 export type Source = string;
 export type Target = string;
@@ -141,6 +142,7 @@ export interface Node {
   config?: Config;
   parent?: Parent;
   size?: Size;
+  pinned?: Pinned;
   [k: string]: unknown;
 }
 export interface Values {

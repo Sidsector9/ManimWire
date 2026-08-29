@@ -1,16 +1,31 @@
-/* Workspace chrome tokens, lifted from the Claude Design canvas (dark instrument direction). */
+/* Design tokens from the handoff README (design_handoff_manim_node_editor). Hex values are authoritative. */
 :root {
-  --bg: #08090b;
-  --panel: #0d0f12;
-  --surface: #15191f;
-  --surface-hover: #1a1e24;
-  --border: #262c34;
-  --border-strong: #3a424c;
+  /* Chrome */
+  --bg: #0d0f12; /* bg/app: app background, status bar, code view */
+  --bg-void: #0a0b0d; /* bg/canvas-void: around the preview frame */
+  --panel: #101317; /* bg/panel: toolbar, library, inspector, timeline */
+  --graph: #0f1216; /* bg/graph */
+  --surface: #15191f; /* bg/node: node body, fields, chips */
+  --surface-hover: #1a1e24; /* bg/node-hover */
+  --row-selected: #141820; /* bg/row-selected: selected row, scene row, popovers */
+  --method-row: #181d24; /* bg/method-row: Animate chain rows */
+  --border-hairline: #171b21;
+  --border-subtle: #1c2128; /* panel dividers, node internal separators */
+  --border: #262c34; /* border/node */
+  --border-field: #242a32;
+  --border-strong: #2a3038; /* popover, secondary button */
+  --border-emphasis: #3a424c; /* primary button, hover border */
+  --border-marker: #39414b;
   --text: #e6e9ee;
-  --text-secondary: #8b939f;
-  --text-muted: #5f6773;
+  --text-secondary: #cdd3db;
+  --text-tertiary: #b6bdc7;
+  --text-muted: #8b939f;
+  --text-faint: #6f7885;
+  --text-dim: #5f6773;
+  --text-dimmest: #4a525d;
+  --text-gutter: #3f4650;
 
-  /* Manim value types, from Manim's own palette (design.md section 5.3). */
+  /* Manim value types, from Manim's own palette. */
   --type-mobject: #58c4dd;
   --type-coordinate-system: #5cd0b3;
   --type-number: #f7d96f;
@@ -24,6 +39,25 @@
   --type-config: #888888;
   --error: #fc6255;
 
+  /* Timeline */
+  --bar-fill: #3b2110;
+  --bar-border: #6b3a16;
+  --bar-fill-selected: #7a3d14;
+  --bar-ink: #ffd3ae;
+  --bar-rate-ink: #c68a5a;
+
+  /* Semantic */
+  --warning-border: #5a4a1e;
+  --warning-fill: #2a2410;
+  --error-border: #5c2224;
+  --error-fill: #2a1112;
+
   --font-ui: 'IBM Plex Sans', system-ui, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+
+  --row-height: 22px; /* node port row; 27px when density is comfortable */
+}
+
+:root[data-density='comfortable'] {
+  --row-height: 27px;
 }

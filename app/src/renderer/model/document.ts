@@ -31,6 +31,8 @@ export interface DocNode {
   parent?: string | null
   /** Map and Repeat only: the frame size on the graph. */
   size?: [number, number] | null
+  /** Ports shown on the collapsed node even without a value or connection. */
+  pinned?: string[]
 }
 
 export interface DocEdge {
@@ -380,7 +382,8 @@ export function visiblePorts(node: DocNode, descriptor: Descriptor, connected: S
   if (!node.collapsed) return ports
   // Expression variables and Config keys are the node's purpose, so they stay visible while collapsed.
   const always = new Set(descriptor.parameters.filter((p) => p.owner === 'Expression' || p.owner === 'Config').map((p) => p.name))
-  return ports.filter((p) => connected.has(p) || p in node.values || p === SELF_PORT || always.has(p))
+  const pinned = new Set(node.pinned ?? [])
+  return ports.filter((p) => connected.has(p) || p in node.values || p === SELF_PORT || always.has(p) || pinned.has(p))
 }
 
 export function connectedPorts(scene: Scene, nodeId: string): Set<string> {

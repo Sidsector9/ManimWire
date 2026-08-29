@@ -57,6 +57,7 @@ export interface Catalogue {
   directions: Directions;
   expression_names: ExpressionNames;
   fonts?: Fonts;
+  rate_curves?: RateCurves;
   unknown_annotations: UnknownAnnotations;
   [k: string]: unknown;
 }
@@ -104,4 +105,7 @@ export interface ColorEntry {
   name: Name2;
   hex: Hex;
   [k: string]: unknown;
+}
+export interface RateCurves {
+  [k: string]: number[];
 }

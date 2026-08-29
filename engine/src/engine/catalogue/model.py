@@ -51,6 +51,9 @@ class Parameter(BaseModel):
     owner: str
 
 
+RATE_SAMPLES = 25
+
+
 def takes_zero_argument_function(target: TypeRef) -> bool:
     """A function port that is called without arguments (TracedPath's point function).
 
@@ -99,4 +102,6 @@ class Catalogue(BaseModel):
     expression_names: list[str]
     # Font families Pango can render, for Text and MarkupText.
     fonts: list[str] = []
+    # Each rate function sampled at RATE_SAMPLES points on [0, 1], for curve previews.
+    rate_curves: dict[str, list[float]] = {}
     unknown_annotations: list[str]

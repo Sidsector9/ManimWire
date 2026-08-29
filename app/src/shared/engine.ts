@@ -44,6 +44,8 @@ export interface FilesApi {
   /** Read a file the user picks; returns null when cancelled. */
   openText(extension: string): Promise<{ path: string; content: string } | null>
   reveal(path: string): Promise<void>
+  /** Open a web page in the user's browser. */
+  openExternal(url: string): Promise<void>
   onMenu(listener: (action: MenuAction) => void): () => void
   onOpened(listener: (file: { path: string; content: string }) => void): () => void
 }

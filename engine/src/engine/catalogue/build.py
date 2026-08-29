@@ -31,7 +31,13 @@ from engine.catalogue.extract import (
     function_descriptor,
     method_descriptor,
 )
-from engine.catalogue.model import Catalogue, ColorEntry, Descriptor, PortType
+from engine.catalogue.model import (
+    RATE_SAMPLES,
+    Catalogue,
+    ColorEntry,
+    Descriptor,
+    PortType,
+)
 from engine.expression import CONSTANTS, FUNCTIONS
 
 _SKIP_MODULES = (
@@ -213,6 +219,13 @@ def build_catalogue() -> Catalogue:
     ]
     entries.extend(BUILTINS)
     fonts = sorted(name for name in manimpango.list_fonts() if not name.startswith("."))
+    curves = {
+        entry.name: samples
+        for entry in entries
+        if entry.kind == "function"
+        and entry.signature == "(float) -> float"
+        and (samples := _rate_curve(functions[entry.name][0])) is not None
+    }
     return Catalogue(
         manim_version=version("manim"),
         entries=entries,
@@ -220,8 +233,18 @@ def build_catalogue() -> Catalogue:
         directions=list(DIRECTION_NAMES),
         expression_names=sorted([*FUNCTIONS, *CONSTANTS]),
         fonts=fonts,
+        rate_curves=curves,
         unknown_annotations=sorted(context.unknown),
     )
+
+
+def _rate_curve(function: Any) -> list[float] | None:
+    """Sample a rate function on [0, 1]; None when it is not one (or fails)."""
+    try:
+        values = [float(function(i / (RATE_SAMPLES - 1))) for i in range(RATE_SAMPLES)]
+    except Exception:  # noqa: BLE001 - any failure means it is not a plain rate function
+        return None
+    return values if all(abs(v) < 10 for v in values) else None
 
 
 @lru_cache(maxsize=1)

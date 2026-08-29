@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { HEADER_HEIGHT, placeBands, placeBars, placeMarkers, ROW_HEIGHT, rowLabels, stepAt, ticks, timeToX, xToTime } from '../model/timeline'
 import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
+import { Icon } from './Icon'
 
 const LABEL_WIDTH = 108
 const MIN_RUN_TIME = 0.1
@@ -17,6 +18,11 @@ export function Timeline() {
   const frame = useEngineResults((s) => s.frame)
   const previewTime = useEngineResults((s) => s.previewTime)
   const setPreviewTime = useEngineResults((s) => s.setPreviewTime)
+  const playing = useEngineResults((s) => s.playing)
+  const loop = useEngineResults((s) => s.loop)
+  const setPlaying = useEngineResults((s) => s.setPlaying)
+  const setLoop = useEngineResults((s) => s.setLoop)
+  const [ghost, setGhost] = useState<{ node: string; step: number; end: number } | null>(null)
   const scene = useDocumentStore(previewScene)
   const editingGroup = useDocumentStore((s) => s.editingGroup)
   const store = useDocumentStore()
@@ -69,6 +75,7 @@ export function Timeline() {
       const bar = layout.bars.find((b) => b.node === drag.node && b.step === drag.step)
       if (!bar) return
       const runTime = Math.max(MIN_RUN_TIME, Math.round((time - bar.start) * 20) / 20)
+      setGhost({ node: drag.node, step: drag.step, end: bar.start + runTime })
       const step = scene.steps[drag.step]
       if (bar.depth === 0 && step?.kind === 'play' && step.run_time != null) {
         store.updateStep(drag.step, { ...step, run_time: runTime })
@@ -86,15 +93,49 @@ export function Timeline() {
       }
     }
     setDrag(null)
+    setGhost(null)
     setHoverStep(null)
+  }
+
+  const stepBoundaries = [...new Set(layout.steps.map((s) => s.start))].sort((a, b) => a - b)
+  const jump = (direction: 1 | -1): void => {
+    const current = previewTime ?? layout.total
+    const next = direction > 0 ? stepBoundaries.find((t) => t > current + 1e-6) : [...stepBoundaries].reverse().find((t) => t < current - 1e-6)
+    setPreviewTime(next ?? (direction > 0 ? layout.total : 0))
   }
 
   return (
     <section className="panel timeline">
-      <div className="panel-head">
-        <span>Timeline</span>
+      <div className="panel-head timeline-head">
+        <span className="transport" role="group" aria-label="Transport">
+          <button className={`icon${playing ? ' active' : ''}`} title={playing ? 'Pause' : 'Play'} onClick={() => setPlaying(!playing)}>
+            <Icon name={playing ? 'pause' : 'play'} size={11} />
+          </button>
+          <button
+            className="icon"
+            title="Stop: back to the start"
+            onClick={() => {
+              setPlaying(false)
+              setPreviewTime(0)
+            }}
+          >
+            <Icon name="stop" size={11} />
+          </button>
+          <button className="icon" title="Previous step" onClick={() => jump(-1)}>
+            <Icon name="previous" size={11} />
+          </button>
+          <button className="icon" title="Next step" onClick={() => jump(1)}>
+            <Icon name="next" size={11} />
+          </button>
+          <button className={`icon${loop ? ' active' : ''}`} title="Loop" onClick={() => setLoop(!loop)}>
+            <Icon name="loop" size={11} />
+          </button>
+        </span>
+        <span className="timeline-label">TIMELINE</span>
         <span className="mono timeline-meta">
-          {layout.error ? `no timeline: ${layout.error}` : `${(frame?.time ?? playhead).toFixed(2)} s / ${layout.total.toFixed(2)} s · ${scene.steps.length} steps`}
+          {layout.error
+            ? `no timeline: ${layout.error}`
+            : `${(frame?.time ?? playhead).toFixed(2)} s / ${layout.total.toFixed(2)} s · ${scene.steps.length} steps · ${layout.sections.length} sections`}
         </span>
         <span className="timeline-actions">
           <button className="button small" onClick={() => store.addStep({ kind: 'wait', duration: 1 })}>
@@ -223,6 +264,20 @@ export function Timeline() {
               )}
             </div>
           ))}
+
+          {ghost && (
+            <div
+              className="timeline-bar ghost"
+              style={{
+                left: timeToX(geometry, layout.bars.find((b) => b.node === ghost.node && b.step === ghost.step)?.start ?? 0),
+                top: HEADER_HEIGHT + (bars.find((b) => b.node === ghost.node && b.step === ghost.step)?.y ?? 0),
+                width: Math.max(4, (ghost.end - (layout.bars.find((b) => b.node === ghost.node && b.step === ghost.step)?.start ?? 0)) * pixelsPerSecond - 2),
+                height: bars.find((b) => b.node === ghost.node && b.step === ghost.step)?.height ?? 16
+              }}
+            >
+              <span className="bar-rate mono">{(ghost.end - (layout.bars.find((b) => b.node === ghost.node && b.step === ghost.step)?.start ?? 0)).toFixed(2)} s</span>
+            </div>
+          )}
 
           {markers.map((marker, i) => (
             <div

@@ -12,11 +12,13 @@ export type Width = number;
 export type Height = number;
 export type OnScreen = boolean;
 export type Bounds = Bounds1[];
+export type RenderMs = number;
 
 export interface FrameResult {
   path: Path;
   time: Time;
   bounds: Bounds;
+  render_ms?: RenderMs;
   [k: string]: unknown;
 }
 export interface Bounds1 {

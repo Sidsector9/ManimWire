@@ -6,6 +6,7 @@ import hashlib
 import shutil
 from collections.abc import Callable, Iterable
 from pathlib import Path
+from time import perf_counter
 from typing import Any, Protocol
 
 from manim.mobject.mobject import Mobject
@@ -58,6 +59,8 @@ class FrameResult(BaseModel):
     path: str
     time: float
     bounds: list[Bounds]
+    # Wall-clock time Manim took to produce the frame; 0 when it came from the cache.
+    render_ms: float = 0
 
 
 class ExportResult(BaseModel):
@@ -132,6 +135,7 @@ class CairoRenderService:
         record = path.with_suffix(".json")
         if path.exists() and record.exists():
             return FrameResult.model_validate_json(record.read_text())
+        started = perf_counter()
         instance, locals_, renderer = run_scene(
             generated,
             scene.name,
@@ -146,6 +150,7 @@ class CairoRenderService:
             path=str(path),
             time=renderer.time,
             bounds=_bounds(instance, locals_, generated.source_map),
+            render_ms=(perf_counter() - started) * 1000,
         )
         record.write_text(result.model_dump_json())
         return result

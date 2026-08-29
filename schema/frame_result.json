@@ -59,6 +59,11 @@
       },
       "title": "Bounds",
       "type": "array"
+    },
+    "render_ms": {
+      "default": 0,
+      "title": "Render Ms",
+      "type": "number"
     }
   },
   "required": [

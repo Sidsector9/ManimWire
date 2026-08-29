@@ -24,6 +24,7 @@ const files: FilesApi = {
   saveText: (defaultName, extension, content) => ipcRenderer.invoke('file:saveText', defaultName, extension, content),
   openText: (extension) => ipcRenderer.invoke('file:openText', extension),
   reveal: (path) => ipcRenderer.invoke('file:reveal', path),
+  openExternal: (url) => ipcRenderer.invoke('file:openExternal', url),
   onMenu: (listener) => {
     const handler = (_event: unknown, action: MenuAction): void => listener(action)
     ipcRenderer.on('menu', handler)

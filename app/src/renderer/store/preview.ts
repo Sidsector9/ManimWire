@@ -31,8 +31,13 @@ interface PreviewStore {
   previewWidth: number
   inFlight: boolean
   pending: { doc: Doc; sceneIndex: number } | null
+  /** Transport (handoff timeline): frames are requested one after another while playing. */
+  playing: boolean
+  loop: boolean
   setPreviewTime(time: number | null): void
   setPreviewWidth(width: number): void
+  setPlaying(playing: boolean): void
+  setLoop(loop: boolean): void
   sync(doc: Doc, sceneIndex: number): Promise<void>
 }
 
@@ -50,8 +55,12 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   previewWidth: 960,
   inFlight: false,
   pending: null,
+  playing: false,
+  loop: false,
   setPreviewTime: (previewTime) => set({ previewTime }),
   setPreviewWidth: (previewWidth) => set({ previewWidth }),
+  setPlaying: (playing) => set({ playing }),
+  setLoop: (loop) => set({ loop }),
 
   /**
    * Validate, generate, and render the current scene. The engine serves one

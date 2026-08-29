@@ -1,11 +1,13 @@
 import { _electron as electron, expect, test } from '@playwright/test'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 // Runs against the built app: `pnpm build` first. A Map over a Range, from examples/dots.mnw.
 test('a Map over a Range becomes a loop, and the settings dialog edits the scene type', async () => {
   const app = await electron.launch({
     args: [path.resolve('.')],
-    env: { ...process.env, MNW_OPEN: path.resolve('../examples/dots.mnw') }
+    env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')), MNW_OPEN: path.resolve('../examples/dots.mnw') }
   })
   const window = await app.firstWindow()
   try {
@@ -22,7 +24,7 @@ test('a Map over a Range becomes a loop, and the settings dialog edits the scene
 
     // The settings dialog changes the scene type; the generated class follows.
     await window.getByRole('button', { name: 'Settings' }).click()
-    await window.locator('.dialog select').first().selectOption('MovingCameraScene')
+    await window.locator('.dialog .chip', { hasText: 'MovingCameraScene' }).click()
     await window.getByRole('button', { name: 'Done' }).click()
     await expect(code).toContainText('class Dots(MovingCameraScene):')
 

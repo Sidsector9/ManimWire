@@ -161,7 +161,11 @@ ipcMain.handle('file:openText', async (_event, extension: string) => {
   if (result.canceled || !filePath) return null
   return { path: filePath, content: await readFile(filePath, 'utf8') }
 })
+ipcMain.handle('file:openExternal', (_event, url: string) => (/^https?:\/\//.test(url) ? shell.openExternal(url) : Promise.resolve()))
 ipcMain.handle('file:reveal', (_event, filePath: string) => shell.showItemInFolder(filePath))
+
+// Tests and scratch sessions can keep their preferences apart from the user's.
+if (process.env['MNW_USER_DATA']) app.setPath('userData', process.env['MNW_USER_DATA'])
 
 app.whenReady().then(() => {
   protocol.handle('mnw', (request) => {
