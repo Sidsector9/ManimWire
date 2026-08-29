@@ -26,7 +26,9 @@ const index = indexDescriptors([
   entry({ name: 'scale', qualname: 'Mobject.scale', kind: 'method', owner: 'Mobject', returns: ref('mobject', 'Self') }),
   entry({ name: 'scale', qualname: 'VMobject.scale', kind: 'method', owner: 'VMobject', returns: ref('mobject', 'Self') }),
   entry({ name: 'get_center', qualname: 'Mobject.get_center', kind: 'method', owner: 'Mobject', returns: ref('vector', 'np.ndarray') }),
-  entry({ name: 'plot', qualname: 'CoordinateSystem.plot', kind: 'method', owner: 'CoordinateSystem', returns: ref('mobject', 'ParametricFunction') })
+  entry({ name: 'plot', qualname: 'CoordinateSystem.plot', kind: 'method', owner: 'CoordinateSystem', returns: ref('mobject', 'ParametricFunction') }),
+  entry({ name: 'CameraFrame', qualname: 'CameraFrame', kind: 'builtin', returns: ref('mobject', 'ScreenRectangle') }),
+  entry({ name: 'ScreenRectangle', qualname: 'ScreenRectangle', kind: 'class', returns: ref('mobject'), bases: ['Rectangle', 'VMobject', 'Mobject'] })
 ])
 const node = (id: string, catalogue: string, values: DocNode['values'] = {}): DocNode => ({ id, catalogue, values, label: null, position: [0, 0], collapsed: true })
 const RESERVED = ['sin', 'pi']
@@ -108,6 +110,11 @@ describe('object roots and animate methods', () => {
 
   it('offers self-returning methods of the class and its bases, nearest class first', () => {
     expect(chainMethods(scene, 's', index).map((m) => m.qualname)).toEqual(['VMobject.scale', 'Mobject.shift'])
+  })
+
+  it('finds the class behind an engine object such as the camera frame', () => {
+    const withFrame: Scene = { ...scene, nodes: [...scene.nodes, node('frame', 'CameraFrame')] }
+    expect(chainMethods(withFrame, 'frame', index).map((m) => m.qualname)).toEqual(['VMobject.scale', 'Mobject.shift'])
   })
 
   it('gives an Animate node one port per chain argument', () => {

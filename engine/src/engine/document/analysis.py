@@ -28,7 +28,14 @@ from engine.catalogue.builtins import (
     RESULT,
     STATE,
 )
-from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType, TypeRef
+from engine.catalogue.model import (
+    Catalogue,
+    Descriptor,
+    Parameter,
+    PortType,
+    TypeRef,
+    takes_zero_argument_function,
+)
 from engine.document.model import (
     GROUP_PREFIX,
     SELF_PORT,
@@ -148,9 +155,11 @@ class Graph:
         self._expand_groups(list(scene.nodes), ())
         self.inputs: dict[tuple[str, str], list[str]] = {}
         self.edges_in: dict[str, list[Edge]] = {}
+        self.edges_out: dict[str, list[Edge]] = {}
         for edge in self.edges:
             self.inputs.setdefault((edge.target, edge.port), []).append(edge.source)
             self.edges_in.setdefault(edge.target, []).append(edge)
+            self.edges_out.setdefault(edge.source, []).append(edge)
         self._live: dict[str, bool] = {}
         self._dt: dict[str, bool] = {}
 
@@ -412,6 +421,22 @@ class Graph:
                 live = True
         self._live[node_id] = live
         return live
+
+    def is_deferred(self, node_id: str) -> bool:
+        """A value read each time a zero-argument function port calls it (TracedPath).
+
+        Such a value must not be computed once into a variable; it is inlined into
+        the ``lambda`` that the port receives.
+        """
+        if not self.is_value_node(node_id):
+            return False
+        for edge in self.edges_out.get(node_id, []):
+            param = next(
+                (p for p in self.parameters(edge.target) if p.name == edge.port), None
+            )
+            if param is not None and takes_zero_argument_function(param.type):
+                return True
+        return False
 
     def reads_frame_delta(self, node_id: str) -> bool:
         """Whether the node's inline inputs include FrameDelta (needs ``dt``)."""

@@ -51,6 +51,19 @@ class Parameter(BaseModel):
     owner: str
 
 
+def takes_zero_argument_function(target: TypeRef) -> bool:
+    """A function port that is called without arguments (TracedPath's point function).
+
+    A value connected to it becomes ``lambda: value``, read each time it is called.
+    Unknown signatures (plain ``Callable``) count, since nothing says otherwise.
+    """
+    return target.type is PortType.FUNCTION and (
+        target.signature is None
+        or target.signature.startswith("() ->")
+        or target.signature == "(...) -> any"
+    )
+
+
 class Descriptor(BaseModel):
     name: str
     qualname: str

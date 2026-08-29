@@ -30,6 +30,7 @@ from engine.catalogue.model import (
     PortType,
     TypeRef,
     is_class_reference,
+    takes_zero_argument_function,
 )
 from engine.document.analysis import Graph, chain_port
 from engine.document.model import (
@@ -72,6 +73,12 @@ class Issue(BaseModel):
 
 def compatible(source: TypeRef, target: TypeRef) -> bool:
     if PortType.ANY in (source.type, target.type):
+        return True
+    if (
+        takes_zero_argument_function(target)
+        and source.type is not PortType.FUNCTION
+        and source.type is not PortType.ANIMATION
+    ):
         return True
     targets = set(target.accepts) | {target.type}
     sources = _SUBTYPES.get(source.type, set()) | {source.type}

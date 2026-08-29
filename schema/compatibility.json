@@ -32,7 +32,7 @@
   {
     "source": "mobject",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "mobject",
@@ -102,7 +102,7 @@
   {
     "source": "coordinate_system",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "coordinate_system",
@@ -172,7 +172,7 @@
   {
     "source": "number",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "number",
@@ -242,7 +242,7 @@
   {
     "source": "live_number",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "live_number",
@@ -312,7 +312,7 @@
   {
     "source": "vector",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "vector",
@@ -382,7 +382,7 @@
   {
     "source": "color",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "color",
@@ -592,7 +592,7 @@
   {
     "source": "text",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "text",
@@ -662,7 +662,7 @@
   {
     "source": "boolean",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "boolean",
@@ -732,7 +732,7 @@
   {
     "source": "config",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "config",
@@ -802,7 +802,7 @@
   {
     "source": "scene",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "scene",
@@ -872,7 +872,7 @@
   {
     "source": "none",
     "target": "function",
-    "ok": false
+    "ok": true
   },
   {
     "source": "none",

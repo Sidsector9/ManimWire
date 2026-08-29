@@ -402,6 +402,12 @@ def test_moving_camera_scene(catalogue: Catalogue, tmp_path: Path) -> None:
     assert [i.code for i in ManimCodeGenerator().generate(scene, catalogue).issues] == [
         "bad_scene_type"
     ]
+    scene.scene_type = "MovingCameraScene"
+    scene.nodes.append(node("save", "Mobject.save_state"))
+    scene.edges.append(edge("frame", "save", "self"))
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert "        self.camera.frame.save_state()\n" in generated.code
 
 
 def test_three_d_scene_with_camera_steps(catalogue: Catalogue, tmp_path: Path) -> None:
@@ -466,3 +472,33 @@ def test_star_args_take_several_strings_but_one_point(catalogue: Catalogue) -> N
     assert generated.issues == []
     assert "        text.shift(np.array([1.0, 2.0, 0.0]))\n" in generated.code
     assert "        tex = Tex('a ', 'b')\n" in generated.code
+
+
+def test_value_on_a_function_port_is_read_on_each_call(catalogue: Catalogue) -> None:
+    """TracedPath(circle.get_start): the point becomes lambda: circle.get_start()."""
+    scene = SceneDocument(
+        nodes=[
+            node("c", "Circle"),
+            node("start", "Mobject.get_start"),
+            node("trace", "TracedPath"),
+            node("bad", "TracedPath"),
+            node("f", "FadeIn"),
+        ],
+        edges=[
+            edge("c", "start", "self"),
+            edge("start", "trace", "traced_point_func"),
+            edge("c", "f", "mobjects"),
+            edge("f", "bad", "traced_point_func"),
+        ],
+        steps=[AddStep(mobjects=["trace"])],
+    )
+    issues = ManimCodeGenerator().generate(scene, catalogue).issues
+    assert [(i.code, i.node) for i in issues] == [("type_mismatch", "bad")]
+    scene.nodes = scene.nodes[:3]
+    scene.edges = scene.edges[:2]
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert (
+        "        traced_path = TracedPath(lambda: circle.get_start())\n"
+        in generated.code
+    )

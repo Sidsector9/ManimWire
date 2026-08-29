@@ -42,7 +42,14 @@ from engine.catalogue.builtins import (
     SUBMOBJECT,
     SUBMOBJECTS,
 )
-from engine.catalogue.model import Catalogue, Descriptor, Parameter, PortType, TypeRef
+from engine.catalogue.model import (
+    Catalogue,
+    Descriptor,
+    Parameter,
+    PortType,
+    TypeRef,
+    takes_zero_argument_function,
+)
 from engine.codegen.literals import LiteralFormatter
 from engine.document.analysis import OBJECT_TYPES, RESULT_PORT, Graph, chain_port
 from engine.document.model import (
@@ -185,11 +192,11 @@ class _Build:
         if descriptor.name in _INLINE_ONLY:
             return
         if (
-            self.graph.is_live(node.id)
+            (self.graph.is_live(node.id) or self.graph.is_deferred(node.id))
             and self.graph.is_value_node(node.id)
             and descriptor.name != STATE.name
         ):
-            return  # live values are inlined into the updater that reads them
+            return  # live and deferred values are inlined where they are read
         if self.graph.is_instance(node.id):
             self.emit_instance(node)
         elif descriptor.name in CONTAINERS:
@@ -244,7 +251,8 @@ class _Build:
             self.emit_state(node)
             return
         if descriptor.kind == "method":
-            receiver = self.variables[self.graph.sources(node.id, SELF_PORT)[0]]
+            # The object may be a variable or an inline expression (self.camera.frame).
+            receiver = self.expression(self.graph.sources(node.id, SELF_PORT)[0])
             if descriptor.returns.annotation == "Self":
                 self.variables[node.id] = receiver
                 self.uses_dt = False
@@ -345,6 +353,17 @@ class _Build:
 
     def expression(self, node_id: str, expected: TypeRef | None = None) -> str:
         """Python for a node's output where it is used, honouring the port it feeds."""
+        value = self.value_expression(node_id, expected)
+        if (
+            expected is not None
+            and takes_zero_argument_function(expected)
+            and self.graph.output_type(node_id).type is not PortType.FUNCTION
+        ):
+            # A value on a function port is read each time the function is called.
+            return self.closure("", value)
+        return value
+
+    def value_expression(self, node_id: str, expected: TypeRef | None = None) -> str:
         node = self.graph.nodes[node_id]
         descriptor = self.descriptor(node)
         name = descriptor.name

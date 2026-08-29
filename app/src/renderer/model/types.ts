@@ -10,8 +10,14 @@ const SUBTYPES: Partial<Record<PortType, PortType[]>> = {
   live_number: ['mobject', 'number']
 }
 
+/** A function port called without arguments; a value connected to it is read on each call. */
+export function takesZeroArgumentFunction(target: TypeRef): boolean {
+  return target.type === 'function' && (target.signature == null || target.signature.startsWith('() ->') || target.signature === '(...) -> any')
+}
+
 export function compatible(source: TypeRef, target: TypeRef): boolean {
   if (source.type === 'any' || target.type === 'any') return true
+  if (takesZeroArgumentFunction(target) && source.type !== 'function' && source.type !== 'animation') return true
   const targets = new Set<PortType>([target.type, ...(target.accepts ?? [])])
   const sources = [source.type, ...(SUBTYPES[source.type] ?? [])]
   return sources.some((t) => targets.has(t))

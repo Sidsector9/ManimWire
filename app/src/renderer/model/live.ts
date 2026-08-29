@@ -121,7 +121,12 @@ function classOf(scene: Scene, nodeId: string, index: DescriptorIndex): Descript
   const descriptor = root ? index.get(root.catalogue) : undefined
   if (!descriptor) return undefined
   if (descriptor.kind === 'class') return descriptor
-  return descriptor.kind === 'method' && descriptor.owner ? index.get(descriptor.owner) : undefined
+  if (descriptor.kind === 'method') {
+    // A method building a new object (axes.plot -> ParametricFunction) names its class.
+    return descriptor.returns.annotation === 'Self' && descriptor.owner ? index.get(descriptor.owner) : index.get(descriptor.returns.annotation)
+  }
+  // Engine nodes standing for a Manim object (CameraFrame -> ScreenRectangle).
+  return index.get(descriptor.returns.annotation)
 }
 
 /** Methods an Animate chain may call on the object at `nodeId`: those returning the object, own class first. */
