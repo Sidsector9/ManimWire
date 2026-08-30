@@ -278,6 +278,7 @@ def test_sequence_fills_the_cache_for_playback(
     hit = service.frame(simple_scene, catalogue, SMALL, 0.75)
     assert service.render_count == before  # served from the cache
     assert hit.render_ms == 0 and hit.time == pytest.approx(12 / 15)
+    assert "c" in [b.node for b in hit.bounds]  # bounds come with cached frames too
     miss = service.frame(simple_scene, catalogue, SMALL, 1.5)
     assert service.render_count == before + 1
     assert miss.time == pytest.approx(23 / 15)  # the first frame at or after 1.5 s

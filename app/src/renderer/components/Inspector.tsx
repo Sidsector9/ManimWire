@@ -342,7 +342,7 @@ function Field({
           <button className="link" title={`Reset to the Manim default${param.display ? ` (${param.display})` : ''}`} onClick={() => onChange(undefined)}>
             reset
           </button>
-        ) : !connected && param.default === null && !isSet ? (
+        ) : !connected && param.default === null && param.kind !== 'var_positional' && !isSet ? (
           'required'
         ) : (
           ''

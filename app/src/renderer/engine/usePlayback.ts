@@ -65,7 +65,8 @@ export function usePlayback(): void {
         }
       }
       if (cancelled) return
-      if (cacheKey(useEngineResults.getState().code, useEngineResults.getState().previewWidth) === key) {
+      // Only a pass from the start covers every frame; a pass from a scrubbed time does not.
+      if (from <= 1e-6 && cacheKey(useEngineResults.getState().code, useEngineResults.getState().previewWidth) === key) {
         useEngineResults.setState({ prerendered: key })
       }
       finish()

@@ -36,6 +36,10 @@ interface PreviewStore {
   loop: boolean
   /** True while the engine renders a run of frames into its cache (render.sequence). */
   sequencing: boolean
+  /** Counts sequence calls, so a cancelled run's completion cannot clear a newer run's flag. */
+  sequenceRun: number
+  /** The document last validated and laid out; a frame-only sync skips those two calls. */
+  synced: { doc: Doc; sceneIndex: number } | null
   /** Bumped when playback should start over (loop); the playback hook watches it. */
   pass: number
   /** Code and width whose frames are all in the engine cache; playback then reads images only. */
@@ -72,6 +76,8 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   playing: false,
   loop: false,
   sequencing: false,
+  sequenceRun: 0,
+  synced: null,
   pass: 0,
   prerendered: null,
   setPreviewTime: (previewTime) => set({ previewTime }),
@@ -102,11 +108,13 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   sequence: async (doc, sceneIndex, start, end) => {
     const scene = doc.scenes[sceneIndex]!.name
     const { previewWidth } = get()
-    set({ sequencing: true, rendering: true, failure: null })
+    const run = get().sequenceRun + 1
+    set({ sequencing: true, sequenceRun: run, rendering: true, failure: null })
     const off = window.engine.onNotification((method, params) => {
       if (method !== 'render.frame_ready') return
       const frame = params as FrameResult & { scene: string }
-      if (frame.scene === scene) set({ frame, previewTime: frame.time })
+      // After Stop the engine still finishes the step; those frames must not move the playhead.
+      if (frame.scene === scene && get().playing && get().sequenceRun === run) set({ frame, previewTime: frame.time })
     })
     try {
       await call('render.sequence', { document: doc, scene, start, end, width: previewWidth })
@@ -116,9 +124,11 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
       return false
     } finally {
       off()
-      const next = get().pending
-      set({ sequencing: false, rendering: next !== null, pending: null })
-      if (next) void get().sync(next.doc, next.sceneIndex)
+      if (get().sequenceRun === run) {
+        const next = get().pending
+        set({ sequencing: false, rendering: next !== null, pending: null })
+        if (next) void get().sync(next.doc, next.sceneIndex)
+      }
     }
   },
 
@@ -132,7 +142,9 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
     } catch (error) {
       set({ failure: describeFailure(error), playing: false })
     } finally {
-      set({ inFlight: false })
+      const next = get().pending
+      set({ inFlight: false, pending: null })
+      if (next) void get().sync(next.doc, next.sceneIndex)
     }
   }
 }))
@@ -143,12 +155,20 @@ type Get = () => PreviewStore
 async function run(doc: Doc, sceneIndex: number, set: Set, get: Get): Promise<void> {
   const scene = doc.scenes[sceneIndex]!.name
   try {
-    const generated = await call<GeneratedCode>('document.generate', { document: doc, scene })
-    const issues = generated.issues ?? []
-    const layout = await call<TimelineLayout>('timeline.layout', { document: doc, scene })
-    set({ issues, code: generated.code, sourceMap: generated.source_map as SourceMap, layout })
-    if (issues.length > 0) {
-      set({ failure: null })
+    const synced = get().synced
+    const unchanged = synced !== null && synced.doc === doc && synced.sceneIndex === sceneIndex
+    if (unchanged && get().playing) return // the playback loop shows frames itself
+    if (!unchanged) {
+      // Only a document change needs new code and a new timeline; a scrub needs a frame.
+      const generated = await call<GeneratedCode>('document.generate', { document: doc, scene })
+      const issues = generated.issues ?? []
+      const layout = await call<TimelineLayout>('timeline.layout', { document: doc, scene })
+      set({ issues, code: generated.code, sourceMap: generated.source_map as SourceMap, layout, synced: { doc, sceneIndex } })
+      if (issues.length > 0) {
+        set({ failure: null })
+        return
+      }
+    } else if (get().issues.length > 0) {
       return
     }
     const { previewTime, previewWidth } = get()

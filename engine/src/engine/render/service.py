@@ -5,9 +5,11 @@ from __future__ import annotations
 import hashlib
 import math
 import shutil
+import sys
 from collections.abc import Callable, Iterable
 from pathlib import Path
 from time import perf_counter
+from types import FrameType
 from typing import Any, Protocol
 
 from manim.mobject.mobject import Mobject
@@ -113,11 +115,15 @@ class _StopAtRenderer(CairoRenderer):
             raise EndSceneEarlyException()
 
 
-OnFrame = Callable[[int, float, Any], None]
+OnFrame = Callable[[int, float, Any, Any], None]
 
 
 class _SequenceRenderer(CairoRenderer):
-    """Cairo renderer that hands every frame between two times to a callback."""
+    """Cairo renderer that hands every frame between two times to a callback.
+
+    The callback also gets the scene, so it can read the objects as they are at
+    that frame (bounds for the canvas overlay).
+    """
 
     def __init__(
         self, start: float, end: float, on_frame: OnFrame, **kwargs: Any
@@ -126,6 +132,11 @@ class _SequenceRenderer(CairoRenderer):
         self.start = start
         self.end = end
         self.on_frame = on_frame
+        self.scene: Any = None
+
+    def play(self, scene: Any, *args: Any, **kwargs: Any) -> None:
+        self.scene = scene
+        super().play(scene, *args, **kwargs)
 
     def add_frame(self, frame: Any, num_frames: int = 1) -> None:
         if self.skip_animations:
@@ -133,11 +144,14 @@ class _SequenceRenderer(CairoRenderer):
         dt = 1 / self.camera.frame_rate
         for _ in range(num_frames):
             self.time += dt
-            if self.time + 1e-9 >= self.start:
+            if self.time + 1e-6 >= self.start:
                 self.on_frame(
-                    round(self.time * self.camera.frame_rate), self.time, frame
+                    round(self.time * self.camera.frame_rate),
+                    self.time,
+                    frame,
+                    self.scene,
                 )
-            if self.time >= self.end - 1e-9:
+            if self.time >= self.end - 1e-6:
                 raise EndSceneEarlyException()
 
 
@@ -221,14 +235,19 @@ class CairoRenderService:
         overrides = _config_for(settings, width)
         written = 0
 
-        def store(index: int, time: float, pixels: Any) -> None:
+        def store(index: int, time: float, pixels: Any, instance: Any) -> None:
             nonlocal written
             path = self._frame_path(scene.name, generated.code, index, overrides)
             record = path.with_suffix(".json")
             if not (path.exists() and record.exists()):
                 Image.fromarray(pixels, "RGBA").save(path)
+                bounds = _bounds(
+                    instance, construct_locals(instance), generated.source_map
+                )
                 record.write_text(
-                    FrameResult(path=str(path), time=time, bounds=[]).model_dump_json()
+                    FrameResult(
+                        path=str(path), time=time, bounds=bounds
+                    ).model_dump_json()
                 )
             written += 1
             if on_frame is not None:
@@ -275,7 +294,8 @@ class CairoRenderService:
                 lambda camera: TimingRenderer(camera_class=camera),
             )
             self.timings[key] = [(p.start, p.start + p.duration) for p in timing.plays]
-        return sum(1 for _, end in self.timings[key] if end < target - 1e-9)
+        # Play ends are sums of floating durations; stay well clear of that error.
+        return sum(1 for _, end in self.timings[key] if end < target - 1e-6)
 
     def export(
         self,
@@ -333,6 +353,15 @@ class CairoRenderService:
             first = generated.issues[0]
             raise RenderError(first.message, first.node, first.step, None)
         return generated
+
+
+def construct_locals(scene: Any) -> dict[str, Any]:
+    """The local variables of the running ``construct``, which draws the frame."""
+    code = type(scene).construct.__code__
+    frame: FrameType | None = sys._getframe()
+    while frame is not None and frame.f_code is not code:
+        frame = frame.f_back
+    return dict(frame.f_locals) if frame is not None else {}
 
 
 def frame_index(time: float, frame_rate: float) -> int:
