@@ -17,7 +17,7 @@ from engine.document import (
     validate_document,
 )
 from engine.info import engine_info
-from engine.render import RENDER_ERROR, CairoRenderService, RenderError
+from engine.render import RENDER_ERROR, CairoRenderService, FrameResult, RenderError
 from engine.rpc import Dispatcher, Notify, RpcError, serve
 from engine.timeline import layout_timeline
 
@@ -38,6 +38,7 @@ def build_dispatcher(cache_dir: Path | None = None) -> Dispatcher:
     dispatcher.register("timeline.layout", _timeline_layout)
     dispatcher.register("render.frame", render.frame)
     dispatcher.register("render.export", render.export, notifies=True)
+    dispatcher.register("render.sequence", render.sequence, notifies=True)
     return dispatcher
 
 
@@ -113,6 +114,36 @@ class _RenderMethods:
                 time,
                 width,
                 parsed.groups,
+            )
+        except RenderError as exc:
+            raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc
+        return result.model_dump()
+
+    def sequence(
+        self,
+        document: dict[str, Any],
+        scene: str,
+        start: float,
+        end: float,
+        width: int | None = None,
+        notify: Notify = lambda method, params: None,
+    ) -> dict[str, Any]:
+        """Render the frames from ``start`` to ``end`` into the cache."""
+        parsed = Document.model_validate(document)
+
+        def ready(frame: FrameResult) -> None:
+            notify("render.frame_ready", {"scene": scene, **frame.model_dump()})
+
+        try:
+            result = self.service.sequence(
+                _scene(parsed, scene),
+                get_catalogue(),
+                parsed.settings,
+                start,
+                end,
+                width,
+                parsed.groups,
+                ready,
             )
         except RenderError as exc:
             raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc

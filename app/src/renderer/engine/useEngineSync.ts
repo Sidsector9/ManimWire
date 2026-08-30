@@ -10,7 +10,8 @@ export function useEngineSync(): void {
   const doc = useDocumentStore((s) => s.doc)
   const sceneIndex = useDocumentStore((s) => s.sceneIndex)
   const ready = useEngineStore((s) => s.status.state === 'ready')
-  const previewTime = useEngineResults((s) => s.previewTime)
+  // While playing, the playback loop shows frames itself; only document changes sync.
+  const previewTime = useEngineResults((s) => (s.playing ? null : s.previewTime))
   const previewWidth = useEngineResults((s) => s.previewWidth)
   const sync = useEngineResults((s) => s.sync)
 

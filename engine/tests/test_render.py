@@ -235,3 +235,49 @@ def test_export_keeps_the_subtitle_file_next_to_the_video(
         "BlueCircle.mp4",
         "BlueCircle.srt",
     ]
+
+
+def test_frame_skips_earlier_plays_and_matches_a_full_render(
+    catalogue: Catalogue, three_dots_scene: SceneDocument, tmp_path: Path
+) -> None:
+    """A frame inside the second play is the same with or without drawing the first."""
+    skipping = CairoRenderService(tmp_path / "skip")
+    result = skipping.frame(three_dots_scene, catalogue, SMALL, 2.5)
+    assert skipping.timings  # the play timings were recorded for this code
+    full = CairoRenderService(tmp_path / "full")
+    full.timings[
+        next(iter(skipping.timings))
+    ] = []  # no plays before the target: draw everything
+    reference = full.frame(three_dots_scene, catalogue, SMALL, 2.5)
+    assert result.time == reference.time
+    assert [(b.node, b.center) for b in result.bounds] == [
+        (b.node, b.center) for b in reference.bounds
+    ]
+    with Image.open(result.path) as a, Image.open(reference.path) as b:
+        assert list(a.getdata()) == list(b.getdata())
+
+
+def test_sequence_fills_the_cache_for_playback(
+    catalogue: Catalogue, simple_scene: SceneDocument, tmp_path: Path
+) -> None:
+    service = CairoRenderService(tmp_path)
+    times: list[float] = []
+    result = service.sequence(
+        simple_scene,
+        catalogue,
+        SMALL,
+        0.5,
+        1.0,
+        on_frame=lambda f: times.append(f.time),
+    )
+    assert (
+        result.frames == len(times) == 8
+    )  # 15 fps: frames 8 to 15 cover 0.5 s to 1.0 s
+    assert times[0] == pytest.approx(8 / 15) and times[-1] == pytest.approx(1.0)
+    before = service.render_count
+    hit = service.frame(simple_scene, catalogue, SMALL, 0.75)
+    assert service.render_count == before  # served from the cache
+    assert hit.render_ms == 0 and hit.time == pytest.approx(12 / 15)
+    miss = service.frame(simple_scene, catalogue, SMALL, 1.5)
+    assert service.render_count == before + 1
+    assert miss.time == pytest.approx(23 / 15)  # the first frame at or after 1.5 s

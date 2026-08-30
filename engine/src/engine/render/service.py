@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import shutil
 from collections.abc import Callable, Iterable
 from pathlib import Path
@@ -22,6 +23,7 @@ from engine.render.runner import (
     QUIET,
     PreviewFileWriter,
     RenderError,
+    TimingRenderer,
     run_scene,
 )
 
@@ -107,15 +109,52 @@ class _StopAtRenderer(CairoRenderer):
         super().add_frame(frame, num_frames)
         if self.progress is not None:
             self.progress(self.time)
-        if self.time >= self.target:
+        if self.time + 1e-6 >= self.target:
             raise EndSceneEarlyException()
+
+
+OnFrame = Callable[[int, float, Any], None]
+
+
+class _SequenceRenderer(CairoRenderer):
+    """Cairo renderer that hands every frame between two times to a callback."""
+
+    def __init__(
+        self, start: float, end: float, on_frame: OnFrame, **kwargs: Any
+    ) -> None:
+        super().__init__(**kwargs)
+        self.start = start
+        self.end = end
+        self.on_frame = on_frame
+
+    def add_frame(self, frame: Any, num_frames: int = 1) -> None:
+        if self.skip_animations:
+            return
+        dt = 1 / self.camera.frame_rate
+        for _ in range(num_frames):
+            self.time += dt
+            if self.time + 1e-9 >= self.start:
+                self.on_frame(
+                    round(self.time * self.camera.frame_rate), self.time, frame
+                )
+            if self.time >= self.end - 1e-9:
+                raise EndSceneEarlyException()
+
+
+class SequenceResult(BaseModel):
+    frames: int
+    start: float
+    end: float
 
 
 class CairoRenderService:
     def __init__(self, cache_dir: Path) -> None:
         self.cache_dir = cache_dir
+        cache_dir.mkdir(parents=True, exist_ok=True)
         self.generator = ManimCodeGenerator()
         self.render_count = 0
+        # Play times per generated code, so a frame request can skip earlier plays.
+        self.timings: dict[str, list[tuple[float, float]]] = {}
 
     def frame(
         self,
@@ -128,20 +167,27 @@ class CairoRenderService:
     ) -> FrameResult:
         generated = self._generate(scene, catalogue, groups)
         overrides = _config_for(settings, width)
-        key = hashlib.sha1(
-            f"{generated.code}|{time}|{sorted(overrides.items())}".encode()
-        ).hexdigest()[:16]
-        path = self.cache_dir / f"{scene.name}-{key}.png"
+        index = frame_index(time, settings.frame_rate)
+        path = self._frame_path(scene.name, generated.code, index, overrides)
         record = path.with_suffix(".json")
         if path.exists() and record.exists():
             return FrameResult.model_validate_json(record.read_text())
         started = perf_counter()
+        target = index / settings.frame_rate
         instance, locals_, renderer = run_scene(
             generated,
             scene.name,
-            {**overrides, "dry_run": True},
+            {
+                **overrides,
+                "dry_run": True,
+                # Plays that end before the target are skipped: Manim jumps each to its
+                # end state without drawing, as it does for its own -n option.
+                "from_animation_number": self._plays_before(
+                    generated, scene.name, target
+                ),
+            },
             lambda camera: _StopAtRenderer(
-                time, None, camera_class=camera, file_writer_class=PreviewFileWriter
+                target, None, camera_class=camera, file_writer_class=PreviewFileWriter
             ),
         )
         self.render_count += 1
@@ -154,6 +200,82 @@ class CairoRenderService:
         )
         record.write_text(result.model_dump_json())
         return result
+
+    def sequence(
+        self,
+        scene: SceneDocument,
+        catalogue: Catalogue,
+        settings: Settings,
+        start: float,
+        end: float,
+        width: int | None = None,
+        groups: Iterable[GroupDefinition] = (),
+        on_frame: Callable[[FrameResult], None] | None = None,
+    ) -> SequenceResult:
+        """Render every frame between two times into the cache, in one run of the scene.
+
+        Later ``frame`` calls for those times are cache hits, so playback only reads
+        images. ``on_frame`` is told about each frame as it is written.
+        """
+        generated = self._generate(scene, catalogue, groups)
+        overrides = _config_for(settings, width)
+        written = 0
+
+        def store(index: int, time: float, pixels: Any) -> None:
+            nonlocal written
+            path = self._frame_path(scene.name, generated.code, index, overrides)
+            record = path.with_suffix(".json")
+            if not (path.exists() and record.exists()):
+                Image.fromarray(pixels, "RGBA").save(path)
+                record.write_text(
+                    FrameResult(path=str(path), time=time, bounds=[]).model_dump_json()
+                )
+            written += 1
+            if on_frame is not None:
+                on_frame(FrameResult.model_validate_json(record.read_text()))
+
+        first = max(1, frame_index(start, settings.frame_rate)) / settings.frame_rate
+        run_scene(
+            generated,
+            scene.name,
+            {
+                **overrides,
+                "dry_run": True,
+                "from_animation_number": self._plays_before(
+                    generated, scene.name, first
+                ),
+            },
+            lambda camera: _SequenceRenderer(
+                first,
+                end,
+                store,
+                camera_class=camera,
+                file_writer_class=PreviewFileWriter,
+            ),
+        )
+        self.render_count += 1
+        return SequenceResult(frames=written, start=first, end=end)
+
+    def _frame_path(
+        self, name: str, code: str, index: int, overrides: dict[str, Any]
+    ) -> Path:
+        key = hashlib.sha1(
+            f"{code}|{index}|{sorted(overrides.items())}".encode()
+        ).hexdigest()[:16]
+        return self.cache_dir / f"{name}-{key}.png"
+
+    def _plays_before(self, generated: GeneratedCode, name: str, target: float) -> int:
+        """How many plays end before ``target``: Manim's ``from_animation_number``."""
+        key = hashlib.sha1(generated.code.encode()).hexdigest()
+        if key not in self.timings:
+            _, _, timing = run_scene(
+                generated,
+                name,
+                {**_QUIET, "dry_run": True},
+                lambda camera: TimingRenderer(camera_class=camera),
+            )
+            self.timings[key] = [(p.start, p.start + p.duration) for p in timing.plays]
+        return sum(1 for _, end in self.timings[key] if end < target - 1e-9)
 
     def export(
         self,
@@ -211,6 +333,11 @@ class CairoRenderService:
             first = generated.issues[0]
             raise RenderError(first.message, first.node, first.step, None)
         return generated
+
+
+def frame_index(time: float, frame_rate: float) -> int:
+    """The frame shown at ``time``: Manim's first frame sits at 1 / frame_rate."""
+    return max(1, math.ceil(time * frame_rate - 1e-6))
 
 
 def _config_for(settings: Settings, width: int | None) -> dict[str, Any]:

@@ -31,14 +31,28 @@ interface PreviewStore {
   previewWidth: number
   inFlight: boolean
   pending: { doc: Doc; sceneIndex: number } | null
-  /** Transport (handoff timeline): frames are requested one after another while playing. */
+  /** Transport (handoff timeline). */
   playing: boolean
   loop: boolean
+  /** True while the engine renders a run of frames into its cache (render.sequence). */
+  sequencing: boolean
+  /** Bumped when playback should start over (loop); the playback hook watches it. */
+  pass: number
+  /** Code and width whose frames are all in the engine cache; playback then reads images only. */
+  prerendered: string | null
   setPreviewTime(time: number | null): void
   setPreviewWidth(width: number): void
   setPlaying(playing: boolean): void
   setLoop(loop: boolean): void
   sync(doc: Doc, sceneIndex: number): Promise<void>
+  /** Render every frame between two times into the cache; the store shows them as they arrive. */
+  sequence(doc: Doc, sceneIndex: number, start: number, end: number): Promise<boolean>
+  /** Show the frame at a time from the cache, dropping the request when one is in flight. */
+  showFrame(doc: Doc, sceneIndex: number, time: number): Promise<void>
+}
+
+export function cacheKey(code: string, width: number): string {
+  return `${width}|${code}`
 }
 
 const END_OF_SCENE = 1e6
@@ -57,6 +71,9 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   pending: null,
   playing: false,
   loop: false,
+  sequencing: false,
+  pass: 0,
+  prerendered: null,
   setPreviewTime: (previewTime) => set({ previewTime }),
   setPreviewWidth: (previewWidth) => set({ previewWidth }),
   setPlaying: (playing) => set({ playing }),
@@ -68,7 +85,7 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
    * kept and run afterwards.
    */
   sync: async (doc, sceneIndex) => {
-    if (get().inFlight) {
+    if (get().inFlight || get().sequencing) {
       set({ pending: { doc, sceneIndex }, rendering: true })
       return
     }
@@ -79,6 +96,43 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
       const next = get().pending
       set({ inFlight: false, pending: null, rendering: next !== null })
       if (next) void get().sync(next.doc, next.sceneIndex)
+    }
+  },
+
+  sequence: async (doc, sceneIndex, start, end) => {
+    const scene = doc.scenes[sceneIndex]!.name
+    const { previewWidth } = get()
+    set({ sequencing: true, rendering: true, failure: null })
+    const off = window.engine.onNotification((method, params) => {
+      if (method !== 'render.frame_ready') return
+      const frame = params as FrameResult & { scene: string }
+      if (frame.scene === scene) set({ frame, previewTime: frame.time })
+    })
+    try {
+      await call('render.sequence', { document: doc, scene, start, end, width: previewWidth })
+      return true
+    } catch (error) {
+      set({ failure: describeFailure(error) })
+      return false
+    } finally {
+      off()
+      const next = get().pending
+      set({ sequencing: false, rendering: next !== null, pending: null })
+      if (next) void get().sync(next.doc, next.sceneIndex)
+    }
+  },
+
+  showFrame: async (doc, sceneIndex, time) => {
+    if (get().inFlight || get().sequencing) return
+    const scene = doc.scenes[sceneIndex]!.name
+    set({ inFlight: true, previewTime: time })
+    try {
+      const frame = await call<FrameResult>('render.frame', { document: doc, scene, time, width: get().previewWidth })
+      set({ frame })
+    } catch (error) {
+      set({ failure: describeFailure(error), playing: false })
+    } finally {
+      set({ inFlight: false })
     }
   }
 }))

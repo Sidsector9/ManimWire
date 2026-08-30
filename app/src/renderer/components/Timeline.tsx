@@ -67,10 +67,19 @@ export function Timeline() {
     return xToTime(geometry, clientX - (rect?.left ?? 0) + (area.current?.scrollLeft ?? 0))
   }
 
+  // Scrubbing shows frames as the playhead moves: cached frames at once, others as the
+  // engine finishes them (requests are dropped while one is in flight), not only on release.
+  const scrubTo = (time: number): void => {
+    const clamped = Math.min(time, layout.total)
+    setPreviewTime(clamped)
+    const { doc, sceneIndex } = useDocumentStore.getState()
+    void useEngineResults.getState().showFrame(doc, sceneIndex, clamped)
+  }
+
   const onPointerMove = (e: React.PointerEvent): void => {
     if (!drag) return
     const time = timeAt(e.clientX)
-    if (drag.kind === 'playhead') setPreviewTime(Math.min(time, layout.total))
+    if (drag.kind === 'playhead') scrubTo(time)
     else if (drag.kind === 'resize') {
       const bar = layout.bars.find((b) => b.node === drag.node && b.step === drag.step)
       if (!bar) return
@@ -205,7 +214,7 @@ export function Timeline() {
             className="timeline-ticks"
             onPointerDown={(e) => {
               setDrag({ kind: 'playhead' })
-              setPreviewTime(Math.min(timeAt(e.clientX), layout.total))
+              scrubTo(timeAt(e.clientX))
             }}
           >
             {ticks(layout, geometry).map((t) => (

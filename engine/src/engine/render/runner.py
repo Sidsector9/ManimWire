@@ -8,6 +8,7 @@ from __future__ import annotations
 import sys
 import traceback
 from collections.abc import Callable
+from dataclasses import dataclass
 from typing import Any
 
 from manim import tempconfig
@@ -38,6 +39,35 @@ class PreviewFileWriter(SceneFileWriter):
             super().add_sound(sound_file, time, gain, **kwargs)
         except OSError:
             pass
+
+
+@dataclass
+class Play:
+    """One play call as Manim compiled it: start time, duration, animations."""
+
+    start: float
+    duration: float
+    animations: list[Any]
+
+
+class TimingRenderer(CairoRenderer):
+    """Records each play call's compiled animations instead of rendering them.
+
+    Skipping every animation makes Manim jump to each end state, so a scene's
+    timings come out in milliseconds without drawing a frame.
+    """
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(
+            file_writer_class=PreviewFileWriter, skip_animations=True, **kwargs
+        )
+        self.plays: list[Play] = []
+
+    def play(self, scene: Any, *args: Any, **kwargs: Any) -> None:
+        scene.compile_animation_data(*args, **kwargs)
+        self.plays.append(Play(self.time, scene.duration, list(scene.animations)))
+        self.time += scene.duration
+        self.num_plays += 1
 
 
 class RenderError(Exception):

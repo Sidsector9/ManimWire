@@ -16,7 +16,6 @@ from typing import Any
 
 from manim.animation.animation import Animation
 from manim.animation.composition import AnimationGroup
-from manim.renderer.cairo_renderer import CairoRenderer
 from pydantic import BaseModel
 
 from engine.catalogue.builtins import CONTAINERS
@@ -38,7 +37,12 @@ from engine.document.model import (
     UpdatingStep,
     WaitStep,
 )
-from engine.render.runner import QUIET, PreviewFileWriter, RenderError, run_scene
+from engine.render.runner import (
+    QUIET,
+    RenderError,
+    TimingRenderer,
+    run_scene,
+)
 
 _MOBJECT_TYPES = {PortType.MOBJECT, PortType.COORDINATE_SYSTEM, PortType.LIVE_NUMBER}
 
@@ -107,29 +111,6 @@ class TimelineLayout(BaseModel):
 
 
 @dataclass
-class _Play:
-    start: float
-    duration: float
-    animations: list[Animation]
-
-
-class _TimingRenderer(CairoRenderer):
-    """Records each play call's compiled animations instead of rendering them."""
-
-    def __init__(self, **kwargs: Any) -> None:
-        super().__init__(
-            file_writer_class=PreviewFileWriter, skip_animations=True, **kwargs
-        )
-        self.plays: list[_Play] = []
-
-    def play(self, scene: Any, *args: Any, **kwargs: Any) -> None:
-        scene.compile_animation_data(*args, **kwargs)
-        self.plays.append(_Play(self.time, scene.duration, list(scene.animations)))
-        self.time += scene.duration
-        self.num_plays += 1
-
-
-@dataclass
 class _Context:
     scene: SceneDocument
     index: dict[str, Descriptor]
@@ -172,7 +153,7 @@ def layout_timeline(
             generated,
             scene.name,
             {**QUIET, "dry_run": True},
-            lambda camera: _TimingRenderer(camera_class=camera),
+            lambda camera: TimingRenderer(camera_class=camera),
         )
     except RenderError as exc:
         return _empty(str(exc))
