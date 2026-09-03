@@ -1,10 +1,12 @@
 import {
+  applyEdgeChanges,
   applyNodeChanges,
   Background,
   ReactFlow,
   useReactFlow,
   type Connection,
   type Edge as FlowEdge,
+  type EdgeChange,
   type FinalConnectionState,
   type NodeChange
 } from '@xyflow/react'
@@ -54,6 +56,11 @@ export function Graph() {
   // document only records the final position on drop.
   const [nodes, setNodes] = useState(derived.nodes)
   useEffect(() => setNodes(derived.nodes), [derived.nodes])
+  // Edge selection lives in xyflow only; without applying its changes a selected
+  // edge is never recorded and the Delete key has nothing to remove.
+  const [edges, setEdges] = useState(derived.edges)
+  useEffect(() => setEdges(derived.edges), [derived.edges])
+  const onEdgesChange = useCallback((changes: EdgeChange<FlowEdge>[]) => setEdges((current) => applyEdgeChanges(changes, current)), [])
   const { screenToFlowPosition } = useReactFlow()
   const [quickAdd, setQuickAdd] = useState<QuickAddState | null>(null)
   const mouse = useRef({ x: 200, y: 120 })
@@ -77,6 +84,9 @@ export function Graph() {
     [store, scene]
   )
 
+  // The edge whose end is being dragged; it must not count as an existing connection
+  // while the user looks for a new socket for it.
+  const reconnecting = useRef<FlowEdge | null>(null)
   const isValidConnection = useCallback(
     (connection: FlowEdge | Connection): boolean => {
       if (!connection.source || !connection.target || !connection.targetHandle) return false
@@ -87,7 +97,14 @@ export function Graph() {
       const port = connection.targetHandle
       const accepted = portType(target, port, index)
       if (!accepted || !compatible(producedType(source), accepted)) return false
-      const already = scene.edges.some((e) => e.target === connection.target && e.port === port && e.source !== connection.source)
+      const moving = reconnecting.current
+      const already = scene.edges.some(
+        (e) =>
+          e.target === connection.target &&
+          e.port === port &&
+          e.source !== connection.source &&
+          !(moving && e.source === moving.source && e.target === moving.target && e.port === moving.targetHandle)
+      )
       return !already || acceptsManyConnections(target, port) || accepted.collection === true
     },
     [index, scene, describe]
@@ -115,6 +132,42 @@ export function Graph() {
       store.connect({ ...current, live: !current.live })
     },
     [scene, index, describe, store]
+  )
+
+  const disconnect = useCallback(
+    (edge: FlowEdge) => {
+      if (edge.targetHandle) store.disconnect({ source: edge.source, target: edge.target, port: edge.targetHandle })
+    },
+    [store]
+  )
+
+  // Dragging either end of a connection off its socket and releasing on empty space
+  // removes the connection (the DaVinci Resolve gesture). Releasing on another
+  // compatible socket moves it there instead.
+  const reconnected = useRef(false)
+  const onReconnectStart = useCallback((_: React.MouseEvent, edge: FlowEdge) => {
+    reconnected.current = false
+    reconnecting.current = edge
+  }, [])
+  const onReconnect = useCallback(
+    (edge: FlowEdge, connection: Connection) => {
+      reconnected.current = true
+      const port = connection.targetHandle
+      const target = describe(connection.target)
+      if (!port || !target) return
+      if (edge.source === connection.source && edge.target === connection.target && edge.targetHandle === port) return
+      disconnect(edge)
+      const live = liveByDefault(scene, connection.source, portType(target, port, index), index)
+      store.connect({ source: connection.source, target: connection.target, port, live })
+    },
+    [describe, disconnect, scene, index, store]
+  )
+  const onReconnectEnd = useCallback(
+    (_: MouseEvent | TouchEvent, edge: FlowEdge) => {
+      reconnecting.current = null
+      if (!reconnected.current) disconnect(edge)
+    },
+    [disconnect]
   )
 
   const onConnectEnd = useCallback(
@@ -154,12 +207,18 @@ export function Graph() {
       </div>
       <ReactFlow<ManimFlowNode>
         nodes={nodes}
-        edges={derived.edges}
+        edges={edges}
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
-        onEdgesDelete={(deleted) => deleted.forEach((e) => e.targetHandle && store.disconnect({ source: e.source, target: e.target, port: e.targetHandle }))}
+        onEdgesChange={onEdgesChange}
+        onEdgesDelete={(deleted) => deleted.forEach(disconnect)}
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
+        edgesReconnectable
+        reconnectRadius={16}
+        onReconnectStart={onReconnectStart}
+        onReconnect={onReconnect}
+        onReconnectEnd={onReconnectEnd}
         onEdgeDoubleClick={(_, edge) => toggleLive(edge)}
         isValidConnection={isValidConnection}
         onPaneClick={() => store.select(null)}

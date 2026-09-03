@@ -763,6 +763,12 @@ body,
   stroke-width: 2;
 }
 
+.react-flow__edge.selected .react-flow__edge-path,
+.react-flow__edge:focus .react-flow__edge-path {
+  stroke: var(--text) !important;
+  stroke-width: 3;
+}
+
 .react-flow__connection-path {
   stroke: var(--text-secondary);
   stroke-width: 2;
