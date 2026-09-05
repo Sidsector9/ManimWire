@@ -584,6 +584,23 @@ body,
   outline: none;
 }
 
+/* Which area the keyboard is talking to: Tab adds a node, Delete removes a connection. */
+.graph:focus-within::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--type-mobject);
+  opacity: 0.45;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* Drawn by xyflow while a selection box is dragged. */
+.react-flow__selection {
+  background: color-mix(in srgb, var(--type-mobject) 12%, transparent);
+  border: 1px solid var(--type-mobject);
+}
+
 .graph-empty {
   position: absolute;
   inset: 0;
@@ -737,6 +754,28 @@ body,
 .node-more:hover {
   background: var(--surface-hover);
   color: var(--text-tertiary);
+}
+
+.node-fold {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-left: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font: 600 11px/1 var(--font-mono);
+  cursor: pointer;
+}
+
+.node-fold:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-emphasis);
+  color: var(--text-secondary);
 }
 
 .react-flow__handle.socket {

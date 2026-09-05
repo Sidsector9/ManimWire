@@ -189,7 +189,13 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     },
     importGroup: (group) => record(importGroup(get().doc, group)),
     editGroup: (name) => set({ editingGroup: name, selected: null, selectedStep: null }),
-    select: (id) => set(id === null ? { selected: null, selectedStep: null } : { selected: id }),
+    // Returning the state unchanged stops zustand notifying: the graph subscribes to
+    // the whole store, and re-rendering it would report the selection straight back.
+    select: (id) =>
+      set((s) => {
+        if (s.selected === id && (id !== null || s.selectedStep === null)) return s
+        return id === null ? { selected: null, selectedStep: null } : { selected: id }
+      }),
     undo: () => {
       const { doc, past, future } = get()
       const previous = past.at(-1)

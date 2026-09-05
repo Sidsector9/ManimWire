@@ -41,6 +41,17 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
           </span>
         )}
         {issues.length > 0 && <span className="node-badge" title={issues.map((i) => i.message).join('\n')}>{issues.length}</span>}
+        {descriptor.parameters.length > 0 && (
+          <button
+            className="node-fold"
+            title={node.collapsed ? 'Show every port' : 'Show only the ports in use'}
+            aria-label={node.collapsed ? 'Expand' : 'Collapse'}
+            aria-expanded={!node.collapsed}
+            onClick={() => updateNode(node.id, { collapsed: !node.collapsed })}
+          >
+            {node.collapsed ? '+' : '\u2212'}
+          </button>
+        )}
         {descriptor.returns.type !== 'none' && (
           <Handle
             type="source"
@@ -86,11 +97,6 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
       {hidden > 0 && (
         <button className="node-more" onClick={() => updateNode(node.id, { collapsed: false })}>
           +{hidden}
-        </button>
-      )}
-      {!node.collapsed && descriptor.parameters.length > 0 && (
-        <button className="node-more" onClick={() => updateNode(node.id, { collapsed: true })}>
-          collapse
         </button>
       )}
       {container && <div className="container-hint">Drop nodes here. Add a Result node for what each run produces.</div>}

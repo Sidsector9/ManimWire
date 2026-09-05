@@ -16,9 +16,8 @@ describe('toFlow', () => {
   it('maps document nodes and edges to xyflow records with typed edge colours', () => {
     const scene = starterDocument().scenes[0]!
     const issues = [{ code: 'x', message: 'bad', node: 'fill', port: null, step: null }]
-    const { nodes, edges } = toFlow(scene, index, issues, 'circle', [])
+    const { nodes, edges } = toFlow(scene, index, issues, [])
     expect(nodes.map((n) => n.id)).toEqual(['circle', 'fill', 'create'])
-    expect(nodes[0]!.selected).toBe(true)
     expect(nodes[1]!.data.connected).toEqual(['self'])
     expect(nodes[1]!.data.issues).toHaveLength(1)
     expect(edges.map((e) => e.id)).toEqual(['circle->fill.self', 'fill->create.mobject'])

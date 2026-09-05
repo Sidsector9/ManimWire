@@ -1,10 +1,12 @@
 // @vitest-environment jsdom
 import { ReactFlowProvider, type NodeProps } from '@xyflow/react'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import type { Descriptor } from '../../shared/engine'
 import type { ManimFlowNode } from '../model/flow'
+import { addNode, emptyDocument } from '../model/document'
 import { useCatalogueStore } from '../store/catalogue'
+import { useDocumentStore } from '../store/document'
 import { ManimNode } from './ManimNode'
 
 const number = { type: 'number' as const, annotation: 'float', optional: false, collection: false, accepts: [], signature: null, choices: null }
@@ -30,6 +32,7 @@ const circle: Descriptor = {
 }
 
 function renderNode(collapsed: boolean, connected: string[] = []) {
+  useDocumentStore.setState({ doc: addNode(emptyDocument(), 0, 'Circle', [0, 0], { radius: 2 }, 'c') })
   useCatalogueStore.setState({ catalogue: { manim_version: '0.21.0', entries: [circle], colors: [{ name: 'BLUE', hex: '#58C4DD' }], directions: ['ORIGIN', 'UP'], unknown_annotations: [], expression_names: [] } })
   const node: ManimFlowNode = {
     id: 'c',
@@ -78,14 +81,18 @@ describe('ManimNode', () => {
     expect(screen.queryByText('fill_opacity')).toBeNull()
     expect(screen.getByText('+2')).toBeTruthy()
     expect((screen.getByDisplayValue('2') as HTMLInputElement).type).toBe('text') // a draft text field, so a lone '-' can be typed
+    expect(screen.getByRole('button', { name: 'Expand' }).getAttribute('aria-expanded')).toBe('false')
   })
 
-  it('expanded: shows every port and a collapse control', () => {
+  it('expanded: shows every port, and the header control collapses it again', () => {
     renderNode(false)
     for (const port of ['radius', 'color', 'fill_opacity', 'stroke_width']) {
       expect(screen.getByText(port)).toBeTruthy()
     }
     expect(screen.queryByText(/^\+\d/)).toBeNull()
-    expect(screen.getByText('collapse')).toBeTruthy()
+    const fold = screen.getByRole('button', { name: 'Collapse' })
+    expect(fold.getAttribute('aria-expanded')).toBe('true')
+    fireEvent.click(fold)
+    expect(useDocumentStore.getState().doc.scenes[0]!.nodes[0]!.collapsed).toBe(true)
   })
 })

@@ -30,6 +30,8 @@ export function App() {
   const editGroup = useDocumentStore((s) => s.editGroup)
   const removeGroup = useDocumentStore((s) => s.removeGroup)
   const layout = useUiStore((s) => s.layout)
+  const tool = useUiStore((s) => s.tool)
+  const setTool = useUiStore((s) => s.setTool)
   const setLayout = useUiStore((s) => s.setLayout)
   const view = useUiStore((s) => s.view)
   const setView = useUiStore((s) => s.setView)
@@ -86,6 +88,15 @@ export function App() {
           </span>
         )}
         <span className="spacer" />
+        <span className="icon-group" role="group" aria-label="Tool">
+          <button className={`icon${tool === 'hand' ? ' active' : ''}`} title="Hand: drag to move the view" onClick={() => setTool('hand')}>
+            <Icon name="hand" />
+          </button>
+          <button className={`icon${tool === 'select' ? ' active' : ''}`} title="Select: drag to draw a selection box" onClick={() => setTool('select')}>
+            <Icon name="pointer" />
+          </button>
+        </span>
+        <span className="vdiv" />
         <span className="icon-group" role="group" aria-label="Layout">
           <button className={`icon${layout === 'stacked' ? ' active' : ''}`} title="Stacked: preview above the graph" onClick={() => setLayout('stacked')}>
             <Icon name="stacked" />

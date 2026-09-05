@@ -42,7 +42,6 @@ export function toFlow(
   scene: Scene,
   index: DescriptorIndex,
   issues: Issue[],
-  selected: string | null,
   expressionNames: string[]
 ): { nodes: ManimFlowNode[]; edges: FlowEdge[] } {
   const nodes: ManimFlowNode[] = []
@@ -58,7 +57,6 @@ export function toFlow(
       id: node.id,
       type: container ? 'container' : 'manim',
       position: { x: node.position[0], y: node.position[1] },
-      selected: node.id === selected,
       ...(node.parent ? { parentId: node.parent } : {}),
       ...(container ? { style: { width, height } } : {}),
       data: {

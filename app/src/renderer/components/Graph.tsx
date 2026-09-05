@@ -3,12 +3,14 @@ import {
   applyNodeChanges,
   Background,
   ReactFlow,
+  SelectionMode,
   useReactFlow,
   type Connection,
   type Edge as FlowEdge,
   type EdgeChange,
   type FinalConnectionState,
-  type NodeChange
+  type NodeChange,
+  type OnSelectionChangeParams
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -18,6 +20,7 @@ import { toFlow, type ManimFlowNode } from '../model/flow'
 import { effectiveDescriptor, isObjectType, liveByDefault, producedType } from '../model/live'
 import { acceptsManyConnections, compatible, portType } from '../model/types'
 import { selectExpressionNames, useCatalogueStore } from '../store/catalogue'
+import { useUiStore } from '../store/ui'
 import { useDescriptorIndex } from '../store/descriptors'
 import { currentScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
@@ -35,15 +38,17 @@ interface QuickAddState {
 
 export function Graph() {
   const scene = useDocumentStore(currentScene)
-  const selected = useDocumentStore((s) => s.selected)
   const editingGroup = useDocumentStore((s) => s.editingGroup)
   const store = useDocumentStore()
+  const select = useDocumentStore((s) => s.select)
+  const selected = useDocumentStore((s) => s.selected)
   const index = useDescriptorIndex()
   const expressionNames = useCatalogueStore(selectExpressionNames)
+  const tool = useUiStore((s) => s.tool)
   const allIssues = useEngineResults((s) => s.issues)
   // Issues carry the group they belong to; the graph shows the ones for what it displays.
   const issues = useMemo(() => allIssues.filter((i) => (editingGroup ? i.group === editingGroup : !i.group)), [allIssues, editingGroup])
-  const derived = useMemo(() => toFlow(scene, index, issues, selected, expressionNames), [scene, index, issues, selected, expressionNames])
+  const derived = useMemo(() => toFlow(scene, index, issues, expressionNames), [scene, index, issues, expressionNames])
   const describe = useCallback(
     (id: string | null | undefined): Descriptor | undefined => {
       const node = scene.nodes.find((n) => n.id === id)
@@ -55,7 +60,20 @@ export function Graph() {
   // xyflow needs position changes applied while a drag is in progress; the
   // document only records the final position on drop.
   const [nodes, setNodes] = useState(derived.nodes)
-  useEffect(() => setNodes(derived.nodes), [derived.nodes])
+  // xyflow owns which nodes are selected, so a document change must not wipe a
+  // box selection.
+  useEffect(() => {
+    setNodes((current) => {
+      const live = new Map(current.map((n) => [n.id, n.selected === true]))
+      return derived.nodes.map((n) => ({ ...n, selected: live.get(n.id) ?? false }))
+    })
+  }, [derived.nodes])
+  // A node picked outside the graph (a timeline row) highlights here too, replacing
+  // whatever the graph had.
+  useEffect(() => {
+    if (selected === null) return
+    setNodes((current) => current.map((n) => (n.selected === (n.id === selected) ? n : { ...n, selected: n.id === selected })))
+  }, [selected])
   // Edge selection lives in xyflow only; without applying its changes a selected
   // edge is never recorded and the Delete key has nothing to remove.
   const [edges, setEdges] = useState(derived.edges)
@@ -76,12 +94,20 @@ export function Graph() {
           store.placeNode(change.id, [change.position.x + ox, change.position.y + oy])
         } else if (change.type === 'remove') {
           store.removeNodes([change.id])
-        } else if (change.type === 'select' && change.selected) {
-          store.select(change.id)
         }
       }
     },
     [store, scene]
+  )
+
+  // The inspector edits one node, so it follows a single selection only. Anything
+  // else is left alone: clicking the pane clears it, and a node picked from a
+  // timeline row must survive the graph echoing its own state back.
+  const onSelectionChange = useCallback(
+    ({ nodes: picked }: OnSelectionChangeParams<ManimFlowNode>) => {
+      if (picked.length === 1) select(picked[0]!.id)
+    },
+    [select]
   )
 
   // The edge whose end is being dragged; it must not count as an existing connection
@@ -221,8 +247,12 @@ export function Graph() {
         onReconnectEnd={onReconnectEnd}
         onEdgeDoubleClick={(_, edge) => toggleLive(edge)}
         isValidConnection={isValidConnection}
+        onSelectionChange={onSelectionChange}
         onPaneClick={() => store.select(null)}
         deleteKeyCode={['Backspace', 'Delete']}
+        panOnDrag={tool === 'hand'}
+        selectionOnDrag={tool === 'select'}
+        selectionMode={SelectionMode.Partial}
         fitView={false}
         minZoom={0.3}
         maxZoom={2}

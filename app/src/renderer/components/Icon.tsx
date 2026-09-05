@@ -13,6 +13,14 @@ const PATHS: Record<string, React.ReactNode> = {
       <rect x="7.5" y="1.5" width="4" height="10" rx="1" />
     </>
   ),
+  hand: (
+    <>
+      <path d="M4.5 7V3.2a1 1 0 0 1 2 0V6" />
+      <path d="M6.5 6V2.6a1 1 0 0 1 2 0V6" />
+      <path d="M8.5 6.2V3.6a1 1 0 0 1 2 0V8a3.5 3.5 0 0 1-3.5 3.5h-.6a3 3 0 0 1-2.3-1.1L2.4 8.2a1 1 0 0 1 1.5-1.3z" />
+    </>
+  ),
+  pointer: <path d="M3 1.8 10.2 8 6.9 8.4 5.6 11.5z" />,
   canvas: (
     <>
       <rect x="1.5" y="2.5" width="10" height="8" rx="1" />
