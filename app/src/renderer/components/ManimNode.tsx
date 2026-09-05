@@ -1,5 +1,5 @@
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
-import { SELF_PORT, isContainer, visiblePorts } from '../model/document'
+import { SELF_PORT, isContainer, portValue, visiblePorts } from '../model/document'
 import type { ManimFlowNode } from '../model/flow'
 import { ANIMATE, chainSummary, isLiveSource, isObjectType } from '../model/live'
 import { portType } from '../model/types'
@@ -77,7 +77,7 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
                   driven
                 </span>
               ) : param ? (
-                <PortEditor param={param} value={node.values[port]} onChange={(v) => setValue(node.id, port, v)} compact />
+                <PortEditor param={param} value={portValue(node, port)} onChange={(v) => setValue(node.id, port, v)} compact />
               ) : null}
             </span>
           </div>

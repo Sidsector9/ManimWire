@@ -502,3 +502,65 @@ def test_value_on_a_function_port_is_read_on_each_call(catalogue: Catalogue) -> 
         "        traced_path = TracedPath(lambda: circle.get_start())\n"
         in generated.code
     )
+
+
+def test_a_part_of_a_vmobject_is_a_vmobject(catalogue: Catalogue) -> None:
+    """Indexing into a formula gives a part that VMobject-only ports accept.
+
+    Manim promises that a VMobject's parts are VMobjects and nothing more, so a
+    part is typed VMobject when its owner is one and Mobject otherwise. A
+    Group's part is still refused.
+    """
+    scene = SceneDocument(
+        name="Parts",
+        nodes=[
+            node("m", "MathTex", values={"tex_strings": ["a", "+", "b"]}),
+            node("part", "Submobject", values={"index": 2}),
+            node("g", "VGroup"),
+            node("plain", "Group"),
+            node("its_part", "Submobject", values={"index": 0}),
+            node("bad", "VGroup"),
+        ],
+        edges=[
+            edge("m", "part", "mobject"),
+            edge("part", "g", "vmobjects"),
+            edge("plain", "its_part", "mobject"),
+            edge("its_part", "bad", "vmobjects"),
+        ],
+        steps=[AddStep(mobjects=["g"])],
+    )
+    issues = ManimCodeGenerator().generate(scene, catalogue).issues
+    assert [(i.code, i.node) for i in issues] == [("type_mismatch", "bad")]
+    assert "Mobject is not one" in issues[0].message
+
+
+def test_copy_makes_a_second_object(catalogue: Catalogue) -> None:
+    """``copy`` is annotated Self but builds a new object, so it gets its own name.
+
+    Without this the copy is emitted as a bare statement and the animation moves
+    the original, which then leaves its place in the formula.
+    """
+    scene = SceneDocument(
+        name="Copies",
+        nodes=[
+            node("m", "MathTex", values={"tex_strings": ["a", "b"]}),
+            node("part", "Submobject", values={"index": 0}),
+            node("twin", "Mobject.copy", label="a copy"),
+            node("shift", "Mobject.shift", values={"vectors": [1, 0, 0]}),
+            node("move", "Transform", values={"remover": True}),
+        ],
+        edges=[
+            edge("m", "part", "mobject"),
+            edge("part", "twin", "self"),
+            edge("twin", "shift", "self"),
+            edge("shift", "move", "mobject"),
+            edge("m", "move", "target_mobject"),
+        ],
+        steps=[AddStep(mobjects=["m"]), PlayStep(animations=["move"])],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert "        submobject = math_tex.submobjects[0]\n" in generated.code
+    assert "        a_copy = submobject.copy()\n" in generated.code
+    assert "        a_copy.shift(np.array([1.0, 0.0, 0.0]))\n" in generated.code
+    assert "Transform(a_copy, target_mobject=math_tex, remover=True)" in generated.code

@@ -48,6 +48,7 @@ from engine.catalogue.model import (
     Parameter,
     PortType,
     TypeRef,
+    copies_its_object,
     takes_zero_argument_function,
 )
 from engine.codegen.literals import LiteralFormatter
@@ -253,7 +254,9 @@ class _Build:
         if descriptor.kind == "method":
             # The object may be a variable or an inline expression (self.camera.frame).
             receiver = self.expression(self.graph.sources(node.id, SELF_PORT)[0])
-            if descriptor.returns.annotation == "Self":
+            if descriptor.returns.annotation == "Self" and not copies_its_object(
+                descriptor
+            ):
                 self.variables[node.id] = receiver
                 self.uses_dt = False
                 arguments = self.arguments(node, descriptor)

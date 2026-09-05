@@ -27,6 +27,8 @@ from engine.catalogue.builtins import (
     OUTPUT,
     RESULT,
     STATE,
+    SUBMOBJECT,
+    SUBMOBJECTS,
 )
 from engine.catalogue.model import (
     Catalogue,
@@ -34,6 +36,7 @@ from engine.catalogue.model import (
     Parameter,
     PortType,
     TypeRef,
+    copies_its_object,
     takes_zero_argument_function,
 )
 from engine.document.model import (
@@ -355,6 +358,12 @@ class Graph:
         ):
             # Time, frame delta, and state are numbers; only a tracker is an object.
             return TypeRef(type=PortType.NUMBER, annotation="float")
+        if descriptor.kind == "method" and descriptor.returns.annotation == "Self":
+            # Self is whatever it was called on: moving an Axes still gives an Axes,
+            # which ports that want a coordinate system have to see.
+            sources = self.sources(node_id, SELF_PORT)
+            if sources:
+                return self.output_type(sources[0])
         name = descriptor.name
         if name == EXPRESSION.name:
             free = self.free_variables(node_id)
@@ -463,11 +472,13 @@ class Graph:
             seen.add(node_id)
             descriptor = self.descriptor(node_id)
             sources = self.sources(node_id, SELF_PORT)
-            # A method returning a new object (axes.plot) constructs that object itself.
+            # A method returning a new object (axes.plot, mobject.copy) constructs
+            # that object itself, so the chain stops there.
             if (
                 descriptor is None
                 or descriptor.kind != "method"
                 or descriptor.returns.annotation != "Self"
+                or copies_its_object(descriptor)
                 or not sources
             ):
                 return node_id
@@ -476,16 +487,29 @@ class Graph:
 
     def class_of(self, node_id: str) -> Descriptor | None:
         """The Manim class of the object a node produces, for method lookup."""
-        descriptor = self.descriptor(self.root(node_id))
+        root = self.root(node_id)
+        descriptor = self.descriptor(root)
         if descriptor is None:
             return None
         if descriptor.kind == "class":
             return descriptor
         if descriptor.kind == "method":
+            if copies_its_object(descriptor):
+                # A copy is the same kind of object as what it was copied from.
+                sources = self.sources(root, SELF_PORT)
+                return self.class_of(sources[0]) if sources else None
             if descriptor.returns.annotation == "Self" and descriptor.owner:
                 return self.index.get(descriptor.owner)
             # A method building a new object (axes.plot -> ParametricFunction).
             return self.index.get(descriptor.returns.annotation)
+        if descriptor.name in (SUBMOBJECT.name, SUBMOBJECTS.name):
+            # All Manim promises about a part is that a VMobject's parts are
+            # VMobjects (VMobject.add checks it). A MathTex's part is not a
+            # MathTex, so the part is typed VMobject, not as its owner.
+            sources = self.sources(root, "mobject")
+            owner = self.class_of(sources[0]) if sources else None
+            if owner is not None and owner.is_vmobject:
+                return self.index.get("VMobject")
         # Engine nodes standing for a Manim object (CameraFrame -> ScreenRectangle).
         return self.index.get(descriptor.returns.annotation)
 

@@ -208,11 +208,47 @@ export function updateNode(doc: Doc, target: Target, id: string, change: Partial
   }))
 }
 
+/** `1.move_to.point_or_mobject` split into the call it addresses; null for a plain port. */
+export function parseChainPort(port: string): { at: number; method: string; param: string } | null {
+  const first = port.indexOf('.')
+  const last = port.lastIndexOf('.')
+  if (first <= 0 || last <= first) return null
+  const at = Number(port.slice(0, first)) - 1
+  if (!Number.isInteger(at) || at < 0) return null
+  return { at, method: port.slice(first + 1, last), param: port.slice(last + 1) }
+}
+
+/** The chain call a port addresses, when the node really has that call. */
+function chainCallFor(node: DocNode, port: string): { at: number; param: string } | null {
+  const parsed = parseChainPort(port)
+  if (!parsed || node.chain?.[parsed.at]?.method !== parsed.method) return null
+  return { at: parsed.at, param: parsed.param }
+}
+
+/** What a port holds: a chain argument lives on its call, every other value on the node. */
+export function portValue(node: DocNode, port: string): JsonValue | undefined {
+  const call = chainCallFor(node, port)
+  return call ? node.chain?.[call.at]?.values[call.param] : node.values[port]
+}
+
 export function setValue(doc: Doc, target: Target, id: string, port: string, value: JsonValue | undefined): Doc {
   return updateScene(doc, target, (s) => ({
     ...s,
     nodes: s.nodes.map((n) => {
       if (n.id !== id) return n
+      // An Animate chain argument belongs to its call, which is where the engine
+      // reads it. Writing it into the node's own values would be ignored in silence.
+      const call = chainCallFor(n, port)
+      if (call) {
+        const chain = (n.chain ?? []).map((entry, i) => {
+          if (i !== call.at) return entry
+          const values = { ...entry.values }
+          if (value === undefined) delete values[call.param]
+          else values[call.param] = value
+          return { ...entry, values }
+        })
+        return { ...n, chain }
+      }
       const values = { ...n.values }
       if (value === undefined) delete values[port]
       else values[port] = value
@@ -383,7 +419,7 @@ export function visiblePorts(node: DocNode, descriptor: Descriptor, connected: S
   // Expression variables and Config keys are the node's purpose, so they stay visible while collapsed.
   const always = new Set(descriptor.parameters.filter((p) => p.owner === 'Expression' || p.owner === 'Config').map((p) => p.name))
   const pinned = new Set(node.pinned ?? [])
-  return ports.filter((p) => connected.has(p) || p in node.values || p === SELF_PORT || always.has(p) || pinned.has(p))
+  return ports.filter((p) => connected.has(p) || portValue(node, p) !== undefined || p === SELF_PORT || always.has(p) || pinned.has(p))
 }
 
 export function connectedPorts(scene: Scene, nodeId: string): Set<string> {

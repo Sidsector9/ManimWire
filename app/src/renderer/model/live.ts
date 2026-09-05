@@ -9,6 +9,14 @@ import type { DescriptorIndex } from './types'
 export const EXPRESSION = 'Expression'
 export const ANIMATE = 'Animate'
 const ALWAYS_LIVE = new Set(['SceneTime', 'FrameDelta', 'State'])
+const PARTS = new Set(['Submobject', 'Submobjects'])
+// Methods annotated Self that build a new object rather than change the one they
+// are called on. Mirror of COPYING_METHODS in engine/src/engine/catalogue/model.py.
+const COPIES = new Set(['copy'])
+
+function copiesItsObject(descriptor: Descriptor): boolean {
+  return descriptor.kind === 'method' && descriptor.returns.annotation === 'Self' && COPIES.has(descriptor.name)
+}
 const OBJECT_TYPES = new Set(['mobject', 'coordinate_system', 'animation', 'scene'])
 // An identifier that does not continue a number or another identifier (1e5 is a number).
 const IDENTIFIER = /(?<![A-Za-z0-9_])[A-Za-z_][A-Za-z0-9_]*/g
@@ -110,7 +118,7 @@ export function rootOf(scene: Scene, nodeId: string, index: DescriptorIndex): st
     const node = scene.nodes.find((n) => n.id === current)
     const descriptor = node ? index.get(node.catalogue) : undefined
     const source = scene.edges.find((e) => e.target === current && e.port === SELF_PORT)
-    if (!descriptor || descriptor.kind !== 'method' || descriptor.returns.annotation !== 'Self' || !source) return current
+    if (!descriptor || descriptor.kind !== 'method' || descriptor.returns.annotation !== 'Self' || copiesItsObject(descriptor) || !source) return current
     current = source.source
   }
   return current
@@ -122,8 +130,19 @@ function classOf(scene: Scene, nodeId: string, index: DescriptorIndex): Descript
   if (!descriptor) return undefined
   if (descriptor.kind === 'class') return descriptor
   if (descriptor.kind === 'method') {
+    if (root && copiesItsObject(descriptor)) {
+      // A copy is the same kind of object as what it was copied from.
+      const source = scene.edges.find((e) => e.target === root.id && e.port === SELF_PORT)
+      return source ? classOf(scene, source.source, index) : undefined
+    }
     // A method building a new object (axes.plot -> ParametricFunction) names its class.
     return descriptor.returns.annotation === 'Self' && descriptor.owner ? index.get(descriptor.owner) : index.get(descriptor.returns.annotation)
+  }
+  if (root && PARTS.has(descriptor.name)) {
+    // All Manim promises about a part is that a VMobject's parts are VMobjects.
+    const source = scene.edges.find((e) => e.target === root.id && e.port === 'mobject')
+    const owner = source ? classOf(scene, source.source, index) : undefined
+    if (owner?.is_vmobject) return index.get('VMobject')
   }
   // Engine nodes standing for a Manim object (CameraFrame -> ScreenRectangle).
   return index.get(descriptor.returns.annotation)

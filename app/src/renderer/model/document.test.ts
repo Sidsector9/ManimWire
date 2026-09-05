@@ -19,8 +19,10 @@ import {
   removeGroup,
   removeNodes,
   removeStep,
+  portValue,
   setValue,
   starterDocument,
+  updateNode,
   visiblePorts
 } from './document'
 
@@ -200,5 +202,38 @@ describe('containers and groups', () => {
     expect(doc.scenes[0]!.nodes).toEqual([])
     expect(doc.groups[0]!.nodes.map((n) => n.catalogue)).toEqual(['Output'])
     expect(importGroup(importGroup(doc, { name: 'X', nodes: [], edges: [] }), { name: 'X', nodes: [], edges: [] }).groups.map((g) => g.name)).toEqual(['Other', 'X', 'X2'])
+  })
+})
+
+describe('an Animate chain argument', () => {
+  const animate = (): ReturnType<typeof addNode> =>
+    updateNode(addNode(emptyDocument(), 0, 'Animate', [0, 0], {}, 'a'), 0, 'a', {
+      chain: [{ method: 'set_fill', values: {} }]
+    })
+
+  it('is written onto its call, which is where the engine reads it', () => {
+    const doc = setValue(animate(), 0, 'a', '1.set_fill.color', 'PINK')
+    const node = doc.scenes[0]!.nodes[0]!
+    expect(node.chain?.[0]?.values).toEqual({ color: 'PINK' })
+    expect(node.values).toEqual({})
+    expect(portValue(node, '1.set_fill.color')).toBe('PINK')
+  })
+
+  it('is cleared from its call, and shows on the collapsed node while it is set', () => {
+    let doc = setValue(animate(), 0, 'a', '1.set_fill.opacity', 0.5)
+    const descriptor = {
+      name: 'Animate',
+      kind: 'builtin',
+      parameters: [{ name: '1.set_fill.opacity', owner: 'Animate' }]
+    } as unknown as Descriptor
+    expect(visiblePorts(doc.scenes[0]!.nodes[0]!, descriptor, new Set())).toContain('1.set_fill.opacity')
+    doc = setValue(doc, 0, 'a', '1.set_fill.opacity', undefined)
+    expect(doc.scenes[0]!.nodes[0]!.chain?.[0]?.values).toEqual({})
+    expect(visiblePorts(doc.scenes[0]!.nodes[0]!, descriptor, new Set())).not.toContain('1.set_fill.opacity')
+  })
+
+  it('stays on the node itself when no such call exists', () => {
+    const doc = setValue(animate(), 0, 'a', '1.rotate.angle', 1)
+    expect(doc.scenes[0]!.nodes[0]!.values).toEqual({ '1.rotate.angle': 1 })
   })
 })

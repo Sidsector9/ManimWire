@@ -53,6 +53,21 @@ class Parameter(BaseModel):
 
 RATE_SAMPLES = 25
 
+# Methods annotated ``Self`` that build a new object instead of changing the one
+# they are called on. Manim's annotation is right about the class and says nothing
+# about identity, so the name is the only thing that separates them. This is a
+# list by name, and it holds the one such method Mobject has.
+COPYING_METHODS = frozenset({"copy"})
+
+
+def copies_its_object(descriptor: Descriptor) -> bool:
+    """Whether a method returns a new object rather than the one it was called on."""
+    return (
+        descriptor.kind == "method"
+        and descriptor.returns.annotation == "Self"
+        and descriptor.name in COPYING_METHODS
+    )
+
 
 def takes_zero_argument_function(target: TypeRef) -> bool:
     """A function port that is called without arguments (TracedPath's point function).
