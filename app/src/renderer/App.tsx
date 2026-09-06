@@ -10,6 +10,7 @@ import { presetLabel, SettingsDialog } from './components/SettingsDialog'
 import { Splitter } from './components/Splitter'
 import { StatusBar } from './components/StatusBar'
 import { Timeline } from './components/Timeline'
+import { isTyping } from './model/keyboard'
 import { usePlayback } from './engine/usePlayback'
 import { useEngineSync } from './engine/useEngineSync'
 import { useFiles } from './engine/useFiles'
@@ -55,6 +56,19 @@ export function App() {
     document.documentElement.dataset['density'] = nodeDensity
   }, [nodeDensity])
 
+  // V and H pick the tool, as they do in Figma and Photoshop. Space pans while held,
+  // whichever tool is active, which xyflow binds itself.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return
+      const key = e.key.toLowerCase()
+      if (key === 'v') setTool('select')
+      else if (key === 'h') setTool('hand')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [setTool])
+
   const projectName = filePath ? filePath.replace(/^.*[/\\]/, '').replace(/\.mnw$/, '') : 'untitled project'
 
   return (
@@ -89,10 +103,10 @@ export function App() {
         )}
         <span className="spacer" />
         <span className="icon-group" role="group" aria-label="Tool">
-          <button className={`icon${tool === 'hand' ? ' active' : ''}`} title="Hand: drag to move the view" onClick={() => setTool('hand')}>
+          <button className={`icon${tool === 'hand' ? ' active' : ''}`} title="Hand: drag to move the view (H). Hold Space to pan with either tool." onClick={() => setTool('hand')}>
             <Icon name="hand" />
           </button>
-          <button className={`icon${tool === 'select' ? ' active' : ''}`} title="Select: drag to draw a selection box" onClick={() => setTool('select')}>
+          <button className={`icon${tool === 'select' ? ' active' : ''}`} title="Select: drag to draw a selection box (V)" onClick={() => setTool('select')}>
             <Icon name="pointer" />
           </button>
         </span>

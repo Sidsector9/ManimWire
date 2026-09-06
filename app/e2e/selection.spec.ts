@@ -48,3 +48,30 @@ test('the select tool boxes several nodes and drags them together; the hand tool
     await app.close()
   }
 })
+
+test('V and H pick the tool from anywhere, but not while typing', async () => {
+  const app = await electron.launch({ args: [path.resolve('.')], env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')) } })
+  const window = await app.firstWindow()
+  try {
+    await expect(window.locator('.status')).toContainText('engine ready')
+    const hand = window.getByRole('button', { name: /^Hand:/ })
+    const select = window.getByRole('button', { name: /^Select:/ })
+    await expect(hand).toHaveClass(/active/)
+
+    // From the page body, with the pointer away from any field.
+    await window.locator('.timeline').click({ position: { x: 5, y: 5 } })
+    await window.keyboard.press('v')
+    await expect(select).toHaveClass(/active/)
+    await window.keyboard.press('h')
+    await expect(hand).toHaveClass(/active/)
+
+    // Typing the same letters into a field must leave the tool alone.
+    const search = window.getByPlaceholder(/^Search /)
+    await search.click()
+    await search.type('vh')
+    await expect(search).toHaveValue('vh')
+    await expect(hand).toHaveClass(/active/)
+  } finally {
+    await app.close()
+  }
+})
