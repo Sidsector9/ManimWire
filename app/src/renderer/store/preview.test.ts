@@ -23,15 +23,15 @@ describe('engine results sync', () => {
   beforeEach(() => {
     vi.stubGlobal('window', { engine: { call: engine.call } })
     engine.calls.length = 0
-    useEngineResults.setState({ inFlight: false, pending: null, rendering: false, frame: null, code: '' })
+    useEngineResults.setState({ inFlight: false, pending: null, rendering: false, frame: null, code: '', synced: null })
   })
   afterEach(() => vi.unstubAllGlobals())
 
   it('runs one sync at a time and keeps only the latest request while busy', async () => {
     const store = useEngineResults.getState()
-    void store.sync(withName('A'), 0)
-    void store.sync(withName('B'), 0)
-    void store.sync(withName('C'), 0)
+    void store.sync(withName('A'), 0, 1)
+    void store.sync(withName('B'), 0, 2)
+    void store.sync(withName('C'), 0, 3)
     expect(engine.calls.map((c) => c.params.document.scenes[0]!.name)).toEqual(['A'])
     expect(useEngineResults.getState().rendering).toBe(true)
 
@@ -68,7 +68,7 @@ describe('engine results sync', () => {
               : { ok: false, error: { code: -32000, message: 'ValueError: bad', data: { node: 'n1', step: null, line: 7 } } }
       }
     })
-    await useEngineResults.getState().sync(withName('A'), 0)
+    await useEngineResults.getState().sync(withName('A'), 0, 1)
     expect(useEngineResults.getState().failure).toEqual({ message: 'ValueError: bad', node: 'n1', step: null, line: 7 })
   })
 
@@ -83,7 +83,7 @@ describe('engine results sync', () => {
         }
       }
     })
-    await useEngineResults.getState().sync(withName('A'), 0)
+    await useEngineResults.getState().sync(withName('A'), 0, 1)
     expect(seen).toEqual(['document.generate', 'timeline.layout'])
     expect(useEngineResults.getState().issues).toHaveLength(1)
     expect(useEngineResults.getState().failure).toBeNull()

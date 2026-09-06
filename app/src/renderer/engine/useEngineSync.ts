@@ -7,7 +7,9 @@ const DEBOUNCE_MS = 150
 
 /** Re-validate, regenerate, and re-render whenever the document or preview settings change. */
 export function useEngineSync(): void {
-  const doc = useDocumentStore((s) => s.doc)
+  // Keyed on the revision, not the document: moving a node changes the document
+  // without changing the scene, and must not cost a render.
+  const revision = useDocumentStore((s) => s.revision)
   const sceneIndex = useDocumentStore((s) => s.sceneIndex)
   const ready = useEngineStore((s) => s.status.state === 'ready')
   // While playing, the playback loop shows frames itself; only document changes sync.
@@ -17,7 +19,7 @@ export function useEngineSync(): void {
 
   useEffect(() => {
     if (!ready) return
-    const timer = setTimeout(() => void sync(doc, sceneIndex), DEBOUNCE_MS)
+    const timer = setTimeout(() => void sync(useDocumentStore.getState().doc, sceneIndex, revision), DEBOUNCE_MS)
     return () => clearTimeout(timer)
-  }, [doc, sceneIndex, ready, previewTime, previewWidth, sync])
+  }, [revision, sceneIndex, ready, previewTime, previewWidth, sync])
 }

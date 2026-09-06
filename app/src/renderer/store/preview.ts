@@ -30,7 +30,7 @@ interface PreviewStore {
   previewTime: number | null
   previewWidth: number
   inFlight: boolean
-  pending: { doc: Doc; sceneIndex: number } | null
+  pending: { doc: Doc; sceneIndex: number; revision: number } | null
   /** Transport (handoff timeline). */
   playing: boolean
   loop: boolean
@@ -38,8 +38,8 @@ interface PreviewStore {
   sequencing: boolean
   /** Counts sequence calls, so a cancelled run's completion cannot clear a newer run's flag. */
   sequenceRun: number
-  /** The document last validated and laid out; a frame-only sync skips those two calls. */
-  synced: { doc: Doc; sceneIndex: number } | null
+  /** The edit last validated and laid out; a frame-only sync skips those two calls. */
+  synced: { revision: number; sceneIndex: number } | null
   /** Bumped when playback should start over (loop); the playback hook watches it. */
   pass: number
   /** Code and width whose frames are all in the engine cache; playback then reads images only. */
@@ -48,7 +48,7 @@ interface PreviewStore {
   setPreviewWidth(width: number): void
   setPlaying(playing: boolean): void
   setLoop(loop: boolean): void
-  sync(doc: Doc, sceneIndex: number): Promise<void>
+  sync(doc: Doc, sceneIndex: number, revision: number): Promise<void>
   /** Render every frame between two times into the cache; the store shows them as they arrive. */
   sequence(doc: Doc, sceneIndex: number, start: number, end: number): Promise<boolean>
   /** Show the frame at a time from the cache, dropping the request when one is in flight. */
@@ -90,18 +90,18 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
    * request at a time, so while a sync is running only the latest request is
    * kept and run afterwards.
    */
-  sync: async (doc, sceneIndex) => {
+  sync: async (doc, sceneIndex, revision) => {
     if (get().inFlight || get().sequencing) {
-      set({ pending: { doc, sceneIndex }, rendering: true })
+      set({ pending: { doc, sceneIndex, revision }, rendering: true })
       return
     }
     set({ inFlight: true, rendering: true })
     try {
-      await run(doc, sceneIndex, set, get)
+      await run(doc, sceneIndex, revision, set, get)
     } finally {
       const next = get().pending
       set({ inFlight: false, pending: null, rendering: next !== null })
-      if (next) void get().sync(next.doc, next.sceneIndex)
+      if (next) void get().sync(next.doc, next.sceneIndex, next.revision)
     }
   },
 
@@ -127,7 +127,7 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
       if (get().sequenceRun === run) {
         const next = get().pending
         set({ sequencing: false, rendering: next !== null, pending: null })
-        if (next) void get().sync(next.doc, next.sceneIndex)
+        if (next) void get().sync(next.doc, next.sceneIndex, next.revision)
       }
     }
   },
@@ -144,7 +144,7 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
     } finally {
       const next = get().pending
       set({ inFlight: false, pending: null })
-      if (next) void get().sync(next.doc, next.sceneIndex)
+      if (next) void get().sync(next.doc, next.sceneIndex, next.revision)
     }
   }
 }))
@@ -152,18 +152,18 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
 type Set = (partial: Partial<PreviewStore>) => void
 type Get = () => PreviewStore
 
-async function run(doc: Doc, sceneIndex: number, set: Set, get: Get): Promise<void> {
+async function run(doc: Doc, sceneIndex: number, revision: number, set: Set, get: Get): Promise<void> {
   const scene = doc.scenes[sceneIndex]!.name
   try {
     const synced = get().synced
-    const unchanged = synced !== null && synced.doc === doc && synced.sceneIndex === sceneIndex
+    const unchanged = synced !== null && synced.revision === revision && synced.sceneIndex === sceneIndex
     if (unchanged && get().playing) return // the playback loop shows frames itself
     if (!unchanged) {
       // Only a document change needs new code and a new timeline; a scrub needs a frame.
       const generated = await call<GeneratedCode>('document.generate', { document: doc, scene })
       const issues = generated.issues ?? []
       const layout = await call<TimelineLayout>('timeline.layout', { document: doc, scene })
-      set({ issues, code: generated.code, sourceMap: generated.source_map as SourceMap, layout, synced: { doc, sceneIndex } })
+      set({ issues, code: generated.code, sourceMap: generated.source_map as SourceMap, layout, synced: { revision, sceneIndex } })
       if (issues.length > 0) {
         set({ failure: null })
         return

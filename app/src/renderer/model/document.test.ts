@@ -25,6 +25,7 @@ import {
   updateNode,
   visiblePorts
 } from './document'
+import { useDocumentStore } from '../store/document'
 
 describe('document operations', () => {
   it('adds and removes nodes together with their edges and step references', () => {
@@ -235,5 +236,35 @@ describe('an Animate chain argument', () => {
   it('stays on the node itself when no such call exists', () => {
     const doc = setValue(animate(), 0, 'a', '1.rotate.angle', 1)
     expect(doc.scenes[0]!.nodes[0]!.values).toEqual({ '1.rotate.angle': 1 })
+  })
+})
+
+describe('the revision counter', () => {
+  const withCircle = (): void => {
+    useDocumentStore.setState({ doc: addNode(emptyDocument(), 0, 'Circle', [0, 0], {}, 'c'), revision: 0, past: [], future: [] })
+  }
+
+  it('does not count a move, a collapse, a resize, or a pin', () => {
+    withCircle()
+    const store = useDocumentStore.getState()
+    store.placeNode('c', [200, 40])
+    store.updateNode('c', { collapsed: false })
+    store.updateNode('c', { size: [300, 200] })
+    store.updateNode('c', { pinned: ['radius'] })
+    expect(useDocumentStore.getState().revision).toBe(0)
+    // The edits still landed; they simply do not reach the engine.
+    expect(useDocumentStore.getState().doc.scenes[0]!.nodes[0]!.position).toEqual([200, 40])
+    expect(useDocumentStore.getState().doc.scenes[0]!.nodes[0]!.collapsed).toBe(false)
+  })
+
+  it('counts edits the engine sees, including undo', () => {
+    withCircle()
+    const store = useDocumentStore.getState()
+    store.setValue('c', 'radius', 2)
+    expect(useDocumentStore.getState().revision).toBe(1)
+    store.updateNode('c', { label: 'ring' })
+    expect(useDocumentStore.getState().revision).toBe(2)
+    useDocumentStore.getState().undo()
+    expect(useDocumentStore.getState().revision).toBe(3)
   })
 })

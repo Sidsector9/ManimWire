@@ -36,6 +36,9 @@ import {
 const HISTORY_LIMIT = 100
 /** Consecutive edits of the same field within this window share one history entry. */
 const COALESCE_MS = 1000
+// Node fields the engine never reads: they place a node on the graph, they do not
+// change the scene.
+const CANVAS_FIELDS = new Set(['position', 'collapsed', 'size', 'pinned'])
 
 interface DocumentStore {
   doc: Doc
@@ -49,6 +52,9 @@ interface DocumentStore {
   selected: string | null
   selectedStep: number | null
   lastEdit: { key: string; at: number } | null
+  /** Counts edits that change what the engine sees. Where a node sits on the graph,
+   * and whether it is folded open, never reach the engine, so those do not count. */
+  revision: number
 
   replace(doc: Doc, filePath: string | null): void
   apply(change: (doc: Doc) => Doc): void
@@ -84,16 +90,23 @@ interface DocumentStore {
 
 export const useDocumentStore = create<DocumentStore>((set, get) => {
   const target = (): Target => get().editingGroup ?? get().sceneIndex
-  const record = (next: Doc): void => {
-    const { doc, past } = get()
+  const record = (next: Doc, semantic = true): void => {
+    const { doc, past, revision } = get()
     if (next === doc) return
-    set({ doc: next, past: [...past.slice(-HISTORY_LIMIT + 1), doc], future: [], dirty: true, lastEdit: null })
+    set({
+      doc: next,
+      past: [...past.slice(-HISTORY_LIMIT + 1), doc],
+      future: [],
+      dirty: true,
+      lastEdit: null,
+      revision: semantic ? revision + 1 : revision
+    })
   }
   const coalesce = (key: string, next: Doc): void => {
     const { lastEdit } = get()
     const now = Date.now()
     if (lastEdit && lastEdit.key === key && now - lastEdit.at < COALESCE_MS) {
-      set({ doc: next, dirty: true, lastEdit: { key, at: now } })
+      set({ doc: next, dirty: true, lastEdit: { key, at: now }, revision: get().revision + 1 })
       return
     }
     record(next)
@@ -107,12 +120,13 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     dirty: false,
     past: [],
     future: [],
+    revision: 0,
     selected: null,
     selectedStep: null,
     lastEdit: null,
 
     replace: (doc, filePath) =>
-      set({ doc, filePath, dirty: false, past: [], future: [], selected: null, selectedStep: null, editingGroup: null, lastEdit: null }),
+      set({ doc, filePath, dirty: false, past: [], future: [], selected: null, selectedStep: null, editingGroup: null, lastEdit: null, revision: get().revision + 1 }),
     apply: (change) => record(change(get().doc)),
     addNode: (catalogue, position, values = {}, parent = null) => {
       const id = newId()
@@ -145,7 +159,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
       const next = updateNode(get().doc, target(), id, change)
       const keys = Object.keys(change)
       if (keys.length === 1 && keys[0] === 'label') coalesce(`${id}:label`, next)
-      else record(next)
+      else record(next, !keys.every((key) => CANVAS_FIELDS.has(key)))
     },
     // Moves change layout only, so they do not create history entries.
     placeNode: (id, absolute) => {
@@ -200,13 +214,13 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
       const { doc, past, future } = get()
       const previous = past.at(-1)
       if (!previous) return
-      set({ doc: previous, past: past.slice(0, -1), future: [doc, ...future], dirty: true, lastEdit: null })
+      set({ doc: previous, past: past.slice(0, -1), future: [doc, ...future], dirty: true, lastEdit: null, revision: get().revision + 1 })
     },
     redo: () => {
       const { doc, past, future } = get()
       const [next, ...rest] = future
       if (!next) return
-      set({ doc: next, past: [...past, doc], future: rest, dirty: true, lastEdit: null })
+      set({ doc: next, past: [...past, doc], future: rest, dirty: true, lastEdit: null, revision: get().revision + 1 })
     },
     markSaved: (filePath) => set({ filePath, dirty: false })
   }
