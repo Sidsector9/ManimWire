@@ -60,7 +60,14 @@ export function App() {
   // whichever tool is active, which xyflow binds itself.
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
-      if (e.metaKey || e.ctrlKey || e.altKey || isTyping(e.target)) return
+      if (isTyping(e.target)) return
+      // Select all belongs to the graph, which takes it while focused. Everywhere else
+      // it would select the whole page, which is never what is wanted here.
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+        e.preventDefault()
+        return
+      }
+      if (e.metaKey || e.ctrlKey || e.altKey) return
       const key = e.key.toLowerCase()
       if (key === 'v') setTool('select')
       else if (key === 'h') setTool('hand')

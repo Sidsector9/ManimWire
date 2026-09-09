@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Descriptor, TypeRef } from '../../shared/engine'
 import { absolutePosition, starterDocument } from '../model/document'
 import { toFlow, type ManimFlowNode } from '../model/flow'
+import { isTyping } from '../model/keyboard'
 import { effectiveDescriptor, isObjectType, liveByDefault, producedType } from '../model/live'
 import { acceptsManyConnections, compatible, portType } from '../model/types'
 import { selectExpressionNames, useCatalogueStore } from '../store/catalogue'
@@ -223,6 +224,9 @@ export function Graph() {
         if (e.key === 'Tab' && !quickAdd) {
           e.preventDefault()
           setQuickAdd({ screen: mouse.current, flow: screenToFlowPosition(mouse.current) })
+        } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a' && !isTyping(e.target)) {
+          e.preventDefault()
+          setNodes((current) => current.map((n) => (n.selected ? n : { ...n, selected: true })))
         }
       }}
       tabIndex={0}

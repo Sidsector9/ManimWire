@@ -76,6 +76,13 @@ export function Timeline() {
     void useEngineResults.getState().showFrame(doc, sceneIndex, clamped)
   }
 
+  // The pointer is captured where a drag begins, so moving outside the timeline, or
+  // outside the window, keeps the grab until the button is released.
+  const startDrag = (e: React.PointerEvent, next: Drag): void => {
+    e.currentTarget.setPointerCapture(e.pointerId)
+    setDrag(next)
+  }
+
   const onPointerMove = (e: React.PointerEvent): void => {
     if (!drag) return
     const time = timeAt(e.clientX)
@@ -182,7 +189,7 @@ export function Timeline() {
         ref={area}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerLeave={() => setDrag(null)}
+        onPointerCancel={() => setDrag(null)}
       >
         <div className="timeline-canvas" style={{ width, height }}>
           <div className="timeline-labels" style={{ width: LABEL_WIDTH }}>
@@ -213,7 +220,7 @@ export function Timeline() {
           <div
             className="timeline-ticks"
             onPointerDown={(e) => {
-              setDrag({ kind: 'playhead' })
+              startDrag(e, { kind: 'playhead' })
               scrubTo(timeAt(e.clientX))
             }}
           >
@@ -256,7 +263,7 @@ export function Timeline() {
                 if (!bar.node) return
                 store.select(bar.node)
                 // Only top-level animations belong to the play step; children belong to their group.
-                if (!bar.group && bar.depth === 0) setDrag({ kind: 'move', node: bar.node, step: bar.step })
+                if (!bar.group && bar.depth === 0) startDrag(e, { kind: 'move', node: bar.node, step: bar.step })
               }}
               title={`${bar.label}${bar.rateFunc ? ` · ${bar.rateFunc}` : ''}`}
             >
@@ -267,7 +274,7 @@ export function Timeline() {
                   className="bar-edge"
                   onPointerDown={(e) => {
                     e.stopPropagation()
-                    setDrag({ kind: 'resize', node: bar.node, step: bar.step, startX: e.clientX })
+                    startDrag(e, { kind: 'resize', node: bar.node, step: bar.step, startX: e.clientX })
                   }}
                 />
               )}

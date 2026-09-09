@@ -75,3 +75,35 @@ test('V and H pick the tool from anywhere, but not while typing', async () => {
     await app.close()
   }
 })
+
+test('select all takes every node while the graph has focus, and nothing outside it', async () => {
+  const app = await electron.launch({ args: [path.resolve('.')], env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')) } })
+  const window = await app.firstWindow()
+  const all = process.platform === 'darwin' ? 'Meta+a' : 'Control+a'
+  try {
+    await expect(window.locator('.status')).toContainText('engine ready')
+    await window.getByRole('button', { name: 'Start with a circle' }).click()
+    const nodes = window.locator('.react-flow__node')
+    await expect(nodes).toHaveCount(3)
+    const selected = window.locator('.react-flow__node.selected')
+
+    // Focus elsewhere: nothing is selected, and the page is not selected either.
+    await window.locator('.timeline').click({ position: { x: 5, y: 5 } })
+    await window.keyboard.press(all)
+    await expect(selected).toHaveCount(0)
+    expect(await window.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('')
+
+    await window.locator('.react-flow__pane').click({ position: { x: 12, y: 12 } })
+    await window.keyboard.press(all)
+    await expect(selected).toHaveCount(3)
+
+    // A text field keeps its own select all.
+    const search = window.getByPlaceholder(/^Search /)
+    await search.fill('circle')
+    await search.press(all)
+    await search.press('x')
+    await expect(search).toHaveValue('x')
+  } finally {
+    await app.close()
+  }
+})
