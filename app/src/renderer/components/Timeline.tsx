@@ -4,6 +4,7 @@ import type { AnimationDrop } from '../model/document'
 import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { Icon } from './Icon'
+import { TimelineResizer } from './TimelineResizer'
 
 const LABEL_WIDTH = 108
 const MIN_RUN_TIME = 0.1
@@ -162,6 +163,7 @@ export function Timeline() {
 
   return (
     <section className="panel timeline">
+      <TimelineResizer />
       <div className="panel-head timeline-head">
         <span className="transport" role="group" aria-label="Transport">
           <button className={`icon${playing ? ' active' : ''}`} title={playing ? 'Pause' : 'Play'} onClick={() => setPlaying(!playing)}>
@@ -232,8 +234,27 @@ export function Timeline() {
         onPointerCancel={() => setDrag(null)}
       >
         <div className="timeline-canvas" style={{ width, height }}>
+          {/* Takes no room in the flow, so the ruler can stay put while rows scroll under it. */}
+          <div className="timeline-header">
+            <div className="timeline-header-band" style={{ height: HEADER_HEIGHT }}>
+              <div className="timeline-corner" style={{ width: LABEL_WIDTH }} />
+              <div
+                className="timeline-ticks"
+                onPointerDown={(e) => {
+                  startDrag(e, { kind: 'playhead' })
+                  scrubTo(timeAt(e.clientX))
+                }}
+              >
+                {ticks(layout, geometry).map((t) => (
+                  <span key={t} className="tick mono" style={{ left: timeToX(geometry, t) }}>
+                    {t}s
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
           <div className="timeline-labels" style={{ width: LABEL_WIDTH }}>
-            <div className="timeline-corner" />
             {rows.map((row, i) => (
               <div
                 key={row.id}
@@ -256,20 +277,6 @@ export function Timeline() {
               {section.name}
             </div>
           ))}
-
-          <div
-            className="timeline-ticks"
-            onPointerDown={(e) => {
-              startDrag(e, { kind: 'playhead' })
-              scrubTo(timeAt(e.clientX))
-            }}
-          >
-            {ticks(layout, geometry).map((t) => (
-              <span key={t} className="tick mono" style={{ left: timeToX(geometry, t) }}>
-                {t}s
-              </span>
-            ))}
-          </div>
 
           {rows.map((row, i) => (
             <div key={row.id} className={`timeline-row${i === 0 ? ' scene' : ''}`} style={{ top: HEADER_HEIGHT + i * ROW_HEIGHT, left: LABEL_WIDTH, width: width - LABEL_WIDTH }} />

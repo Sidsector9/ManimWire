@@ -32,6 +32,7 @@ export function App() {
   const removeGroup = useDocumentStore((s) => s.removeGroup)
   const layout = useUiStore((s) => s.layout)
   const tool = useUiStore((s) => s.tool)
+  const timelineHeight = useUiStore((s) => s.timelineHeight)
   const setTool = useUiStore((s) => s.setTool)
   const setLayout = useUiStore((s) => s.setLayout)
   const view = useUiStore((s) => s.view)
@@ -79,7 +80,7 @@ export function App() {
   const projectName = filePath ? filePath.replace(/^.*[/\\]/, '').replace(/\.mnw$/, '') : 'untitled project'
 
   return (
-    <div className="workspace">
+    <div className="workspace" style={{ '--timeline-height': `${timelineHeight}px` } as React.CSSProperties}>
       <header className="toolbar">
         <span className="project">
           {projectName}

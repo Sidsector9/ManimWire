@@ -12,7 +12,7 @@ body,
 .workspace {
   display: grid;
   height: 100%;
-  grid-template-rows: 40px minmax(0, 1fr) 200px 24px;
+  grid-template-rows: 40px minmax(0, 1fr) var(--timeline-height, 200px) 24px;
   grid-template-columns: 240px minmax(0, 1fr) 280px;
   grid-template-areas:
     'title title title'
@@ -23,7 +23,6 @@ body,
 
 @media (min-width: 1800px) {
   .workspace {
-    grid-template-rows: 40px minmax(0, 1fr) 216px 24px;
     grid-template-columns: 264px minmax(0, 1fr) 320px;
   }
 }
@@ -1138,8 +1137,29 @@ body,
   border-right: 1px solid var(--border);
 }
 
+/* Zero height, so the ruler holds its place while the rows scroll beneath it. */
+.timeline-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  height: 0;
+}
+
+.timeline-header-band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--panel);
+}
+
 .timeline-corner {
-  height: 34px;
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  height: 100%;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
 
@@ -1179,6 +1199,18 @@ body,
   height: 18px;
   border-bottom: 1px solid var(--border);
   cursor: col-resize;
+}
+
+.timeline-resizer {
+  flex: none;
+  height: 6px;
+  cursor: row-resize;
+}
+
+.timeline-resizer:hover,
+.timeline-resizer:active {
+  background: var(--type-mobject);
+  opacity: 0.5;
 }
 
 .tick {
@@ -1381,16 +1413,18 @@ body,
 .timeline-playhead {
   position: absolute;
   top: 0;
-  z-index: 4;
+  z-index: 6; /* above the sticky ruler, so its time label stays readable */
   width: 1px;
   background: var(--type-number);
   pointer-events: none;
 }
 
 .playhead-time {
-  position: absolute;
+  position: sticky;
   top: 0;
-  left: 3px;
+  display: block;
+  width: max-content;
+  margin-left: 3px;
   font-size: 10px;
   color: var(--type-number);
 }

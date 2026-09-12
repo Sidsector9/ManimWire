@@ -63,7 +63,8 @@ test('dropping an animation onto the middle of another play step joins it', asyn
     const bar = window.locator('.timeline-bar.depth-0:not(.group):not(.scene-level)').first()
     await bar.scrollIntoViewIfNeeded()
     const box = (await bar.boundingBox())!
-    const into = (await window.locator('.timeline-step').nth(4).boundingBox())!
+    // A play step is the only kind an animation can join, and the last one is never the source.
+    const into = (await window.locator('.timeline-step.step-play').last().boundingBox())!
     const bars = window.locator('.timeline-bar')
     const inside = await barsWithin(bars, into.x, into.x + into.width)
 
