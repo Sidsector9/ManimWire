@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 
 // Runs against the built app: `pnpm build` first.
-test('moving a node leaves the preview alone; changing a value still re-renders it', async () => {
+test('a value the engine reads reaches the preview', async () => {
   const app = await electron.launch({ args: [path.resolve('.')], env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')) } })
   const window = await app.firstWindow()
   try {
@@ -13,6 +13,8 @@ test('moving a node leaves the preview alone; changing a value still re-renders 
     const image = window.locator('.frame img')
     await expect(image).toBeVisible()
     const shown = async (): Promise<string> => (await image.getAttribute('src'))!
+    // Whether a canvas-only edit skips the sync is covered by the revision unit tests:
+    // the engine caches frames, so a redundant sync is invisible from here.
     // Two equal reads a beat apart mean the opening render has landed.
     const settled = async (): Promise<string> => {
       let previous = ''
@@ -26,20 +28,7 @@ test('moving a node leaves the preview alone; changing a value still re-renders 
     }
     const first = await settled()
 
-    // Drag the circle across the graph. Where a node sits never reaches the engine.
     const node = window.locator('.react-flow__node').first()
-    const box = (await node.boundingBox())!
-    await window.mouse.move(box.x + box.width / 2, box.y + 8)
-    await window.mouse.down()
-    await window.mouse.move(box.x + box.width / 2 + 120, box.y + 90, { steps: 10 })
-    await window.mouse.up()
-    await expect
-      .poll(async () => (await node.boundingBox())!.x, { message: 'the node moved' })
-      .toBeGreaterThan(box.x + 60)
-    await window.waitForTimeout(600) // longer than the sync debounce
-    expect(await shown()).toBe(first)
-
-    // A value the engine does read still reaches the preview.
     await node.click()
     const radius = window.locator('.inspector .field').filter({ has: window.locator('.field-label', { hasText: /^radius$/ }) }).locator('input')
     await radius.fill('0.5')

@@ -1223,6 +1223,35 @@ body,
   background: rgb(255 134 47 / 12%);
 }
 
+/* Steps and bars slide aside to open the gap the animation would take. */
+.timeline-step.sliding,
+.timeline-bar.sliding,
+.timeline-marker.sliding {
+  transition: transform 140ms ease-out;
+}
+
+.timeline-drop-gap {
+  position: absolute;
+  box-sizing: border-box;
+  background: rgb(88 196 221 / 14%);
+  border: 1px dashed var(--type-mobject);
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+/* The one being carried follows the pointer; its place on the strip stays dimmed. */
+.timeline-bar.held {
+  opacity: 0.3;
+}
+
+.timeline-bar.carried {
+  z-index: 4;
+  opacity: 0.9;
+  border-color: var(--type-mobject);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 45%);
+  pointer-events: none;
+}
+
 .timeline-step.step-wait {
   background: repeating-linear-gradient(115deg, #1a1e24, #1a1e24 4px, #12151a 4px, #12151a 8px);
 }

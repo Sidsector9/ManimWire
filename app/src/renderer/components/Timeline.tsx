@@ -1,11 +1,14 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { HEADER_HEIGHT, placeBands, placeBars, placeMarkers, ROW_HEIGHT, rowLabels, stepAt, ticks, timeToX, xToTime } from '../model/timeline'
+import type { AnimationDrop } from '../model/document'
 import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { Icon } from './Icon'
 
 const LABEL_WIDTH = 108
 const MIN_RUN_TIME = 0.1
+// How wide the gap opens when an animation would land between two steps.
+const DROP_GAP = 44
 
 type Drag =
   | { kind: 'playhead' }
@@ -30,8 +33,23 @@ export function Timeline() {
   const selected = useDocumentStore((s) => s.selected)
   const [pixelsPerSecond, setPixelsPerSecond] = useState(96)
   const [drag, setDrag] = useState<Drag | null>(null)
-  const [hoverStep, setHoverStep] = useState<number | null>(null)
+  const [drop, setDrop] = useState<AnimationDrop | null>(null)
+  const [dragX, setDragX] = useState<number | null>(null)
   const area = useRef<HTMLDivElement>(null)
+  // Escape abandons a drag. Registered before the early returns below, or the hook
+  // count would change once a layout arrives.
+  useEffect(() => {
+    if (!drag) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      setDrag(null)
+      setGhost(null)
+      setDrop(null)
+      setDragX(null)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drag])
   const geometry = { labelWidth: LABEL_WIDTH, pixelsPerSecond }
 
   if (editingGroup) {
@@ -83,6 +101,17 @@ export function Timeline() {
     setDrag(next)
   }
 
+  /** Near a boundary the animation lands between two steps; in the middle it joins one. */
+  const dropAt = (time: number): AnimationDrop => {
+    const index = time >= layout.total ? null : stepAt(layout, time)
+    const step = index === null ? undefined : layout.steps.find((s) => s.index === index)
+    if (!step) return { kind: 'before', step: scene.steps.length }
+    const edge = Math.min(0.25, (step.end - step.start) / 3)
+    if (time < step.start + edge) return { kind: 'before', step: step.index }
+    if (time > step.end - edge) return { kind: 'before', step: step.index + 1 }
+    return step.kind === 'play' ? { kind: 'into', step: step.index } : { kind: 'before', step: step.index }
+  }
+
   const onPointerMove = (e: React.PointerEvent): void => {
     if (!drag) return
     const time = timeAt(e.clientX)
@@ -96,22 +125,33 @@ export function Timeline() {
       if (bar.depth === 0 && step?.kind === 'play' && step.run_time != null) {
         store.updateStep(drag.step, { ...step, run_time: runTime })
       } else store.setValue(drag.node, 'run_time', runTime)
-    } else setHoverStep(stepAt(layout, time))
+    } else {
+      setDrop(dropAt(time))
+      setDragX(timeToX(geometry, time))
+    }
+  }
+
+  const endDrag = (): void => {
+    setDrag(null)
+    setGhost(null)
+    setDrop(null)
+    setDragX(null)
   }
 
   const onPointerUp = (e: React.PointerEvent): void => {
-    if (drag?.kind === 'move') {
-      const time = timeAt(e.clientX)
-      const target = time >= layout.total ? null : stepAt(layout, time)
-      const targetStep = target !== null ? scene.steps[target] : undefined
-      if (target === null || (targetStep?.kind === 'play' && target !== drag.step)) {
-        store.moveAnimation(drag.node, drag.step, target)
-      }
-    }
-    setDrag(null)
-    setGhost(null)
-    setHoverStep(null)
+    // Released away from the strip, the gesture is abandoned: the pointer is captured,
+    // so a release over the graph would otherwise reorder the timeline unseen.
+    const strip = area.current?.getBoundingClientRect()
+    const over = strip !== undefined && e.clientY >= strip.top && e.clientY <= strip.bottom
+    if (drag?.kind === 'move' && over) store.moveAnimation(drag.node, drag.step, dropAt(timeAt(e.clientX)))
+    endDrag()
   }
+
+  // Everything from the insertion point slides right, opening the gap it would take.
+  const opening = drag?.kind === 'move' && drop?.kind === 'before' ? drop.step : null
+  const shift = (stepIndex: number): string | undefined => (opening !== null && stepIndex >= opening ? `translateX(${DROP_GAP}px)` : undefined)
+  const gapX = opening === null ? 0 : timeToX(geometry, layout.steps.find((s) => s.index === opening)?.start ?? layout.total)
+  const held = drag?.kind === 'move' ? bars.find((b) => b.node === drag.node && b.step === drag.step) : undefined
 
   const stepBoundaries = [...new Set(layout.steps.map((s) => s.start))].sort((a, b) => a - b)
   const jump = (direction: 1 | -1): void => {
@@ -242,8 +282,14 @@ export function Timeline() {
           {layout.steps.map((step) => (
             <div
               key={step.index}
-              className={`timeline-step step-${step.kind}${selectedStep === step.index ? ' selected' : ''}${hoverStep === step.index ? ' drop' : ''}`}
-              style={{ left: timeToX(geometry, step.start), width: Math.max(2, (step.end - step.start) * pixelsPerSecond), top: HEADER_HEIGHT, height: rows.length * ROW_HEIGHT }}
+              className={`timeline-step step-${step.kind}${selectedStep === step.index ? ' selected' : ''}${drop?.kind === 'into' && drop.step === step.index ? ' drop' : ''}${opening !== null ? ' sliding' : ''}`}
+              style={{
+                left: timeToX(geometry, step.start),
+                width: Math.max(2, (step.end - step.start) * pixelsPerSecond),
+                top: HEADER_HEIGHT,
+                height: rows.length * ROW_HEIGHT,
+                transform: shift(step.index)
+              }}
               onClick={() => store.selectStep(step.index)}
               title={step.label}
             >
@@ -254,8 +300,8 @@ export function Timeline() {
           {bars.map((bar) => (
             <div
               key={`${bar.step}-${bar.node}`}
-              className={`timeline-bar${bar.group ? ' group' : ''}${selected === bar.node ? ' selected' : ''}${bar.node ? '' : ' scene-level'} depth-${Math.min(bar.depth, 2)}`}
-              style={{ left: bar.x, top: HEADER_HEIGHT + bar.y, width: bar.width, height: bar.height }}
+              className={`timeline-bar${bar.group ? ' group' : ''}${selected === bar.node ? ' selected' : ''}${bar.node ? '' : ' scene-level'}${held === bar ? ' held' : ''}${opening !== null ? ' sliding' : ''} depth-${Math.min(bar.depth, 2)}`}
+              style={{ left: bar.x, top: HEADER_HEIGHT + bar.y, width: bar.width, height: bar.height, transform: shift(bar.step) }}
               onPointerDown={(e) => {
                 e.stopPropagation()
                 store.selectStep(bar.step)
@@ -295,11 +341,24 @@ export function Timeline() {
             </div>
           )}
 
+          {opening !== null && (
+            <div className="timeline-drop-gap" style={{ left: gapX, width: DROP_GAP, top: HEADER_HEIGHT, height: rows.length * ROW_HEIGHT }} />
+          )}
+
+          {held && dragX !== null && (
+            <div
+              className="timeline-bar carried"
+              style={{ left: dragX - held.width / 2, top: HEADER_HEIGHT + held.y, width: held.width, height: held.height }}
+            >
+              <span className="bar-label">{held.label}</span>
+            </div>
+          )}
+
           {markers.map((marker, i) => (
             <div
               key={i}
-              className={`timeline-marker kind-${marker.kind}`}
-              style={{ left: marker.x, top: HEADER_HEIGHT + marker.y }}
+              className={`timeline-marker kind-${marker.kind}${opening !== null ? ' sliding' : ''}`}
+              style={{ left: marker.x, top: HEADER_HEIGHT + marker.y, transform: shift(marker.step) }}
               title={`${marker.kind} ${marker.label}`}
               onClick={() => store.selectStep(marker.step)}
             >

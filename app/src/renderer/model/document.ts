@@ -452,16 +452,25 @@ export function parseDocument(text: string): Doc {
 }
 
 /** Move an animation to another play step, or to a new play step at the end when `to` is null. */
-export function moveAnimation(doc: Doc, target: Target, node: string, from: number, to: number | null): Doc {
+/** Where a dragged animation lands: joining a play step, or as a new step before one. */
+export type AnimationDrop = { kind: 'into'; step: number } | { kind: 'before'; step: number }
+
+export function moveAnimation(doc: Doc, target: Target, node: string, from: number, to: AnimationDrop): Doc {
   return updateScene(doc, target, (s) => {
-    if (s.steps[from]?.kind !== 'play' || (to !== null && s.steps[to]?.kind !== 'play')) return s
+    if (s.steps[from]?.kind !== 'play') return s
+    // Landing back where it started would otherwise reorder the step's animations.
+    if (to.kind === 'into' && (to.step === from || s.steps[to.step]?.kind !== 'play')) return s
+    if (to.kind === 'before' && (to.step < 0 || to.step > s.steps.length)) return s
+    // Taking the animation out keeps the list the same length, so the destination
+    // index stays valid; empty play steps go at the end.
     const steps = s.steps.map((step, i) =>
       i === from && step.kind === 'play' ? { ...step, animations: step.animations.filter((a) => a !== node) } : step
     )
-    if (to === null) steps.push({ kind: 'play', animations: [node] })
+    if (to.kind === 'before') steps.splice(to.step, 0, { kind: 'play', animations: [node] })
     else {
-      const target = steps[to]
-      if (target?.kind === 'play' && !target.animations.includes(node)) steps[to] = { ...target, animations: [...target.animations, node] }
+      const landing = steps[to.step]
+      if (landing?.kind !== 'play' || landing.animations.includes(node)) return s
+      steps[to.step] = { ...landing, animations: [...landing.animations, node] }
     }
     return { ...s, steps: steps.filter((step) => step.kind !== 'play' || step.animations.length > 0) }
   })

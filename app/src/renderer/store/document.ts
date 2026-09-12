@@ -21,6 +21,7 @@ import {
   setSettings,
   setValue,
   updateNode,
+  type AnimationDrop,
   type Doc,
   type DocEdge,
   type DocNode,
@@ -74,7 +75,7 @@ interface DocumentStore {
   removeStep(at: number): void
   updateStep(at: number, step: Step): void
   moveStep(from: number, to: number): void
-  moveAnimation(node: string, from: number, to: number | null): void
+  moveAnimation(node: string, from: number, to: AnimationDrop): void
   selectStep(at: number | null): void
   setSettings(change: Partial<Doc['settings']>): void
   setSceneType(type: SceneType): void

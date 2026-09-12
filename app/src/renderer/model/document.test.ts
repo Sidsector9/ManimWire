@@ -145,26 +145,47 @@ describe('moveAnimation and moveStep', () => {
   }
 
   it('moves an animation into another play step and drops an emptied step', () => {
-    const doc = moveAnimation(base(), 0, 'a', 0, 2)
+    const doc = moveAnimation(base(), 0, 'a', 0, { kind: 'into', step: 2 })
     expect(doc.scenes[0]!.steps).toEqual([
       { kind: 'play', animations: ['b'] },
       { kind: 'wait', duration: 1 },
       { kind: 'play', animations: ['a'] }
     ])
-    const alone = moveAnimation(doc, 0, 'b', 0, 2)
+    const alone = moveAnimation(doc, 0, 'b', 0, { kind: 'into', step: 2 })
     expect(alone.scenes[0]!.steps).toEqual([{ kind: 'wait', duration: 1 }, { kind: 'play', animations: ['a', 'b'] }])
   })
 
-  it('appends a new play step when the target is null', () => {
-    const doc = moveAnimation(base(), 0, 'a', 0, null)
+  it('inserts a new play step between two steps', () => {
+    const doc = moveAnimation(base(), 0, 'a', 0, { kind: 'before', step: 1 })
+    expect(doc.scenes[0]!.steps).toEqual([
+      { kind: 'play', animations: ['b'] },
+      { kind: 'play', animations: ['a'] },
+      { kind: 'wait', duration: 1 }
+    ])
+  })
+
+  it('appends a new play step past the last one', () => {
+    const doc = moveAnimation(base(), 0, 'a', 0, { kind: 'before', step: 3 })
     expect(doc.scenes[0]!.steps.at(-1)).toEqual({ kind: 'play', animations: ['a'] })
   })
 
   it('leaves the document unchanged for a target that is not a play step', () => {
     const doc = base()
-    expect(moveAnimation(doc, 0, 'a', 0, 1)).toBe(doc)
-    expect(moveAnimation(doc, 0, 'a', 0, 9)).toBe(doc)
-    expect(moveAnimation(doc, 0, 'a', 1, 0)).toBe(doc)
+    expect(moveAnimation(doc, 0, 'a', 0, { kind: 'into', step: 1 })).toBe(doc)
+    expect(moveAnimation(doc, 0, 'a', 0, { kind: 'into', step: 9 })).toBe(doc)
+    expect(moveAnimation(doc, 0, 'a', 1, { kind: 'into', step: 0 })).toBe(doc)
+  })
+
+  it('leaves the order alone when an animation lands back in its own step', () => {
+    const doc = base()
+    expect(moveAnimation(doc, 0, 'a', 0, { kind: 'into', step: 0 })).toBe(doc)
+    expect(moveAnimation(doc, 0, 'b', 0, { kind: 'into', step: 0 })).toBe(doc)
+  })
+
+  it('refuses a position outside the step list', () => {
+    const doc = base()
+    expect(moveAnimation(doc, 0, 'a', 0, { kind: 'before', step: -1 })).toBe(doc)
+    expect(moveAnimation(doc, 0, 'a', 0, { kind: 'before', step: 4 })).toBe(doc)
   })
 
   it('reorders steps', () => {
