@@ -1,0 +1,10 @@
+ManimWire
+Copyright 2026 Siddharth Thevaril
+https://github.com/Sidsector9/ManimWire
+
+A visual programming environment for Manim Community Edition.
+
+This product includes ManimWire, written by Siddharth Thevaril.
+
+Manim Community Edition is a separate work, included as a git submodule under
+its own MIT licence. See manim/LICENSE.

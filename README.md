@@ -70,5 +70,15 @@ For LaTeX on macOS, `brew install --cask mactex-no-gui` installs the full distri
 
 ## Licensing
 
-Manim Community Edition is included as a git submodule and keeps its own licence, which
-is in `manim/LICENSE`.
+The code in this repository is the Apache License 2.0 with the Commons Clause
+condition, in `LICENSE`. You may use it, fork it, change it and pass it on. You may not
+sell it, and you may not charge for hosting it or for support whose value comes from the
+application itself. Everything you make with it is yours, including work you sell.
+
+A fork or a redistribution has to carry the credit in `NOTICE`, in its own notice file,
+its documentation, or somewhere a person can see it in the application. It also has to
+say which files it changed, and it cannot use the name ManimWire for itself.
+
+Manim Community Edition is included as a git submodule and keeps its own MIT licence, in
+`manim/LICENSE`. A packaged build carries other libraries under their own licences, and
+the Commons Clause condition takes none of those rights away.
