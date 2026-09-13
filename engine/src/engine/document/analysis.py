@@ -420,6 +420,13 @@ class Graph:
         descriptor = self.descriptor(node_id)
         live = descriptor is not None and descriptor.name in ALWAYS_LIVE
         for edge in self.edges_in.get(node_id, []):
+            port = next(
+                (p for p in self.parameters(node_id) if p.name == edge.port), None
+            )
+            if port is not None and takes_zero_argument_function(port.type):
+                # The port is handed a lambda, so it reads the value itself every
+                # time it calls it. The node it feeds is built once (TracedPath).
+                continue
             if edge.live or (
                 self.is_value_node(edge.source) and self.is_live(edge.source)
             ):

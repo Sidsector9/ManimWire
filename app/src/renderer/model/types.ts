@@ -23,6 +23,15 @@ export function compatible(source: TypeRef, target: TypeRef): boolean {
   return sources.some((t) => targets.has(t))
 }
 
+// Manim annotations for a two dimensional array; they are vector ports otherwise.
+// Mirrors MATRIX_ANNOTATIONS in engine/catalogue/model.py.
+const MATRIX_ANNOTATIONS = new Set(['MatrixMN', 'Zeros'])
+
+/** Whether a port takes rows of numbers rather than one point. */
+export function isMatrix(type: TypeRef): boolean {
+  return type.type === 'vector' && MATRIX_ANNOTATIONS.has(type.annotation)
+}
+
 export type DescriptorIndex = Map<string, Descriptor>
 
 export function indexDescriptors(entries: Descriptor[]): DescriptorIndex {

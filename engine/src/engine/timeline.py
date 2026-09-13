@@ -10,7 +10,7 @@ and the n-th child of a group is the n-th connection into its animations port.
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -18,9 +18,9 @@ from manim.animation.animation import Animation
 from manim.animation.composition import AnimationGroup
 from pydantic import BaseModel
 
-from engine.catalogue.builtins import CONTAINERS
+from engine.catalogue.builtins import CONTAINERS, RESULT
 from engine.catalogue.model import Catalogue, Descriptor, PortType
-from engine.codegen import ManimCodeGenerator
+from engine.codegen import ManimCodeGenerator, SourceMap
 from engine.document.analysis import Graph
 from engine.document.model import (
     SELF_PORT,
@@ -39,6 +39,7 @@ from engine.document.model import (
 )
 from engine.render.runner import (
     QUIET,
+    Play,
     RenderError,
     TimingRenderer,
     run_scene,
@@ -66,6 +67,8 @@ class Bar(BaseModel):
     rate_func: str | None = None
     parent: str | None = None
     depth: int = 0
+    # Which run of a played container built this animation, or None outside a loop.
+    run: int | None = None
 
 
 class Marker(BaseModel):
@@ -139,6 +142,17 @@ class _Context:
             node_id = sources[0]
         return node_id
 
+    def row(self, node_id: str) -> str:
+        """The row an object belongs to. A container owns the runs inside it."""
+        node_id = self.root(node_id)
+        seen: set[str] = set()
+        node = self.nodes.get(node_id)
+        while node is not None and node.parent is not None and node_id not in seen:
+            seen.add(node_id)
+            node_id = node.parent
+            node = self.nodes.get(node_id)
+        return node_id
+
 
 def layout_timeline(
     scene: SceneDocument,
@@ -171,28 +185,50 @@ def layout_timeline(
     spans: list[StepSpan] = []
     section_starts: list[tuple[SectionStep, float]] = []
     events: list[tuple[float, str, str]] = []  # (time, row, enter|leave|action)
-    plays = iter(renderer.plays)
+    take = _plays_per_step(renderer.plays, generated.source_map)
     time = 0.0
     for position, step in enumerate(scene.steps):
         end = time
+        group: list[Play] = []
         if isinstance(step, PlayStep | WaitStep) or (
             isinstance(step, CameraStep) and step.action == "move"
         ):
-            play = next(plays)  # move_camera plays its own animations
-            time, end = play.start, play.start + play.duration
+            group = take(position)  # move_camera plays its own animations
+            if group:
+                time, end = group[0].start, group[-1].start + group[-1].duration
         if isinstance(step, PlayStep):
-            pairs = list(zip(step.animations, play.animations, strict=False))
-            for node_id, animation in pairs:
-                _collect(animation, node_id, position, time, None, 0, context, bars)
-                # Scene.play adds the animated mobjects; a remover takes its own out.
-                for row in _animation_rows(node_id, context):
-                    if animation.is_remover():
-                        events.append((end, row, "leave"))
-                    else:
-                        events.append((time, row, "enter"))
-            label = ", ".join(_label(a, n, context) for n, a in pairs)
+            # A played container runs its body once per item, so each of its plays
+            # holds another animation built by the same node.
+            loop = _loop_animation(step, context, graph)
+            label = ""
+            for run, play in enumerate(group):
+                ids = [loop] * len(play.animations) if loop else step.animations
+                pairs = list(zip(ids, play.animations, strict=False))
+                for node_id, animation in pairs:
+                    _collect(
+                        animation,
+                        node_id,
+                        position,
+                        play.start,
+                        None,
+                        0,
+                        context,
+                        bars,
+                        run=run if loop else None,
+                    )
+                    # Scene.play adds the animated mobjects; a remover takes
+                    # its own out.
+                    for row in _animation_rows(node_id, context):
+                        if animation.is_remover():
+                            events.append((play.start + play.duration, row, "leave"))
+                        else:
+                            events.append((play.start, row, "enter"))
+                label = ", ".join(_label(a, n, context) for n, a in pairs)
+            if loop:
+                name = label or _row_label(step.animations[0], context)
+                label = f"{name} x {len(group)}"
         elif isinstance(step, WaitStep):
-            label = f"wait {play.duration:g} s"
+            label = f"wait {end - time:g} s"
         elif isinstance(step, SectionStep):
             section_starts.append((step, time))
             label = step.name
@@ -319,6 +355,57 @@ def _bands(
     return bands
 
 
+def _plays_per_step(
+    plays: list[Play], source_map: SourceMap
+) -> Callable[[int], list[Play]]:
+    """Hand out the play calls each step made, in order.
+
+    Most steps make one. A step that plays a container makes one per run, and
+    they are told apart by the line of generated code that called them.
+    """
+    step_of_line = {
+        line: index for index, lines in source_map.steps.items() for line in lines
+    }
+    remaining = list(plays)
+    position = 0
+
+    def step_of(play: Play) -> int | None:
+        return step_of_line.get(play.line) if play.line is not None else None
+
+    def take(step: int) -> list[Play]:
+        nonlocal position
+        taken = []
+        while position < len(remaining) and step_of(remaining[position]) == step:
+            taken.append(remaining[position])
+            position += 1
+        if (
+            not taken
+            and position < len(remaining)
+            and step_of(remaining[position]) is None
+        ):
+            # No line to go by: steps and their plays still run in order.
+            taken.append(remaining[position])
+            position += 1
+        return taken
+
+    return take
+
+
+def _loop_animation(step: PlayStep, context: _Context, graph: Graph) -> str | None:
+    """For a step playing a Map or Repeat, the node building each run's animation."""
+    if len(step.animations) != 1:
+        return None
+    container = step.animations[0]
+    descriptor = context.descriptor(container)
+    if descriptor is None or descriptor.name not in CONTAINERS:
+        return None
+    result = next(
+        (c for c in graph.children(container) if c.catalogue == RESULT.name), None
+    )
+    sources = graph.sources(result.id, "value") if result else []
+    return sources[0] if sources else container
+
+
 def _empty(error: str) -> TimelineLayout:
     return TimelineLayout(
         rows=[], steps=[], bars=[], markers=[], sections=[], total=0.0, error=error
@@ -335,6 +422,7 @@ def _collect(
     context: _Context,
     bars: list[Bar],
     scale: float = 1.0,
+    run: int | None = None,
 ) -> None:
     """Append the bar for ``animation`` and, for groups, its children.
 
@@ -352,6 +440,7 @@ def _collect(
         rate_func=getattr(animation.rate_func, "__name__", None),
         parent=parent,
         depth=depth,
+        run=run,
     )
     bars.append(bar)
     if not isinstance(animation, AnimationGroup) or not len(animation.animations):
@@ -376,6 +465,7 @@ def _collect(
             context,
             bars,
             child_scale,
+            run,
         )
     children = [b for b in bars if b.parent == node_id and b.depth == depth + 1]
     bar.rows = list(dict.fromkeys(bar.rows + [r for c in children for r in c.rows]))
@@ -409,7 +499,7 @@ def _animation_rows(node_id: str, context: _Context) -> list[str]:
             continue
         for source in context.inputs.get((node_id, param.name), []):
             if source in context.nodes:
-                rows.append(context.root(source))
+                rows.append(context.row(source))
     return list(dict.fromkeys(rows))
 
 

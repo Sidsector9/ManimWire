@@ -40,19 +40,28 @@ export function usePlayback(): void {
       }
     }
 
-    /** Advances the playhead in real time, calling `show` with the scene time it reaches. */
-    const clock = (show: (t: number) => void, done: () => void): (() => void) => {
-      const started = performance.now()
+    /**
+     * Advances the playhead, calling `show` with the scene time it reaches. It moves
+     * at real speed, and never past `limit`: on a first pass that is the newest frame
+     * the engine has finished, so a scene that renders slower than it plays waits for
+     * its frames instead of holding one image while the playhead runs away.
+     */
+    const clock = (show: (t: number) => void, done: () => void, limit?: () => number): (() => void) => {
+      let at = from
+      let last = performance.now()
       let stopped = false
       const tick = (): void => {
         if (cancelled || stopped) return
-        const t = from + (performance.now() - started) / 1000
-        if (t >= total) {
+        const now = performance.now()
+        const ahead = at + (now - last) / 1000
+        last = now
+        at = limit === undefined ? ahead : Math.min(ahead, limit())
+        if (at >= total) {
           done()
           return
         }
-        useEngineResults.getState().setPreviewTime(t)
-        show(t)
+        useEngineResults.getState().setPreviewTime(at)
+        show(at)
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
@@ -70,7 +79,8 @@ export function usePlayback(): void {
       const steps = layout.steps.filter((s) => s.end > s.start + 1e-9 && s.end > from + 1e-9)
       const stopClock = clock(
         (t) => useEngineResults.getState().showQueued(t),
-        finish
+        finish,
+        () => useEngineResults.getState().rendered
       )
       for (const step of steps) {
         if (cancelled) return stopClock()

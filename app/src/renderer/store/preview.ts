@@ -46,6 +46,8 @@ interface PreviewStore {
   prerendered: string | null
   /** Frames the engine has finished during a first pass, waiting for their moment. */
   queued: FrameResult[]
+  /** The latest scene time rendered in this pass; the playhead never runs past it. */
+  rendered: number
   setPreviewTime(time: number | null): void
   setPreviewWidth(width: number): void
   setPlaying(playing: boolean): void
@@ -85,9 +87,10 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   pass: 0,
   prerendered: null,
   queued: [],
+  rendered: 0,
   setPreviewTime: (previewTime) => set({ previewTime }),
   setPreviewWidth: (previewWidth) => set({ previewWidth }),
-  setPlaying: (playing) => set({ playing, ...(playing ? {} : { queued: [] }) }),
+  setPlaying: (playing) => set({ playing, ...(playing ? { rendered: 0 } : { queued: [] }) }),
   setLoop: (loop) => set({ loop }),
 
   /**
@@ -121,7 +124,9 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
       // Rendering usually outruns the scene, so frames wait their turn rather than
       // being shown the moment they arrive. After Stop the engine still finishes the
       // step; those frames must not be queued at all.
-      if (frame.scene === scene && get().playing && get().sequenceRun === run) set({ queued: [...get().queued, frame] })
+      if (frame.scene === scene && get().playing && get().sequenceRun === run) {
+        set({ queued: [...get().queued, frame], rendered: Math.max(get().rendered, frame.time) })
+      }
     })
     try {
       await call('render.sequence', { document: doc, scene, start, end, width: previewWidth })

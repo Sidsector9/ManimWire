@@ -58,6 +58,13 @@ RATE_SAMPLES = 25
 # about identity, so the name is the only thing that separates them. This is a
 # list by name, and it holds the one such method Mobject has.
 COPYING_METHODS = frozenset({"copy"})
+# Manim annotations for a two dimensional array. They read as vectors otherwise.
+MATRIX_ANNOTATIONS = frozenset({"MatrixMN", "Zeros"})
+
+
+def is_matrix(type_ref: TypeRef) -> bool:
+    """Whether a port takes rows of numbers rather than one point."""
+    return type_ref.annotation in MATRIX_ANNOTATIONS
 
 
 def copies_its_object(descriptor: Descriptor) -> bool:

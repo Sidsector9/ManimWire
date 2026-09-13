@@ -59,6 +59,66 @@ function parseList(text: string): number[] | null {
   return numbers.every((n) => Number.isFinite(n)) ? numbers : null
 }
 
+/** Rows of numbers, written "1, 1; 0, 1": commas between values, semicolons between rows. */
+function parseMatrix(text: string): number[][] | null {
+  const rows = text
+    .split(';')
+    .map((row) => row.trim())
+    .filter((row) => row !== '')
+  if (rows.length === 0) return null
+  const parsed = rows.map(parseList)
+  if (parsed.some((row) => row === null)) return null
+  const numbers = parsed as number[][]
+  return numbers.every((row) => row.length === numbers[0]!.length) ? numbers : null
+}
+
+export function MatrixInput({
+  value,
+  placeholder,
+  onChange
+}: {
+  value: number[][] | undefined
+  placeholder?: string
+  onChange(value: number[][] | undefined): void
+}) {
+  const committed = Array.isArray(value) ? value.map((row) => row.join(', ')).join('; ') : ''
+  const [text, setText] = useState(committed)
+  const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    if (!focused) setText(committed)
+  }, [committed, focused])
+
+  const commit = (): void => {
+    if (text.trim() === '') onChange(undefined)
+    else {
+      const parsed = parseMatrix(text)
+      if (parsed) onChange(parsed)
+      else setText(committed)
+    }
+  }
+
+  return (
+    <input
+      className={`port-input mono${text !== committed ? ' draft' : ''}`}
+      type="text"
+      value={text}
+      placeholder={placeholder}
+      title="Rows of numbers: commas between values, semicolons between rows, such as 1, 1; 0, 1"
+      onMouseDown={(e) => e.stopPropagation()}
+      onFocus={() => setFocused(true)}
+      onBlur={() => {
+        setFocused(false)
+        commit()
+      }}
+      onChange={(e) => setText(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') commit()
+        else if (e.key === 'Escape') setText(committed)
+      }}
+    />
+  )
+}
+
 /** Comma-separated numbers, such as an x_range. Committed on Enter or when the field is left. */
 export function NumberListInput({
   value,

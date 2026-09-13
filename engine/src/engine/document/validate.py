@@ -30,6 +30,7 @@ from engine.catalogue.model import (
     PortType,
     TypeRef,
     is_class_reference,
+    is_matrix,
     takes_zero_argument_function,
 )
 from engine.document.analysis import Graph, chain_port
@@ -601,10 +602,34 @@ def _step_issues(
         elif descriptor is None:
             continue
         elif isinstance(step, PlayStep):
-            if descriptor.returns.type is not PortType.ANIMATION:
+            # A container produces whatever its Result is, once per run.
+            output = graph.output_type(node_id)
+            if output.type is not PortType.ANIMATION:
                 bad(
                     "not_animation",
                     f"{descriptor.qualname} is not an animation",
+                    node_id,
+                )
+            elif descriptor.name in CONTAINERS:
+                if len(step.animations) > 1:
+                    bad(
+                        "bad_step",
+                        f"{descriptor.name} plays once per run, so it has to be "
+                        "the only animation of its step",
+                        node_id,
+                    )
+                if any(edge.source == node_id for edge in graph.edges):
+                    bad(
+                        "bad_scope",
+                        f"{descriptor.name} is played, so its runs are animations "
+                        "rather than a value other nodes can read",
+                        node_id,
+                    )
+            elif output.collection:
+                bad(
+                    "not_animation",
+                    f"{descriptor.qualname} produces several animations; play them "
+                    "through an AnimationGroup",
                     node_id,
                 )
         elif not compatible(
@@ -719,7 +744,25 @@ def _literal_problem(
             if value in colors or value.startswith("#")
             else f"unknown colour {value}"
         )
+    if kind in (
+        PortType.MOBJECT,
+        PortType.COORDINATE_SYSTEM,
+        PortType.ANIMATION,
+        PortType.LIVE_NUMBER,
+    ):
+        # Manim takes a point wherever it takes a mobject: Line(start), move_to,
+        # next_to. Anything else has to come down a connection.
+        if PortType.VECTOR not in type_ref.accepts:
+            return f"{kind.value} values must be connected, not typed"
+        kind = PortType.VECTOR
     if kind is PortType.VECTOR:
+        if is_matrix(type_ref):
+            rows = value if isinstance(value, list) else []
+            if not rows or not all(isinstance(row, list) and row for row in rows):
+                return "expected rows of numbers, such as 1, 1; 0, 1"
+            if len({len(row) for row in rows if isinstance(row, list)}) != 1:
+                return "every row of a matrix needs the same number of values"
+            return None
         if isinstance(value, str):
             return None if value in DIRECTION_NAMES else f"unknown direction {value}"
         if isinstance(value, list) and len(value) == 3:
@@ -734,13 +777,6 @@ def _literal_problem(
                 f"port needs {type_ref.signature}"
             )
         return None
-    if kind in (
-        PortType.MOBJECT,
-        PortType.COORDINATE_SYSTEM,
-        PortType.ANIMATION,
-        PortType.LIVE_NUMBER,
-    ):
-        return f"{kind.value} values must be connected, not typed"
     return None
 
 

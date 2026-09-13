@@ -3,7 +3,7 @@
 // call. The engine stays the authority; this lets the graph react before it answers.
 
 import type { Descriptor, Parameter, TypeRef } from '../../shared/engine'
-import { SELF_PORT, type DocNode, type Scene } from './document'
+import { SELF_PORT, containerResult, isContainer, type DocNode, type Scene } from './document'
 import type { DescriptorIndex } from './types'
 
 export const EXPRESSION = 'Expression'
@@ -37,6 +37,13 @@ const NUMBER: TypeRef = { type: 'number', annotation: 'float', optional: false, 
 /** The type a node's output has for connection checks: time, frame delta, and state are numbers, not objects. */
 export function producedType(descriptor: Descriptor): TypeRef {
   return descriptor.returns.type === 'live_number' && descriptor.kind !== 'class' ? NUMBER : descriptor.returns
+}
+
+/** A Map or Repeat whose Result is an animation is played once per run, as a loop. */
+export function playsEachRun(scene: Scene, node: DocNode, index: DescriptorIndex): boolean {
+  if (!isContainer(node)) return false
+  const source = containerResult(scene, node.id)
+  return source ? index.get(source.catalogue)?.returns.type === 'animation' : false
 }
 
 /**

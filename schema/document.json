@@ -316,6 +316,22 @@
                 "type": "array"
               },
               {
+                "items": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  "type": "array"
+                },
+                "type": "array"
+              },
+              {
                 "type": "null"
               }
             ]
@@ -378,6 +394,22 @@
               {
                 "items": {
                   "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "items": {
+                  "items": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "number"
+                      }
+                    ]
+                  },
+                  "type": "array"
                 },
                 "type": "array"
               },

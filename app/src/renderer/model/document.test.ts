@@ -11,6 +11,7 @@ import {
   emptyDocument,
   graphOf,
   importGroup,
+  isLoopStep,
   moveAnimation,
   moveStep,
   nextPosition,
@@ -167,6 +168,22 @@ describe('moveAnimation and moveStep', () => {
   it('appends a new play step past the last one', () => {
     const doc = moveAnimation(base(), 0, 'a', 0, { kind: 'before', step: 3 })
     expect(doc.scenes[0]!.steps.at(-1)).toEqual({ kind: 'play', animations: ['a'] })
+  })
+
+  it('leaves a loop step alone: its container plays once per run, by itself', () => {
+    let doc = base()
+    doc = addNode(doc, 0, 'Map', [0, 0], {}, 'loop')
+    doc = { ...doc, scenes: doc.scenes.map((s) => ({ ...s, steps: [...s.steps, { kind: 'play' as const, animations: ['loop'] }] })) }
+    const at = doc.scenes[0]!.steps.length - 1
+    expect(isLoopStep(doc.scenes[0]!, at)).toBe(true)
+    expect(moveAnimation(doc, 0, 'a', 0, { kind: 'into', step: at })).toBe(doc)
+    // Landing before it still works: the loop keeps its own step.
+    expect(moveAnimation(doc, 0, 'a', 0, { kind: 'before', step: at }).scenes[0]!.steps).toEqual([
+      { kind: 'play', animations: ['b'] },
+      { kind: 'wait', duration: 1 },
+      { kind: 'play', animations: ['a'] },
+      { kind: 'play', animations: ['loop'] }
+    ])
   })
 
   it('leaves the document unchanged for a target that is not a play step', () => {

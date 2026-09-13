@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Descriptor, TypeRef } from '../../shared/engine'
 import { SELF_PORT, type DocNode, type Scene } from './document'
-import { chainMethods, chainPort, effectiveDescriptor, expressionVariables, isLiveSource, liveByDefault, producedType, rootOf } from './live'
+import { chainMethods, chainPort, effectiveDescriptor, expressionVariables, isLiveSource, liveByDefault, playsEachRun, producedType, rootOf } from './live'
 import { indexDescriptors } from './types'
 
 const ref = (type: TypeRef['type'], annotation = ''): TypeRef => ({ type, annotation, optional: false, collection: false, accepts: [], signature: null, choices: null })
@@ -28,7 +28,10 @@ const index = indexDescriptors([
   entry({ name: 'get_center', qualname: 'Mobject.get_center', kind: 'method', owner: 'Mobject', returns: ref('vector', 'np.ndarray') }),
   entry({ name: 'plot', qualname: 'CoordinateSystem.plot', kind: 'method', owner: 'CoordinateSystem', returns: ref('mobject', 'ParametricFunction') }),
   entry({ name: 'CameraFrame', qualname: 'CameraFrame', kind: 'builtin', returns: ref('mobject', 'ScreenRectangle') }),
-  entry({ name: 'ScreenRectangle', qualname: 'ScreenRectangle', kind: 'class', returns: ref('mobject'), bases: ['Rectangle', 'VMobject', 'Mobject'] })
+  entry({ name: 'ScreenRectangle', qualname: 'ScreenRectangle', kind: 'class', returns: ref('mobject'), bases: ['Rectangle', 'VMobject', 'Mobject'] }),
+  entry({ name: 'Map', qualname: 'Map', kind: 'builtin', returns: ref('any') }),
+  entry({ name: 'Result', qualname: 'Result', kind: 'builtin', returns: ref('none') }),
+  entry({ name: 'Transform', qualname: 'Transform', kind: 'class', returns: ref('animation') })
 ])
 const node = (id: string, catalogue: string, values: DocNode['values'] = {}): DocNode => ({ id, catalogue, values, label: null, position: [0, 0], collapsed: true })
 const RESERVED = ['sin', 'pi']
@@ -123,5 +126,28 @@ describe('object roots and animate methods', () => {
     const effective = effectiveDescriptor(animate, index.get('Animate')!, withAnimate, RESERVED, index)
     expect(effective.parameters.map((p) => p.name)).toEqual(['mobject', chainPort(0, 'shift', 'vectors')])
     expect(effective.parameters[1]).toMatchObject({ display: 'chain', owner: 'Animate', kind: 'var_positional' })
+  })
+})
+
+describe('a container of animations', () => {
+  const inside = (id: string, catalogue: string): DocNode => ({ ...node(id, catalogue), parent: 'm' })
+  const scene = (resultFrom: string): Scene => ({
+    name: 'S',
+    scene_type: 'Scene',
+    nodes: [node('m', 'Map'), inside('tr', 'Transform'), inside('d', 'Dot'), inside('res', 'Result')],
+    edges: [{ source: resultFrom, target: 'res', port: 'value', live: false }],
+    steps: []
+  })
+
+  it('plays once per run when its Result is an animation', () => {
+    const doc = scene('tr')
+    expect(playsEachRun(doc, doc.nodes[0]!, index)).toBe(true)
+  })
+
+  it('is a value, not an animation, when its Result is an object', () => {
+    const doc = scene('d')
+    expect(playsEachRun(doc, doc.nodes[0]!, index)).toBe(false)
+    // An ordinary animation node is played on its own, not as a loop.
+    expect(playsEachRun(doc, doc.nodes[1]!, index)).toBe(false)
   })
 })

@@ -1,8 +1,9 @@
 import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
+import { isMatrix } from '../model/types'
 import { selectColors, selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
 import { ColorPicker, RateFuncPicker, VectorEditor } from './editors'
-import { NumberInput, NumberListInput } from './inputs'
+import { MatrixInput, NumberInput, NumberListInput } from './inputs'
 
 interface Props {
   param: Parameter
@@ -20,6 +21,9 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
   const directions = useCatalogueStore(selectDirections)
   const fonts = useCatalogueStore(selectFonts)
   const { type } = param
+  // Manim takes a point wherever it takes a mobject: Line's start, move_to, next_to.
+  // Mirrors the rule in engine/document/validate.py.
+  const kind = type.type !== 'vector' && (type.accepts ?? []).includes('vector') ? 'vector' : type.type
   const placeholder = param.display ?? ''
   const stop = (e: React.SyntheticEvent): void => e.stopPropagation()
 
@@ -27,7 +31,7 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
     const numbers = Array.isArray(value) && value.every((v) => typeof v === 'number') ? (value as number[]) : undefined
     return <NumberListInput value={numbers} placeholder={placeholder} onChange={onChange} />
   }
-  switch (type.type) {
+  switch (kind) {
     case 'number':
       return <NumberInput value={typeof value === 'number' ? value : undefined} placeholder={placeholder} onChange={onChange} />
     case 'boolean':
@@ -55,6 +59,10 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
         </span>
       )
     case 'vector':
+      if (isMatrix(type)) {
+        const rows = Array.isArray(value) && value.every((row) => Array.isArray(row)) ? (value as number[][]) : undefined
+        return <MatrixInput value={rows} placeholder={placeholder} onChange={onChange} />
+      }
       if (!compact) return <VectorEditor value={typeof value === 'string' || Array.isArray(value) ? (value as string | number[]) : undefined} placeholder={placeholder} onChange={onChange} />
       return (
         <select className="port-select mono" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>

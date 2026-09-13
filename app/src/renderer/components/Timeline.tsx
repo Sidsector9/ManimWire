@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { HEADER_HEIGHT, placeBands, placeBars, placeMarkers, ROW_HEIGHT, rowLabels, stepAt, ticks, timeToX, xToTime } from '../model/timeline'
-import type { AnimationDrop } from '../model/document'
+import { isLoopStep, type AnimationDrop } from '../model/document'
 import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { Icon } from './Icon'
@@ -110,7 +110,8 @@ export function Timeline() {
     const edge = Math.min(0.25, (step.end - step.start) / 3)
     if (time < step.start + edge) return { kind: 'before', step: step.index }
     if (time > step.end - edge) return { kind: 'before', step: step.index + 1 }
-    return step.kind === 'play' ? { kind: 'into', step: step.index } : { kind: 'before', step: step.index }
+    // A loop step is one animation played once per run; a second one cannot join it.
+    return step.kind === 'play' && !isLoopStep(scene, step.index) ? { kind: 'into', step: step.index } : { kind: 'before', step: step.index }
   }
 
   const onPointerMove = (e: React.PointerEvent): void => {
@@ -304,9 +305,11 @@ export function Timeline() {
             </div>
           ))}
 
-          {bars.map((bar) => (
+          {bars.map((bar, i) => (
             <div
-              key={`${bar.step}-${bar.node}`}
+              // Position in the layout: one step can hold several bars for one node,
+              // one per run of a loop, and Manim's own group children share an id.
+              key={i}
               className={`timeline-bar${bar.group ? ' group' : ''}${selected === bar.node ? ' selected' : ''}${bar.node ? '' : ' scene-level'}${held === bar ? ' held' : ''}${opening !== null ? ' sliding' : ''} depth-${Math.min(bar.depth, 2)}`}
               style={{ left: bar.x, top: HEADER_HEIGHT + bar.y, width: bar.width, height: bar.height, transform: shift(bar.step) }}
               onPointerDown={(e) => {
@@ -315,14 +318,15 @@ export function Timeline() {
                 // A scene-level bar (move_camera) has no node; edit it through its step.
                 if (!bar.node) return
                 store.select(bar.node)
-                // Only top-level animations belong to the play step; children belong to their group.
-                if (!bar.group && bar.depth === 0) startDrag(e, { kind: 'move', node: bar.node, step: bar.step })
+                // Only top-level animations belong to the play step; children belong to
+                // their group, and a loop's runs belong to the container.
+                if (!bar.group && bar.depth === 0 && bar.run === null) startDrag(e, { kind: 'move', node: bar.node, step: bar.step })
               }}
               title={`${bar.label}${bar.rateFunc ? ` · ${bar.rateFunc}` : ''}`}
             >
               <span className="bar-label">{bar.label}</span>
               {bar.rateFunc && bar.width > 110 && <span className="bar-rate mono">{bar.rateFunc}</span>}
-              {!bar.group && bar.node && (
+              {!bar.group && bar.node && bar.run === null && (
                 <span
                   className="bar-edge"
                   onPointerDown={(e) => {

@@ -5,6 +5,8 @@ from __future__ import annotations
 import time
 from pathlib import Path
 
+import pytest
+
 from engine.catalogue import Catalogue
 from engine.catalogue.coverage import coverage_report
 from engine.catalogue.model import PortType
@@ -21,9 +23,11 @@ from engine.document import (
     PlayStep,
     SceneDocument,
     Settings,
+    WaitStep,
     validate_group,
 )
 from engine.document.analysis import Graph
+from engine.document.validate import validate_scene
 from engine.render import CairoRenderService
 from engine.timeline import layout_timeline
 
@@ -79,7 +83,7 @@ def test_map_over_range_is_a_loop(catalogue: Catalogue, tmp_path: Path) -> None:
     assert (
         "        range = np.arange(0, 3, 1)\n"
         "        dots = []\n"
-        "        for index, item in enumerate(range):\n"
+        "        for item in range:\n"
         "            expression = 0.2 + 0.1 * item\n"
         "            dot = Dot(radius=expression, color=YELLOW)\n"
         "            dots.append(dot)\n"
@@ -564,3 +568,137 @@ def test_copy_makes_a_second_object(catalogue: Catalogue) -> None:
     assert "        a_copy = submobject.copy()\n" in generated.code
     assert "        a_copy.shift(np.array([1.0, 0.0, 0.0]))\n" in generated.code
     assert "Transform(a_copy, target_mobject=math_tex, remover=True)" in generated.code
+
+
+def transform_cycle_scene() -> SceneDocument:
+    """Circle, then Map over a VGroup of shapes playing Transform once per shape."""
+    return SceneDocument(
+        name="TransformCycle",
+        nodes=[
+            node("a", "Circle", label="a"),
+            node("t1", "Square", label="t1"),
+            node("t2", "Triangle", label="t2"),
+            node("shapes", "VGroup", label="shapes"),
+            node("loop", "Map", label="each shape"),
+            node("t", "Item", label="t", parent="loop"),
+            node("tr", "Transform", parent="loop"),
+            node("res", "Result", parent="loop"),
+        ],
+        edges=[
+            edge("t1", "shapes", "vmobjects"),
+            edge("t2", "shapes", "vmobjects"),
+            edge("shapes", "loop", "items"),
+            edge("a", "tr", "mobject"),
+            edge("t", "tr", "target_mobject"),
+            edge("tr", "res", "value"),
+        ],
+        steps=[
+            AddStep(mobjects=["a"]),
+            WaitStep(duration=1.0),
+            PlayStep(animations=["loop"]),
+        ],
+    )
+
+
+def test_played_map_becomes_a_for_loop_around_play(catalogue: Catalogue) -> None:
+    generated = ManimCodeGenerator().generate(transform_cycle_scene(), catalogue)
+    assert generated.issues == []
+    assert (
+        "        self.add(a)\n"
+        "        self.wait(1.0)\n"
+        "        for t in shapes:\n"
+        "            self.play(Transform(a, target_mobject=t))\n"
+    ) in generated.code
+    # The loop replaces the container's list; nothing collects the runs.
+    assert "append" not in generated.code
+
+
+def test_played_map_keeps_the_step_options(catalogue: Catalogue) -> None:
+    scene = transform_cycle_scene()
+    scene.steps[2] = PlayStep(animations=["loop"], run_time=0.5, rate_func="linear")
+    code = ManimCodeGenerator().generate(scene, catalogue).code
+    assert (
+        "            self.play(Transform(a, target_mobject=t), "
+        "run_time=0.5, rate_func=linear)\n"
+    ) in code
+
+
+def test_played_map_puts_one_bar_on_the_timeline_per_run(
+    catalogue: Catalogue,
+) -> None:
+    layout = layout_timeline(transform_cycle_scene(), catalogue)
+    assert layout.error is None
+    assert layout.total == 3.0
+    play = layout.steps[2]
+    assert (play.start, play.end, play.label) == (1.0, 3.0, "Transform x 2")
+    runs = [bar for bar in layout.bars if bar.step == 2]
+    assert [(bar.run, bar.start, bar.end) for bar in runs] == [
+        (0, 1.0, 2.0),
+        (1, 2.0, 3.0),
+    ]
+    # The container owns the row: its runs are not rows of their own.
+    assert runs[0].rows == ["a", "loop"]
+
+
+def test_played_map_renders_the_second_run(
+    catalogue: Catalogue, tmp_path: Path
+) -> None:
+    service = CairoRenderService(tmp_path)
+    scene = transform_cycle_scene()
+    sizes = {}
+    for moment in (1.99, 2.99):
+        result = service.frame(scene, catalogue, SMALL, moment)
+        assert Path(result.path).exists()
+        circle = next(b for b in result.bounds if b.node == "a")
+        assert circle.on_screen
+        sizes[moment] = (circle.width, circle.height)
+    # Each run transforms the same object again, so it ends as the second shape.
+    # Without the second run it would still be the square at the end.
+    assert sizes[1.99] == pytest.approx((2.0, 2.0), abs=0.02)
+    assert sizes[2.99] == pytest.approx((1.732, 1.5), abs=0.02)
+
+
+def test_a_played_container_cannot_also_be_a_value(catalogue: Catalogue) -> None:
+    scene = transform_cycle_scene()
+    scene.nodes.append(node("g", "VGroup"))
+    scene.edges.append(edge("loop", "g", "vmobjects"))
+    codes = {i.code for i in validate_scene(scene, catalogue, [])}
+    assert "bad_scope" in codes
+
+
+def test_a_played_container_is_alone_in_its_step(catalogue: Catalogue) -> None:
+    scene = transform_cycle_scene()
+    scene.nodes.append(node("fade", "FadeIn"))
+    scene.edges.append(edge("a", "fade", "mobjects"))
+    scene.steps[2] = PlayStep(animations=["loop", "fade"])
+    codes = {i.code for i in validate_scene(scene, catalogue, [])}
+    assert "bad_step" in codes
+
+
+def test_a_container_of_objects_is_still_not_an_animation(
+    catalogue: Catalogue,
+) -> None:
+    scene = map_scene()
+    scene.steps = [PlayStep(animations=["m"])]
+    messages = [i.message for i in validate_scene(scene, catalogue, [])]
+    assert "Map is not an animation" in messages
+
+
+def test_an_empty_loop_leaves_the_next_step_its_own_timings(
+    catalogue: Catalogue,
+) -> None:
+    """A Map over nothing plays nothing; the step after it keeps its animation."""
+    scene = transform_cycle_scene()
+    # An empty VGroup: the loop body never runs.
+    scene.edges = [e for e in scene.edges if e.target != "shapes"]
+    scene.nodes.append(node("fade", "FadeIn"))
+    scene.edges.append(edge("a", "fade", "mobjects"))
+    scene.steps.append(PlayStep(animations=["fade"]))
+
+    layout = layout_timeline(scene, catalogue)
+    assert layout.error is None
+    assert [bar.step for bar in layout.bars] == [3]
+    loop_step, fade_step = layout.steps[2], layout.steps[3]
+    assert (loop_step.start, loop_step.end) == (1.0, 1.0)
+    assert (fade_step.start, fade_step.end) == (1.0, 2.0)
+    assert layout.total == 2.0

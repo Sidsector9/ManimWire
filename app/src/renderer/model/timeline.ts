@@ -24,6 +24,8 @@ export interface BarBox {
   /** A group with children is drawn as a bracket around them. */
   group: boolean
   depth: number
+  /** Which run of a played container drew this bar, or null outside a loop. */
+  run: number | null
 }
 
 export interface BandBox {
@@ -82,7 +84,8 @@ export function placeBars(layout: TimelineLayout, geometry: Geometry): BarBox[] 
       label: bar.label,
       rateFunc: bar.rate_func ?? null,
       group,
-      depth: bar.depth ?? 0
+      depth: bar.depth ?? 0,
+      run: bar.run ?? null
     }
   })
 }

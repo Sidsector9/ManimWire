@@ -4,7 +4,8 @@
 import type { Descriptor, PortType } from '../../shared/engine'
 
 /** A list of strings is only meaningful on a *args port that takes several strings. */
-export type JsonValue = string | number | boolean | number[] | string[] | null
+/** A matrix (rows of numbers) is the only nested value, as in the engine's document model. */
+export type JsonValue = string | number | boolean | number[] | string[] | number[][] | null
 
 /** One call in an Animate node's chain: mobject.animate.method(values). */
 export interface MethodCall {
@@ -319,6 +320,23 @@ export function isContainer(node: DocNode): boolean {
   return node.catalogue === 'Map' || node.catalogue === 'Repeat'
 }
 
+/** The node feeding a container's Result: what one run of the container contributes. */
+export function containerResult(scene: Scene, container: string): DocNode | undefined {
+  const result = scene.nodes.find((n) => n.parent === container && n.catalogue === 'Result')
+  const edge = result && scene.edges.find((e) => e.target === result.id && e.port === 'value')
+  return edge ? scene.nodes.find((n) => n.id === edge.source) : undefined
+}
+
+/** A play step that runs a container plays it once per run, so nothing can join it. */
+export function isLoopStep(scene: Scene, at: number): boolean {
+  const step = scene.steps[at]
+  if (step?.kind !== 'play') return false
+  return step.animations.some((id) => {
+    const node = scene.nodes.find((n) => n.id === id)
+    return node !== undefined && isContainer(node)
+  })
+}
+
 export function containerSize(node: DocNode): [number, number] {
   return node.size ?? CONTAINER_SIZE
 }
@@ -459,7 +477,7 @@ export function moveAnimation(doc: Doc, target: Target, node: string, from: numb
   return updateScene(doc, target, (s) => {
     if (s.steps[from]?.kind !== 'play') return s
     // Landing back where it started would otherwise reorder the step's animations.
-    if (to.kind === 'into' && (to.step === from || s.steps[to.step]?.kind !== 'play')) return s
+    if (to.kind === 'into' && (to.step === from || s.steps[to.step]?.kind !== 'play' || isLoopStep(s, to.step))) return s
     if (to.kind === 'before' && (to.step < 0 || to.step > s.steps.length)) return s
     // Taking the animation out keeps the list the same length, so the destination
     // index stays valid; empty play steps go at the end.

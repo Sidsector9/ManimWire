@@ -18,6 +18,7 @@ export type Label2 = string;
 export type RateFunc = string | null;
 export type Parent = string | null;
 export type Depth = number;
+export type Run = number | null;
 export type Bars = Bar[];
 export type Step1 = number;
 export type Kind1 = string;
@@ -77,6 +78,7 @@ export interface Bar {
   rate_func?: RateFunc;
   parent?: Parent;
   depth?: Depth;
+  run?: Run;
   [k: string]: unknown;
 }
 export interface Marker {

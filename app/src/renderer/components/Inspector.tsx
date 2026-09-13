@@ -1,7 +1,7 @@
 import type { Parameter } from '../../shared/engine'
 import { GROUP_PREFIX, SELF_PORT, connectedPorts, type ConfigKey, type DocNode, type JsonValue, type MethodCall, type Scene, type UpdatingAction } from '../model/document'
 import { conceptGroups } from '../model/groups'
-import { ANIMATE, chainMethods, chainPort, effectiveDescriptor, isLiveSource, rootOf } from '../model/live'
+import { ANIMATE, chainMethods, chainPort, effectiveDescriptor, isLiveSource, playsEachRun, rootOf } from '../model/live'
 import type { DescriptorIndex } from '../model/types'
 import { TYPE_COLOR, selectExpressionNames, useCatalogueStore } from '../store/catalogue'
 import { useDescriptorIndex } from '../store/descriptors'
@@ -52,6 +52,8 @@ export function Inspector() {
   const lines = (sourceMap.nodes[node.id] ?? []).map((n) => code.split('\n')[n - 1] ?? '').map((l) => l.trim())
   const nodeIssues = issues.filter((i) => i.node === node.id)
   const inPlay = scene.steps.some((s) => s.kind === 'play' && s.animations.includes(node.id))
+  // A container of animations goes on the timeline as a loop: one play per run.
+  const loops = playsEachRun(scene, node, index)
   const live = isLiveSource(scene, node.id, index)
   // Only Manim objects have suspend_updating and friends; a State runs a scene updater.
   const hasUpdaters = catalogued.kind !== 'builtin' && sourceMap.live.some((id) => rootOf(scene, id, index) === node.id)
@@ -86,9 +88,9 @@ export function Inspector() {
             {issue.message}
           </div>
         ))}
-        {descriptor.returns.type === 'animation' && !inPlay && (
+        {(descriptor.returns.type === 'animation' || loops) && !inPlay && (
           <button className="button" onClick={() => store.addStep({ kind: 'play', animations: [node.id] })}>
-            Play this animation
+            {loops ? 'Play this once per run' : 'Play this animation'}
           </button>
         )}
         {descriptor.kind === 'method' && (

@@ -179,7 +179,9 @@ MAP = _node(
     "Map",
     "logic",
     "Runs the nodes inside it once per item of a collection and collects the "
-    "Result of each run. Item and Index give the current item and its position.",
+    "Result of each run. Item and Index give the current item and its position. "
+    "When the Result is an animation, put this on the timeline to play it once "
+    "per item.",
     [_param("items", PortType.ANY, None, "Iterable", collection=True)],
     TypeRef(type=PortType.ANY, annotation="list", collection=True),
 )
@@ -188,7 +190,8 @@ REPEAT = _node(
     "Repeat",
     "logic",
     "Runs the nodes inside it count times and collects the Result of each run. "
-    "Index gives the current position.",
+    "Index gives the current position. When the Result is an animation, put this "
+    "on the timeline to play it count times.",
     [_param("count", PortType.NUMBER, None, "int")],
     TypeRef(type=PortType.ANY, annotation="list", collection=True),
 )

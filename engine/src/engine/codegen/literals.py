@@ -5,6 +5,14 @@ from __future__ import annotations
 from engine.catalogue.model import PortType, TypeRef, is_class_reference
 from engine.document.model import JsonValue
 
+# Ports that take a mobject but also accept a point, such as Line's start and end.
+_TAKES_A_POINT = (
+    PortType.MOBJECT,
+    PortType.COORDINATE_SYSTEM,
+    PortType.ANIMATION,
+    PortType.LIVE_NUMBER,
+)
+
 
 def kind_is_number(type_ref: TypeRef) -> bool:
     return type_ref.type is PortType.NUMBER
@@ -26,12 +34,22 @@ class LiteralFormatter:
             element = type_ref.model_copy(update={"collection": False})
             return "[" + ", ".join(self.format(item, element) for item in value) + "]"
         kind = type_ref.type
+        if kind in _TAKES_A_POINT and PortType.VECTOR in type_ref.accepts:
+            kind = PortType.VECTOR  # a point typed where a mobject would go
         if kind is PortType.COLOR and isinstance(value, str):
             return value if value in self.color_names else f'ManimColor("{value}")'
         if kind is PortType.VECTOR:
             if isinstance(value, list):
                 self.uses_numpy = True
-                return f"np.array({[float(v) for v in value]!r})"
+                if all(isinstance(row, list) for row in value):
+                    rows = [
+                        [float(v) for v in row]
+                        for row in value
+                        if isinstance(row, list)
+                    ]
+                    return f"np.array({rows!r})"
+                numbers = [float(v) for v in value if not isinstance(v, list)]
+                return f"np.array({numbers!r})"
             return str(value)
         if kind is PortType.FUNCTION and isinstance(value, str):
             return value  # a Manim function such as smooth, validated by name

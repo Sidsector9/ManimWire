@@ -82,6 +82,18 @@
           "default": 0,
           "title": "Depth",
           "type": "integer"
+        },
+        "run": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run"
         }
       },
       "required": [

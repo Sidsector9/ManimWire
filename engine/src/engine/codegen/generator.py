@@ -4,8 +4,10 @@ Construction statements come first in dependency order, then the steps. A live
 node (see engine.document.analysis) becomes ``always_redraw`` when it builds a
 mobject and ``add_updater`` when it is a method acting on one, so live
 connections in the graph turn into Manim updaters without the user writing a
-function (goal.md section 23). Map and Repeat containers become ``for`` loops;
-reusable groups are expanded in place (engine.document.analysis).
+function (goal.md section 23). Map and Repeat containers become ``for`` loops,
+collecting a list of what each run builds, or wrapping a ``self.play`` call when
+a play step names the container; reusable groups are expanded in place
+(engine.document.analysis).
 """
 
 from __future__ import annotations
@@ -172,12 +174,22 @@ class _Build:
         self.loops: dict[str, tuple[str, str]] = {}
         # Names assigned inside the loops being emitted; lambdas must bind them.
         self.scoped: list[str] = []
+        # Containers a play step names: their loop wraps a play call, so they are
+        # written where the step is, not with the other objects.
+        self.played = {
+            node_id
+            for step in scene.steps
+            if isinstance(step, PlayStep)
+            for node_id in step.animations
+            if node_id in self.graph.nodes
+            and self.descriptor(self.graph.nodes[node_id]).name in CONTAINERS
+        }
 
     # ---- driver -----------------------------------------------------------------
 
     def run(self) -> GeneratedCode:
         for node in self.ordered_nodes():
-            if node.parent is None:
+            if node.parent is None and node.id not in self.played:
                 self.emit_node(node)
         for position, step in enumerate(self.scene.steps):
             self.emit_step(position, step)
@@ -323,28 +335,70 @@ class _Build:
     def emit_container(self, node: Node, descriptor: Descriptor) -> None:
         name = self.new_variable(node.label or descriptor.name)
         self.variables[node.id] = name
-        index = self.new_variable("index")
-        item = self.new_variable("item") if descriptor.name == MAP.name else ""
         self.line(f"{name} = []", node.id)
+        outer = self.open_loop(node, descriptor)
+        self.emit_body(node)
+        self.line(f"{name}.append({self.result_expression(node)})", node.id)
+        self.close_loop(node.id, outer)
+
+    def open_loop(
+        self, node: Node, descriptor: Descriptor, step: int | None = None
+    ) -> int:
+        """Write a container's ``for`` statement and enter its scope.
+
+        ``enumerate`` is only used when an Index node inside reads the position,
+        so the common loop reads the way a person would write it.
+        """
+        inside = self.descendants(node.id)
+        index = (
+            self.new_variable("index")
+            if any(
+                child.catalogue == INDEX.name
+                and self.graph.container_of(child.id) == node.id
+                for child in inside
+            )
+            else ""
+        )
         if descriptor.name == MAP.name:
-            items = self.expression(self.graph.sources(node.id, "items")[0])
-            self.line(f"for {index}, {item} in enumerate({items}):", node.id)
+            items = [
+                child
+                for child in inside
+                if child.catalogue == ITEM.name
+                and self.graph.nearest(child.id, MAP.name) == node.id
+            ]
+            label = next((c.label for c in items if c.label), None)
+            item = self.new_variable(label or "item") if items else "_"
+            source = self.expression(self.graph.sources(node.id, "items")[0])
+            target = f"{index}, {item}" if index else item
+            head = f"enumerate({source})" if index else source
         else:
-            count = self.argument(node, REPEAT.parameters[0])
-            self.line(f"for {index} in range(int({count})):", node.id)
+            item = ""
+            target = index or "_"
+            head = f"range(int({self.argument(node, REPEAT.parameters[0])}))"
+        self.line(f"for {target} in {head}:", node.id, step)
         self.loops[node.id] = (item, index)
         outer = len(self.scoped)
-        self.scoped += [n for n in (item, index) if n]
+        # "_" stands for a loop variable nothing reads, so no lambda can capture it.
+        self.scoped += [n for n in (item, index) if n and n != "_"]
         self.indent += 1
-        children = self.graph.children(node.id)
-        for child in self.ordered_nodes(children):
+        return outer
+
+    def emit_body(self, node: Node) -> None:
+        for child in self.ordered_nodes(self.graph.children(node.id)):
             self.emit_node(child)
-        result = next(c for c in children if c.catalogue == RESULT.name)
-        value = self.expression(self.graph.sources(result.id, "value")[0])
-        self.line(f"{name}.append({value})", node.id)
+
+    def result_expression(self, node: Node) -> str:
+        """What one run of a container contributes, read from its Result node."""
+        result = next(
+            c for c in self.graph.children(node.id) if c.catalogue == RESULT.name
+        )
+        sources = self.graph.sources(result.id, "value")
+        return self.expression(sources[0]) if sources else "None"
+
+    def close_loop(self, node_id: str, outer: int) -> None:
         self.indent -= 1
         del self.scoped[outer:]
-        del self.loops[node.id]
+        del self.loops[node_id]
 
     def emit_instance(self, node: Node) -> None:
         """A group instance stands for the value its Output copy receives."""
@@ -587,19 +641,12 @@ class _Build:
 
     def emit_step(self, position: int, step: AnyStep) -> None:
         if isinstance(step, PlayStep):
+            container = next((a for a in step.animations if a in self.played), None)
+            if container is not None:
+                self.emit_played_container(container, position, step)
+                return
             parts = [self.expression(a) for a in step.animations]
-            if step.run_time is not None:
-                parts.append(f"run_time={step.run_time!r}")
-            if step.rate_func is not None:
-                parts.append(f"rate_func={step.rate_func}")
-            if step.lag_ratio is not None:
-                parts.append(f"lag_ratio={step.lag_ratio!r}")
-            if step.subcaption is not None:
-                parts.append(f"subcaption={step.subcaption!r}")
-                if step.subcaption_duration is not None:
-                    parts.append(f"subcaption_duration={step.subcaption_duration!r}")
-                if step.subcaption_offset:
-                    parts.append(f"subcaption_offset={step.subcaption_offset!r}")
+            parts += self.play_options(step)
             text = f"self.play({', '.join(parts)})"
         elif isinstance(step, WaitStep):
             text = f"self.wait({step.duration!r})"
@@ -643,6 +690,33 @@ class _Build:
             method = MOBJECT_STEP_METHODS[step.kind]
             text = f"self.{method}({self.mobject_arguments(step.mobjects)})"
         self.line(text, step=position)
+
+    def play_options(self, step: PlayStep) -> list[str]:
+        parts = []
+        if step.run_time is not None:
+            parts.append(f"run_time={step.run_time!r}")
+        if step.rate_func is not None:
+            parts.append(f"rate_func={step.rate_func}")
+        if step.lag_ratio is not None:
+            parts.append(f"lag_ratio={step.lag_ratio!r}")
+        if step.subcaption is not None:
+            parts.append(f"subcaption={step.subcaption!r}")
+            if step.subcaption_duration is not None:
+                parts.append(f"subcaption_duration={step.subcaption_duration!r}")
+            if step.subcaption_offset:
+                parts.append(f"subcaption_offset={step.subcaption_offset!r}")
+        return parts
+
+    def emit_played_container(
+        self, node_id: str, position: int, step: PlayStep
+    ) -> None:
+        """A played Map or Repeat: one ``self.play`` inside the loop, once per run."""
+        node = self.graph.nodes[node_id]
+        outer = self.open_loop(node, self.descriptor(node), position)
+        self.emit_body(node)
+        parts = [self.result_expression(node)] + self.play_options(step)
+        self.line(f"self.play({', '.join(parts)})", node_id, position)
+        self.close_loop(node_id, outer)
 
     def mobject_arguments(self, ids: list[str]) -> str:
         """Objects for a Scene method; a collection (a Map's output) is spread."""

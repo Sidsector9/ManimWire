@@ -11,7 +11,19 @@ from engine.catalogue.model import PortType
 # Literal port values as stored in the document. The catalogue parameter type
 # decides how a value is written as Manim source.
 # A list of strings is only meaningful on a *args port that takes several strings.
-JsonValue = str | int | float | bool | list[int] | list[int | float] | list[str] | None
+# A matrix (rows of numbers) is the only nested value: Manim takes them for
+# apply_matrix and for the Matrix mobjects.
+JsonValue = (
+    str
+    | int
+    | float
+    | bool
+    | list[int]
+    | list[int | float]
+    | list[str]
+    | list[list[int | float]]
+    | None
+)
 
 # Port name for the object a method node is called on.
 SELF_PORT = "self"

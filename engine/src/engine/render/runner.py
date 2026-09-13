@@ -43,11 +43,16 @@ class PreviewFileWriter(SceneFileWriter):
 
 @dataclass
 class Play:
-    """One play call as Manim compiled it: start time, duration, animations."""
+    """One play call as Manim compiled it: start time, duration, animations.
+
+    ``line`` is the line of generated code that made the call, which is how a
+    caller tells apart the several plays one loop step makes.
+    """
 
     start: float
     duration: float
     animations: list[Any]
+    line: int | None = None
 
 
 class TimingRenderer(CairoRenderer):
@@ -65,9 +70,21 @@ class TimingRenderer(CairoRenderer):
 
     def play(self, scene: Any, *args: Any, **kwargs: Any) -> None:
         scene.compile_animation_data(*args, **kwargs)
-        self.plays.append(Play(self.time, scene.duration, list(scene.animations)))
+        self.plays.append(
+            Play(self.time, scene.duration, list(scene.animations), scene_line())
+        )
         self.time += scene.duration
         self.num_plays += 1
+
+
+def scene_line() -> int | None:
+    """The line of generated code that called into Manim, if the call came from one."""
+    frame: Any = sys._getframe()
+    while frame is not None:
+        if frame.f_code.co_filename == SOURCE_NAME:
+            return int(frame.f_lineno)
+        frame = frame.f_back
+    return None
 
 
 class RenderError(Exception):

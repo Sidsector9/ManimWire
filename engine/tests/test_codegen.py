@@ -16,6 +16,7 @@ from engine.document import (
     BringToFrontStep,
     Document,
     Edge,
+    MethodCall,
     Node,
     PlayStep,
     SceneDocument,
@@ -295,3 +296,94 @@ def test_class_reference_literal_is_an_identifier(catalogue: Catalogue) -> None:
     assert [i.code for i in ManimCodeGenerator().generate(scene, catalogue).issues] == [
         "bad_literal"
     ]
+
+
+def matrix_scene(matrix: list[list[float]]) -> SceneDocument:
+    """A plane sheared by a matrix, with the matrix itself on screen beside it."""
+    return SceneDocument(
+        name="Shear",
+        nodes=[
+            Node(id="p", catalogue="NumberPlane"),
+            Node(
+                id="m",
+                catalogue="IntegerMatrix",
+                values={"matrix": matrix, "include_background_rectangle": True},
+            ),
+            Node(
+                id="a",
+                catalogue="Animate",
+                chain=[MethodCall(method="apply_matrix", values={"matrix": matrix})],
+            ),
+        ],
+        edges=[Edge(source="p", target="a", port="mobject")],
+        steps=[PlayStep(animations=["a"])],
+    )
+
+
+def test_a_matrix_value_becomes_rows_of_numbers(catalogue: Catalogue) -> None:
+    generated = ManimCodeGenerator().generate(matrix_scene([[1, 1], [0, 1]]), catalogue)
+    assert generated.issues == []
+    assert "IntegerMatrix([[1, 1], [0, 1]]" in generated.code
+    # A matrix port is a vector port by type, so it is written as an array.
+    assert "apply_matrix(np.array([[1.0, 1.0], [0.0, 1.0]]))" in generated.code, (
+        generated.code
+    )
+
+
+def test_rows_of_different_lengths_are_refused(catalogue: Catalogue) -> None:
+    generated = ManimCodeGenerator().generate(matrix_scene([[1, 1], [0]]), catalogue)
+    assert generated.code == ""
+    assert [i.message for i in generated.issues] == [
+        "apply_matrix.matrix: every row of a matrix needs the same number of values"
+    ]
+
+
+def test_a_point_is_still_three_numbers(catalogue: Catalogue) -> None:
+    """The matrix rule only relaxes matrix ports; a direction stays a direction."""
+    rows: list[list[int | float]] = [[1, 1]]
+    scene = SceneDocument(
+        name="Shift",
+        nodes=[
+            Node(id="c", catalogue="Circle"),
+            Node(id="s", catalogue="Mobject.shift", values={"vectors": rows}),
+        ],
+        edges=[Edge(source="c", target="s", port="self")],
+        steps=[],
+    )
+    issues = ManimCodeGenerator().generate(scene, catalogue).issues
+    assert [i.code for i in issues] == ["bad_literal"]
+
+
+def test_a_point_can_be_typed_where_a_mobject_would_go(catalogue: Catalogue) -> None:
+    """Manim takes a point for Line's ends and for move_to, so the app does too."""
+    scene = SceneDocument(
+        name="Points",
+        nodes=[
+            Node(
+                id="l",
+                catalogue="Line",
+                values={"start": [-6, 0, 0], "end": [6, 0, 0]},
+            ),
+            Node(id="c", catalogue="Circle"),
+            Node(
+                id="m", catalogue="Mobject.move_to", values={"point_or_mobject": "UP"}
+            ),
+            Node(id="t", catalogue="Transform", values={"target_mobject": [1, 0, 0]}),
+        ],
+        edges=[Edge(source="c", target="m", port="self")],
+        steps=[],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    # A target mobject is not a point: that one still has to be connected.
+    assert [i.message for i in generated.issues] == [
+        "mobject values must be connected, not typed",
+        "Transform needs mobject",
+    ]
+    scene.nodes = scene.nodes[:3]
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert (
+        "Line(start=np.array([-6.0, 0.0, 0.0]), end=np.array([6.0, 0.0, 0.0]))"
+        in generated.code
+    )
+    assert "circle.move_to(UP)" in generated.code

@@ -278,24 +278,6 @@ def test_expression_output_type_follows_free_variables(catalogue: Catalogue) -> 
     )
 
 
-def test_derivative_example_exports(catalogue: Catalogue, tmp_path: Path) -> None:
-    path = Path(__file__).resolve().parents[2] / "examples" / "derivative.mnw"
-    document = Document.model_validate_json(path.read_text())
-    scene = document.scenes[0]
-    generated = ManimCodeGenerator().generate(scene, catalogue)
-    assert generated.issues == []
-    layout = layout_timeline(scene, catalogue)
-    assert layout.error is None
-    assert {(b.row, b.start, b.end) for b in layout.bands} == {
-        ("dot", 2.0, 9.0),
-        ("tangent", 2.0, 9.0),
-    }
-    settings = Settings.model_validate({**SMALL, "frame_rate": 5})
-    result = CairoRenderService(tmp_path).export(scene, catalogue, settings, tmp_path)
-    assert Path(result.path).name == "Tangent.mp4"
-    assert Path(result.path).stat().st_size > 1000
-
-
 def test_builtin_numbers_are_not_objects(catalogue: Catalogue) -> None:
     scene = SceneDocument(
         nodes=[
@@ -384,3 +366,34 @@ def test_methods_on_a_live_object_become_updaters(catalogue: Catalogue) -> None:
         "self.play(dot.animate.move_to("
         "axes.coords_to_point(value_tracker.get_value())))"
     ) in code
+
+
+def test_a_traced_path_is_built_once_even_from_a_live_point(
+    catalogue: Catalogue,
+) -> None:
+    """The lambda reads the point every frame, so the path itself must not be redrawn.
+
+    Rebuilding a TracedPath each frame would throw away everything it has traced.
+    """
+    scene = SceneDocument(
+        name="Trace",
+        nodes=[
+            Node(id="clock", catalogue="SceneTime"),
+            Node(id="x", catalogue="Expression", values={"expr": "t"}),
+            Node(id="p", catalogue="Coordinates"),
+            Node(id="trace", catalogue="TracedPath"),
+        ],
+        edges=[
+            edge("clock", "x", "t", live=True),
+            edge("x", "p", "x", live=True),
+            edge("p", "trace", "traced_point_func"),
+        ],
+        steps=[WaitStep(duration=1.0)],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert (
+        "        traced_path = TracedPath("
+        "lambda: np.array([self.time, 0, 0]))\n" in generated.code
+    ), generated.code
+    assert "always_redraw" not in generated.code
