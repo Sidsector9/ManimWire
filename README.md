@@ -2,8 +2,6 @@
   <img width="600" height="200" alt="Image" src="https://github.com/user-attachments/assets/b990c7d3-4b8a-40df-b57e-095881d4cad9" />
 </p>
 
-<h1 align="center">ManimWire</h1>
-
 <p align="center">
   A desktop visual programming environment for Manim Community Edition.<br>
   Build mathematical animations by connecting nodes.
@@ -56,6 +54,8 @@ pnpm install
 pnpm dev
 ```
 
+<img width="1728" height="1084" alt="Image" src="https://github.com/user-attachments/assets/91bb9ddb-4397-4dda-8b8c-8bf3b8de0091" />
+
 The application starts the Python engine itself from the `.venv` that `uv sync` created.
 The status bar at the bottom of the window shows the engine state, the Manim version, the
 Python version and whether LaTeX was found.
@@ -64,8 +64,11 @@ Open any file from `examples/` to see a finished project.
 
 For LaTeX on macOS, `brew install --cask mactex-no-gui` installs the full distribution.
 
+### Node editor
+
+<img width="100%" height="505" alt="Image" src="https://github.com/user-attachments/assets/40c8ca01-6b0b-4916-8e6b-2a74e5e7e5b4" />
+
 ## Licensing
 
 Manim Community Edition is included as a git submodule and keeps its own licence, which
-is in `manim/LICENSE`. This repository does not yet declare a licence of its own, so all
-rights are reserved until one is added.
+is in `manim/LICENSE`.
