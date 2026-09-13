@@ -6,7 +6,8 @@ import { Graph } from './components/Graph'
 import { Icon } from './components/Icon'
 import { Inspector } from './components/Inspector'
 import { Library } from './components/Library'
-import { presetLabel, SettingsDialog } from './components/SettingsDialog'
+import { SettingsDialog } from './components/SettingsDialog'
+import { QualityChip, SceneChip } from './components/ToolbarChips'
 import { Splitter } from './components/Splitter'
 import { StatusBar } from './components/StatusBar'
 import { Timeline } from './components/Timeline'
@@ -25,8 +26,6 @@ export function App() {
   const loadCatalogue = useCatalogueStore((s) => s.load)
   const filePath = useDocumentStore((s) => s.filePath)
   const dirty = useDocumentStore((s) => s.dirty)
-  const sceneName = useDocumentStore((s) => s.doc.scenes[s.sceneIndex]?.name ?? '')
-  const settings = useDocumentStore((s) => s.doc.settings)
   const editingGroup = useDocumentStore((s) => s.editingGroup)
   const editGroup = useDocumentStore((s) => s.editGroup)
   const removeGroup = useDocumentStore((s) => s.removeGroup)
@@ -87,13 +86,8 @@ export function App() {
           {dirty && <span className="dirty" title="Unsaved changes" />}
         </span>
         <span className="vdiv" />
-        <button className="chip" title="Scene type and settings" onClick={() => setSettingsOpen(true)}>
-          {sceneName}
-          <span className="caret">▾</span>
-        </button>
-        <button className="chip mono" title="Quality preset" onClick={() => setSettingsOpen(true)}>
-          {presetLabel(settings)}
-        </button>
+        <SceneChip />
+        <QualityChip />
         {editingGroup && (
           <span className="breadcrumb mono">
             <span>›</span>

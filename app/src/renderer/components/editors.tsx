@@ -10,7 +10,7 @@ import { NumberInput } from './inputs'
 const POPOVER_WIDTH = 264
 
 /** A popover under its trigger, rendered at the document root so panels do not clip it. */
-function Popover({ open, anchor, onClose, children }: { open: boolean; anchor: React.RefObject<HTMLElement | null>; onClose(): void; children: React.ReactNode }) {
+export function Popover({ open, anchor, onClose, children }: { open: boolean; anchor: React.RefObject<HTMLElement | null>; onClose(): void; children: React.ReactNode }) {
   const box = useRef<HTMLDivElement>(null)
   const [position, setPosition] = useState({ top: 0, left: 0 })
   useLayoutEffect(() => {
