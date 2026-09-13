@@ -44,13 +44,17 @@ interface PreviewStore {
   pass: number
   /** Code and width whose frames are all in the engine cache; playback then reads images only. */
   prerendered: string | null
+  /** Frames the engine has finished during a first pass, waiting for their moment. */
+  queued: FrameResult[]
   setPreviewTime(time: number | null): void
   setPreviewWidth(width: number): void
   setPlaying(playing: boolean): void
   setLoop(loop: boolean): void
   sync(doc: Doc, sceneIndex: number, revision: number): Promise<void>
-  /** Render every frame between two times into the cache; the store shows them as they arrive. */
+  /** Render every frame between two times into the cache, queueing them for playback. */
   sequence(doc: Doc, sceneIndex: number, start: number, end: number): Promise<boolean>
+  /** Show the newest queued frame due by `time`, dropping the ones it passed. */
+  showQueued(time: number): void
   /** Show the frame at a time from the cache, dropping the request when one is in flight. */
   showFrame(doc: Doc, sceneIndex: number, time: number): Promise<void>
 }
@@ -80,9 +84,10 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   synced: null,
   pass: 0,
   prerendered: null,
+  queued: [],
   setPreviewTime: (previewTime) => set({ previewTime }),
   setPreviewWidth: (previewWidth) => set({ previewWidth }),
-  setPlaying: (playing) => set({ playing }),
+  setPlaying: (playing) => set({ playing, ...(playing ? {} : { queued: [] }) }),
   setLoop: (loop) => set({ loop }),
 
   /**
@@ -113,8 +118,10 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
     const off = window.engine.onNotification((method, params) => {
       if (method !== 'render.frame_ready') return
       const frame = params as FrameResult & { scene: string }
-      // After Stop the engine still finishes the step; those frames must not move the playhead.
-      if (frame.scene === scene && get().playing && get().sequenceRun === run) set({ frame, previewTime: frame.time })
+      // Rendering usually outruns the scene, so frames wait their turn rather than
+      // being shown the moment they arrive. After Stop the engine still finishes the
+      // step; those frames must not be queued at all.
+      if (frame.scene === scene && get().playing && get().sequenceRun === run) set({ queued: [...get().queued, frame] })
     })
     try {
       await call('render.sequence', { document: doc, scene, start, end, width: previewWidth })
@@ -130,6 +137,13 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
         if (next) void get().sync(next.doc, next.sceneIndex, next.revision)
       }
     }
+  },
+
+  showQueued: (time) => {
+    const queued = get().queued
+    const ready = queued.filter((f) => f.time <= time + 1e-6)
+    if (ready.length === 0) return
+    set({ frame: ready[ready.length - 1]!, queued: queued.slice(ready.length) })
   },
 
   showFrame: async (doc, sceneIndex, time) => {

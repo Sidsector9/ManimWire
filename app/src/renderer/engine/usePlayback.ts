@@ -3,10 +3,12 @@ import { useDocumentStore } from '../store/document'
 import { cacheKey, useEngineResults } from '../store/preview'
 
 /**
- * Playback. The first pass asks the engine to render each play step's frames into
- * its cache in one run (render.sequence), showing them as they arrive at the
- * engine's pace. Once every frame is cached, playback runs in real time and only
- * reads images. Any change to the scene or the preview size starts a new first pass.
+ * Playback. Both passes run on the same wall clock, so the scene plays at its own
+ * speed either way. The first pass asks the engine to render each play step's frames
+ * into its cache (render.sequence) and shows each as its moment arrives; rendering
+ * usually runs ahead, and where it falls behind the newest finished frame is shown.
+ * Later passes only read images. A change to the scene or preview size starts a new
+ * first pass.
  */
 export function usePlayback(): void {
   const playing = useEngineResults((s) => s.playing)
@@ -38,38 +40,54 @@ export function usePlayback(): void {
       }
     }
 
-    const playCached = (): void => {
+    /** Advances the playhead in real time, calling `show` with the scene time it reaches. */
+    const clock = (show: (t: number) => void, done: () => void): (() => void) => {
       const started = performance.now()
+      let stopped = false
       const tick = (): void => {
-        if (cancelled) return
+        if (cancelled || stopped) return
         const t = from + (performance.now() - started) / 1000
         if (t >= total) {
-          finish()
+          done()
           return
         }
-        void useEngineResults.getState().showFrame(doc, sceneIndex, t)
+        useEngineResults.getState().setPreviewTime(t)
+        show(t)
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)
+      return () => {
+        stopped = true
+      }
+    }
+
+    const playCached = (): void => {
+      clock((t) => void useEngineResults.getState().showFrame(doc, sceneIndex, t), finish)
     }
 
     const playSequence = async (): Promise<void> => {
       const store = useEngineResults.getState()
       const steps = layout.steps.filter((s) => s.end > s.start + 1e-9 && s.end > from + 1e-9)
+      const stopClock = clock(
+        (t) => useEngineResults.getState().showQueued(t),
+        finish
+      )
       for (const step of steps) {
-        if (cancelled) return
+        if (cancelled) return stopClock()
         const ok = await store.sequence(doc, sceneIndex, Math.max(step.start, from), step.end)
         if (!ok) {
+          stopClock()
           useEngineResults.getState().setPlaying(false)
           return
         }
       }
-      if (cancelled) return
+      if (cancelled) return stopClock()
       // Only a pass from the start covers every frame; a pass from a scrubbed time does not.
       if (from <= 1e-6 && cacheKey(useEngineResults.getState().code, useEngineResults.getState().previewWidth) === key) {
         useEngineResults.setState({ prerendered: key })
       }
-      finish()
+      // The clock ends the pass, whether it got to the end of the scene before the
+      // rendering did or after.
     }
 
     if (results.prerendered === key) playCached()

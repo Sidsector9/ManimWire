@@ -70,3 +70,34 @@ test('play renders the scene once, then replays it in real time from the cache',
     await app.close()
   }
 })
+
+test('the first play runs at the scene speed, not at the speed frames are rendered', async () => {
+  const app = await electron.launch({
+    args: [path.resolve('.')],
+    env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')), MNW_OPEN: path.resolve('../examples/derivative.mnw') }
+  })
+  const window = await app.firstWindow()
+  try {
+    await expect(window.locator('.status')).toContainText('engine ready')
+    await expect(window.locator('.frame img')).toBeVisible()
+    const total = Number(/\/ ([\d.]+) s/.exec(await window.locator('.timeline-head').innerText())![1])
+    expect(total).toBeGreaterThan(4)
+
+    // The first pass renders as it goes and the second reads the cache, so they take
+    // different work but must take the same time.
+    const play = window.locator('.timeline-head .icon[title="Play"]')
+    const timePass = async (): Promise<number> => {
+      const began = Date.now()
+      await play.click()
+      await expect(play).toBeVisible({ timeout: 120000 })
+      return (Date.now() - began) / 1000
+    }
+    for (const pass of [1, 2]) {
+      const took = await timePass()
+      expect(took, `pass ${pass} took ${took.toFixed(1)} s for a ${total} s scene`).toBeGreaterThan(total * 0.8)
+      expect(took, `pass ${pass} took ${took.toFixed(1)} s for a ${total} s scene`).toBeLessThan(total * 1.6)
+    }
+  } finally {
+    await app.close()
+  }
+})
