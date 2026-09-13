@@ -1,0 +1,760 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "CoordinateSystemExample",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "decimals",
+          "catalogue": "Config",
+          "values": {
+            "num_decimal_places": 1
+          },
+          "label": "label decimals",
+          "position": [
+            40,
+            380
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [
+            {
+              "name": "num_decimal_places",
+              "type": "number"
+            }
+          ],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "axis_style",
+          "catalogue": "Config",
+          "values": {
+            "stroke_color": "GREY_A",
+            "stroke_width": 2,
+            "font_size": 20
+          },
+          "label": "axis style",
+          "position": [
+            40,
+            120
+          ],
+          "collapsed": false,
+          "chain": [],
+          "config": [
+            {
+              "name": "stroke_color",
+              "type": "color"
+            },
+            {
+              "name": "stroke_width",
+              "type": "number"
+            },
+            {
+              "name": "font_size",
+              "type": "number"
+            },
+            {
+              "name": "decimal_number_config",
+              "type": "config"
+            }
+          ],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "y_style",
+          "catalogue": "Config",
+          "values": {
+            "include_tip": false
+          },
+          "label": "y axis style",
+          "position": [
+            40,
+            500
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [
+            {
+              "name": "include_tip",
+              "type": "boolean"
+            }
+          ],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "axes",
+          "catalogue": "Axes",
+          "values": {
+            "x_range": [
+              -1,
+              10
+            ],
+            "y_range": [
+              -2,
+              2,
+              0.5
+            ],
+            "x_length": 10,
+            "y_length": 6
+          },
+          "label": "axes",
+          "position": [
+            340,
+            260
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "labels",
+          "catalogue": "CoordinateSystem.add_coordinates",
+          "values": {},
+          "label": "coordinate labels",
+          "position": [
+            580,
+            260
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "p00",
+          "catalogue": "CoordinateSystem.c2p",
+          "values": {
+            "coords": [
+              0,
+              0,
+              0
+            ]
+          },
+          "label": "(0, 0)",
+          "position": [
+            820,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "dot",
+          "catalogue": "Dot",
+          "values": {
+            "fill_color": "RED",
+            "fill_opacity": 1
+          },
+          "label": "dot",
+          "position": [
+            1060,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "fade_in",
+          "catalogue": "FadeIn",
+          "values": {
+            "scale": 0.5
+          },
+          "label": null,
+          "position": [
+            1764,
+            64
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "p32",
+          "catalogue": "CoordinateSystem.c2p",
+          "values": {
+            "coords": [
+              3,
+              2,
+              0
+            ]
+          },
+          "label": "(3, 2)",
+          "position": [
+            1154,
+            671
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "move32",
+          "catalogue": "Animate",
+          "values": {},
+          "label": null,
+          "position": [
+            1997,
+            644
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "move_to",
+              "values": {}
+            }
+          ],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "p505",
+          "catalogue": "CoordinateSystem.c2p",
+          "values": {
+            "coords": [
+              5,
+              0.5,
+              0
+            ]
+          },
+          "label": "(5, 0.5)",
+          "position": [
+            1154,
+            791
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "move505",
+          "catalogue": "Animate",
+          "values": {},
+          "label": null,
+          "position": [
+            1997,
+            764
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "move_to",
+              "values": {}
+            }
+          ],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "p3m2",
+          "catalogue": "CoordinateSystem.c2p",
+          "values": {
+            "coords": [
+              3,
+              -2,
+              0
+            ]
+          },
+          "label": "(3, -2)",
+          "position": [
+            1154,
+            911
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "move3m2",
+          "catalogue": "Animate",
+          "values": {},
+          "label": null,
+          "position": [
+            1997,
+            884
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "move_to",
+              "values": {}
+            }
+          ],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "p11",
+          "catalogue": "CoordinateSystem.c2p",
+          "values": {
+            "coords": [
+              1,
+              1,
+              0
+            ]
+          },
+          "label": "(1, 1)",
+          "position": [
+            1154,
+            1031
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "move11",
+          "catalogue": "Animate",
+          "values": {},
+          "label": null,
+          "position": [
+            1997,
+            1004
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "move_to",
+              "values": {}
+            }
+          ],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "where",
+          "catalogue": "Mobject.get_center",
+          "values": {},
+          "label": "where the dot is",
+          "position": [
+            1307,
+            191
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "lines",
+          "catalogue": "CoordinateSystem.get_lines_to_point",
+          "values": {},
+          "label": "lines to the dot",
+          "position": [
+            1823,
+            235
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "pair",
+          "catalogue": "VGroup",
+          "values": {},
+          "label": "axes and dot",
+          "position": [
+            1997,
+            1124
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "shrink",
+          "catalogue": "Animate",
+          "values": {
+            "run_time": 2
+          },
+          "label": "to the corner",
+          "position": [
+            2319,
+            380
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "scale",
+              "values": {
+                "scale_factor": 0.75
+              }
+            },
+            {
+              "method": "to_corner",
+              "values": {
+                "corner": "UL"
+              }
+            }
+          ],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "fade_out",
+          "catalogue": "FadeOut",
+          "values": {},
+          "label": null,
+          "position": [
+            2322,
+            594
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "decimals",
+          "target": "axis_style",
+          "port": "decimal_number_config",
+          "live": false
+        },
+        {
+          "source": "axis_style",
+          "target": "axes",
+          "port": "axis_config",
+          "live": false
+        },
+        {
+          "source": "y_style",
+          "target": "axes",
+          "port": "y_axis_config",
+          "live": false
+        },
+        {
+          "source": "axes",
+          "target": "labels",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "labels",
+          "target": "p00",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "p00",
+          "target": "dot",
+          "port": "point",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "fade_in",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "labels",
+          "target": "p32",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "move32",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "p32",
+          "target": "move32",
+          "port": "1.move_to.point_or_mobject",
+          "live": false
+        },
+        {
+          "source": "labels",
+          "target": "p505",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "move505",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "p505",
+          "target": "move505",
+          "port": "1.move_to.point_or_mobject",
+          "live": false
+        },
+        {
+          "source": "labels",
+          "target": "p3m2",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "move3m2",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "p3m2",
+          "target": "move3m2",
+          "port": "1.move_to.point_or_mobject",
+          "live": false
+        },
+        {
+          "source": "labels",
+          "target": "p11",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "move11",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "p11",
+          "target": "move11",
+          "port": "1.move_to.point_or_mobject",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "where",
+          "port": "self",
+          "live": true
+        },
+        {
+          "source": "labels",
+          "target": "lines",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "where",
+          "target": "lines",
+          "port": "point",
+          "live": true
+        },
+        {
+          "source": "labels",
+          "target": "pair",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "pair",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "pair",
+          "target": "shrink",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "labels",
+          "target": "fade_out",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "fade_out",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "lines",
+          "target": "fade_out",
+          "port": "mobjects",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "labels"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "fade_in"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "move32"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "move505"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "add",
+          "mobjects": [
+            "lines"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "move3m2"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "move11"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "shrink"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "fade_out"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

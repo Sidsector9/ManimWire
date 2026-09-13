@@ -1,0 +1,241 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "TracedPathExample",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "circ",
+          "catalogue": "Circle",
+          "values": {
+            "color": "RED"
+          },
+          "label": "circ",
+          "position": [
+            40,
+            40
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "circ_shift",
+          "catalogue": "Mobject.shift",
+          "values": {
+            "vectors": [
+              -4,
+              0,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            280,
+            40
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "start",
+          "catalogue": "Mobject.get_start",
+          "values": {},
+          "label": "start of circle",
+          "position": [
+            522.2068674800838,
+            -76.96397644444748
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "dot",
+          "catalogue": "Dot",
+          "values": {
+            "color": "RED"
+          },
+          "label": "dot",
+          "position": [
+            38.896566259958036,
+            240.68885570230768
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "dot_move",
+          "catalogue": "Mobject.move_to",
+          "values": {},
+          "label": null,
+          "position": [
+            916.1608853642526,
+            209.06487953827724
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "rolling",
+          "catalogue": "VGroup",
+          "values": {},
+          "label": "rolling circle",
+          "position": [
+            1183.6964086033724,
+            56.24199723872511
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "trace",
+          "catalogue": "TracedPath",
+          "values": {},
+          "label": "trace",
+          "position": [
+            842.7575305031468,
+            -80.27427766457336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "angle",
+          "catalogue": "Number",
+          "values": {
+            "value": -0.3
+          },
+          "label": "angle per frame",
+          "position": [
+            1102.5010754921273,
+            427.3132834796799
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "spin",
+          "catalogue": "Mobject.rotate",
+          "values": {},
+          "label": null,
+          "position": [
+            1458.169044591602,
+            218.9714260976219
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "roll",
+          "catalogue": "Animate",
+          "values": {
+            "run_time": 4,
+            "rate_func": "linear"
+          },
+          "label": "roll right",
+          "position": [
+            1708.800889414614,
+            179.36080459885034
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "shift",
+              "values": {
+                "vectors": [
+                  8,
+                  0,
+                  0
+                ]
+              }
+            }
+          ],
+          "parent": null
+        }
+      ],
+      "edges": [
+        {
+          "source": "circ",
+          "target": "circ_shift",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "circ_shift",
+          "target": "start",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "dot",
+          "target": "dot_move",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "start",
+          "target": "dot_move",
+          "port": "point_or_mobject",
+          "live": false
+        },
+        {
+          "source": "circ_shift",
+          "target": "rolling",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "dot_move",
+          "target": "rolling",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "start",
+          "target": "trace",
+          "port": "traced_point_func",
+          "live": false
+        },
+        {
+          "source": "rolling",
+          "target": "spin",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "angle",
+          "target": "spin",
+          "port": "angle",
+          "live": true
+        },
+        {
+          "source": "spin",
+          "target": "roll",
+          "port": "mobject",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "trace",
+            "spin"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "roll"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

@@ -1,0 +1,780 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "OpeningManimExample",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "intro",
+          "catalogue": "Text",
+          "values": {
+            "text": "The original motivation for manim was to\nbetter illustrate mathematical functions\nas transformations."
+          },
+          "label": "intro words",
+          "position": [
+            40,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "intro_top",
+          "catalogue": "Mobject.to_edge",
+          "values": {
+            "edge": "UP"
+          },
+          "label": "to the top",
+          "position": [
+            400,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "write_intro",
+          "catalogue": "Write",
+          "values": {},
+          "label": null,
+          "position": [
+            660,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "grid",
+          "catalogue": "NumberPlane",
+          "values": {
+            "x_range": [
+              -10,
+              10
+            ],
+            "y_range": [
+              -5,
+              5
+            ]
+          },
+          "label": "grid",
+          "position": [
+            40,
+            240
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "w1",
+          "catalogue": "Text",
+          "values": {
+            "text": "This is what the matrix"
+          },
+          "label": null,
+          "position": [
+            50,
+            491
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "mtx",
+          "catalogue": "IntegerMatrix",
+          "values": {
+            "matrix": [
+              [
+                1,
+                1
+              ],
+              [
+                0,
+                1
+              ]
+            ],
+            "include_background_rectangle": true
+          },
+          "label": "the matrix",
+          "position": [
+            50,
+            571
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "w2",
+          "catalogue": "Text",
+          "values": {
+            "text": "looks like"
+          },
+          "label": null,
+          "position": [
+            48,
+            676
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "words",
+          "catalogue": "VGroup",
+          "values": {},
+          "label": "matrix words",
+          "position": [
+            649,
+            561
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "in_a_row",
+          "catalogue": "Mobject.arrange",
+          "values": {
+            "direction": "RIGHT"
+          },
+          "label": "in a row",
+          "position": [
+            869,
+            561
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "words_top",
+          "catalogue": "Mobject.to_edge",
+          "values": {
+            "edge": "UP"
+          },
+          "label": "to the top",
+          "position": [
+            1089,
+            561
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "outline",
+          "catalogue": "VMobject.set_stroke",
+          "values": {
+            "color": "BLACK",
+            "width": 10,
+            "background": true
+          },
+          "label": "readable over the grid",
+          "position": [
+            1309,
+            561
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "draw_grid",
+          "catalogue": "Create",
+          "values": {},
+          "label": "draw the grid",
+          "position": [
+            539,
+            414
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "swap_words",
+          "catalogue": "FadeTransform",
+          "values": {},
+          "label": "words to matrix words",
+          "position": [
+            1621,
+            194
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "turn",
+          "catalogue": "Animate",
+          "values": {
+            "run_time": 3
+          },
+          "label": "apply the matrix",
+          "position": [
+            812,
+            313
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "apply_matrix",
+              "values": {
+                "matrix": [
+                  [
+                    1,
+                    1
+                  ],
+                  [
+                    0,
+                    1
+                  ]
+                ]
+              }
+            }
+          ],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "c_grid",
+          "catalogue": "ComplexPlane",
+          "values": {},
+          "label": "complex plane",
+          "position": [
+            140,
+            839
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "moving",
+          "catalogue": "Mobject.copy",
+          "values": {},
+          "label": "a copy to bend",
+          "position": [
+            438,
+            940
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "ready",
+          "catalogue": "NumberPlane.prepare_for_nonlinear_transform",
+          "values": {},
+          "label": "ready to bend",
+          "position": [
+            698,
+            940
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "c_thin",
+          "catalogue": "VMobject.set_stroke",
+          "values": {
+            "color": "BLUE_E",
+            "width": 1
+          },
+          "label": "thin blue lines",
+          "position": [
+            698,
+            800
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "c_labels",
+          "catalogue": "CoordinateSystem.add_coordinates",
+          "values": {},
+          "label": "coordinate labels",
+          "position": [
+            938,
+            800
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "words2",
+          "catalogue": "Tex",
+          "values": {
+            "tex_strings": "Or thinking of the plane as $\\mathbb{C}$,\\\\ this is the map $z \\rightarrow z^2$"
+          },
+          "label": "complex map words",
+          "position": [
+            21,
+            1312
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "words2_corner",
+          "catalogue": "Mobject.to_corner",
+          "values": {
+            "corner": "UR"
+          },
+          "label": "to the corner",
+          "position": [
+            381,
+            1312
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "words2_outline",
+          "catalogue": "VMobject.set_stroke",
+          "values": {
+            "color": "BLACK",
+            "width": 5,
+            "background": true
+          },
+          "label": "readable over the grid",
+          "position": [
+            641,
+            1312
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "hide_grid",
+          "catalogue": "FadeOut",
+          "values": {},
+          "label": "the old grid goes",
+          "position": [
+            1051,
+            230
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "write_c",
+          "catalogue": "Write",
+          "values": {},
+          "label": "write the plane",
+          "position": [
+            1178,
+            800
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "show_moving",
+          "catalogue": "FadeIn",
+          "values": {},
+          "label": "the copy appears",
+          "position": [
+            1178,
+            940
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "swap_words2",
+          "catalogue": "FadeTransform",
+          "values": {},
+          "label": "matrix words to map words",
+          "position": [
+            1778,
+            1264
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "square",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "z^2"
+          },
+          "label": "z squared",
+          "position": [
+            832,
+            1139
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "bend",
+          "catalogue": "Animate",
+          "values": {
+            "run_time": 6
+          },
+          "label": "bend the copy",
+          "position": [
+            1193,
+            1058
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "apply_complex_function",
+              "values": {}
+            }
+          ],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "intro",
+          "target": "intro_top",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "intro_top",
+          "target": "write_intro",
+          "port": "vmobject",
+          "live": false
+        },
+        {
+          "source": "w1",
+          "target": "words",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "mtx",
+          "target": "words",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "w2",
+          "target": "words",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "words",
+          "target": "in_a_row",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "in_a_row",
+          "target": "words_top",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "words_top",
+          "target": "outline",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "grid",
+          "target": "draw_grid",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "intro_top",
+          "target": "swap_words",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "outline",
+          "target": "swap_words",
+          "port": "target_mobject",
+          "live": false
+        },
+        {
+          "source": "grid",
+          "target": "turn",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "c_grid",
+          "target": "moving",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "moving",
+          "target": "ready",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "c_grid",
+          "target": "c_thin",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "c_thin",
+          "target": "c_labels",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "words2",
+          "target": "words2_corner",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "words2_corner",
+          "target": "words2_outline",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "grid",
+          "target": "hide_grid",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "c_labels",
+          "target": "write_c",
+          "port": "vmobject",
+          "live": false
+        },
+        {
+          "source": "ready",
+          "target": "show_moving",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "outline",
+          "target": "swap_words2",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "words2_outline",
+          "target": "swap_words2",
+          "port": "target_mobject",
+          "live": false
+        },
+        {
+          "source": "ready",
+          "target": "bend",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "square",
+          "target": "bend",
+          "port": "1.apply_complex_function.function",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "play",
+          "animations": [
+            "write_intro"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 2
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "draw_grid",
+            "swap_words"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "turn"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "hide_grid",
+            "write_c",
+            "show_moving",
+            "swap_words2"
+          ],
+          "run_time": 3,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "bend"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 2
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

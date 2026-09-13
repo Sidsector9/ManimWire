@@ -1,0 +1,668 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "SineCurveUnitCircle",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "x_axis",
+          "catalogue": "Line",
+          "values": {
+            "start": [
+              -6,
+              0,
+              0
+            ],
+            "end": [
+              6,
+              0,
+              0
+            ]
+          },
+          "label": "x axis",
+          "position": [
+            60,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "y_axis",
+          "catalogue": "Line",
+          "values": {
+            "start": [
+              -4,
+              -2,
+              0
+            ],
+            "end": [
+              -4,
+              2,
+              0
+            ]
+          },
+          "label": "y axis",
+          "position": [
+            60,
+            180
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "label0",
+          "catalogue": "MathTex",
+          "values": {
+            "tex_strings": "\\pi"
+          },
+          "label": "\\pi",
+          "position": [
+            60,
+            320
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "place0",
+          "catalogue": "Mobject.next_to",
+          "values": {
+            "mobject_or_point": [
+              -1,
+              0,
+              0
+            ],
+            "direction": "DOWN"
+          },
+          "label": "below -1",
+          "position": [
+            320,
+            320
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "label1",
+          "catalogue": "MathTex",
+          "values": {
+            "tex_strings": "2 \\pi"
+          },
+          "label": "2 \\pi",
+          "position": [
+            60,
+            420
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "place1",
+          "catalogue": "Mobject.next_to",
+          "values": {
+            "mobject_or_point": [
+              1,
+              0,
+              0
+            ],
+            "direction": "DOWN"
+          },
+          "label": "below 1",
+          "position": [
+            320,
+            420
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "label2",
+          "catalogue": "MathTex",
+          "values": {
+            "tex_strings": "3 \\pi"
+          },
+          "label": "3 \\pi",
+          "position": [
+            60,
+            520
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "place2",
+          "catalogue": "Mobject.next_to",
+          "values": {
+            "mobject_or_point": [
+              3,
+              0,
+              0
+            ],
+            "direction": "DOWN"
+          },
+          "label": "below 3",
+          "position": [
+            320,
+            520
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "label3",
+          "catalogue": "MathTex",
+          "values": {
+            "tex_strings": "4 \\pi"
+          },
+          "label": "4 \\pi",
+          "position": [
+            60,
+            620
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "place3",
+          "catalogue": "Mobject.next_to",
+          "values": {
+            "mobject_or_point": [
+              5,
+              0,
+              0
+            ],
+            "direction": "DOWN"
+          },
+          "label": "below 5",
+          "position": [
+            320,
+            620
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "circle",
+          "catalogue": "Circle",
+          "values": {
+            "radius": 1
+          },
+          "label": "orbit",
+          "position": [
+            60,
+            760
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "orbit",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              -4,
+              0,
+              0
+            ]
+          },
+          "label": "around the origin",
+          "position": [
+            320,
+            760
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "clock",
+          "catalogue": "SceneTime",
+          "values": {},
+          "label": "seconds",
+          "position": [
+            60,
+            900
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "turns",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "0.25 * t"
+          },
+          "label": "turns so far",
+          "position": [
+            320,
+            900
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "alpha",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "s % 1"
+          },
+          "label": "where on the circle",
+          "position": [
+            625.8193428864541,
+            870.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "on_circle",
+          "catalogue": "VMobject.point_from_proportion",
+          "values": {},
+          "label": "the point on the orbit",
+          "position": [
+            865.8193428864541,
+            730.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "dot",
+          "catalogue": "Dot",
+          "values": {
+            "radius": 0.08,
+            "color": "YELLOW"
+          },
+          "label": "dot",
+          "position": [
+            803.152933987228,
+            1010.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "follow",
+          "catalogue": "Mobject.move_to",
+          "values": {},
+          "label": "keep it on the orbit",
+          "position": [
+            1105.8193428864543,
+            1010.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "where",
+          "catalogue": "Mobject.get_center",
+          "values": {},
+          "label": "where the dot is",
+          "position": [
+            1365.8193428864543,
+            1010.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "x_of",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "-3 + 4 * s"
+          },
+          "label": "x moves right",
+          "position": [
+            625.8193428864541,
+            1150.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "y_of",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "sin(2 * pi * s)"
+          },
+          "label": "y follows the dot",
+          "position": [
+            625.8193428864541,
+            1270.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "curve_point",
+          "catalogue": "Coordinates",
+          "values": {
+            "z": 0
+          },
+          "label": "point on the curve",
+          "position": [
+            865.8193428864541,
+            1210.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "radius_line",
+          "catalogue": "Line",
+          "values": {
+            "start": [
+              -4,
+              0,
+              0
+            ],
+            "color": "BLUE"
+          },
+          "label": "origin to the dot",
+          "position": [
+            1625.8193428864543,
+            870.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "link_line",
+          "catalogue": "Line",
+          "values": {
+            "color": "YELLOW_A",
+            "stroke_width": 2
+          },
+          "label": "dot to the curve",
+          "position": [
+            1625.8193428864543,
+            1070.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "sine",
+          "catalogue": "TracedPath",
+          "values": {
+            "stroke_color": "YELLOW_D"
+          },
+          "label": "the sine curve",
+          "position": [
+            1625.8193428864543,
+            1270.8875983386838
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "label0",
+          "target": "place0",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "label1",
+          "target": "place1",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "label2",
+          "target": "place2",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "label3",
+          "target": "place3",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "circle",
+          "target": "orbit",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "clock",
+          "target": "turns",
+          "port": "t",
+          "live": true
+        },
+        {
+          "source": "turns",
+          "target": "alpha",
+          "port": "s",
+          "live": true
+        },
+        {
+          "source": "orbit",
+          "target": "on_circle",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "alpha",
+          "target": "on_circle",
+          "port": "alpha",
+          "live": true
+        },
+        {
+          "source": "dot",
+          "target": "follow",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "on_circle",
+          "target": "follow",
+          "port": "point_or_mobject",
+          "live": true
+        },
+        {
+          "source": "follow",
+          "target": "where",
+          "port": "self",
+          "live": true
+        },
+        {
+          "source": "turns",
+          "target": "x_of",
+          "port": "s",
+          "live": true
+        },
+        {
+          "source": "turns",
+          "target": "y_of",
+          "port": "s",
+          "live": true
+        },
+        {
+          "source": "x_of",
+          "target": "curve_point",
+          "port": "x",
+          "live": true
+        },
+        {
+          "source": "y_of",
+          "target": "curve_point",
+          "port": "y",
+          "live": true
+        },
+        {
+          "source": "where",
+          "target": "radius_line",
+          "port": "end",
+          "live": true
+        },
+        {
+          "source": "where",
+          "target": "link_line",
+          "port": "start",
+          "live": true
+        },
+        {
+          "source": "curve_point",
+          "target": "link_line",
+          "port": "end",
+          "live": true
+        },
+        {
+          "source": "curve_point",
+          "target": "sine",
+          "port": "traced_point_func",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "x_axis",
+            "y_axis",
+            "place0",
+            "place1",
+            "place2",
+            "place3"
+          ]
+        },
+        {
+          "kind": "add",
+          "mobjects": [
+            "follow"
+          ]
+        },
+        {
+          "kind": "add",
+          "mobjects": [
+            "orbit",
+            "radius_line",
+            "link_line",
+            "sine"
+          ]
+        },
+        {
+          "kind": "wait",
+          "duration": 8.5
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

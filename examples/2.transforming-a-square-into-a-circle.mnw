@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "Scene1",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "6a168a44",
+          "catalogue": "Circle",
+          "values": {},
+          "label": null,
+          "position": [
+            193.578125,
+            163
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "a6b31a03",
+          "catalogue": "VMobject.set_fill",
+          "values": {
+            "color": "PINK",
+            "opacity": 0.5
+          },
+          "label": null,
+          "position": [
+            444.578125,
+            183
+          ],
+          "collapsed": false
+        },
+        {
+          "id": "f8ead07c",
+          "catalogue": "Square",
+          "values": {},
+          "label": null,
+          "position": [
+            213.578125,
+            427
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "9140a470",
+          "catalogue": "VMobject.rotate",
+          "values": {},
+          "label": "Rotate",
+          "position": [
+            450.578125,
+            464
+          ],
+          "collapsed": false,
+          "parent": null
+        },
+        {
+          "id": "20e0371c",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "pi/4"
+          },
+          "label": null,
+          "position": [
+            214.578125,
+            505
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "7c2793df",
+          "catalogue": "Create",
+          "values": {},
+          "label": null,
+          "position": [
+            722.578125,
+            435
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "28264251",
+          "catalogue": "Transform",
+          "values": {},
+          "label": null,
+          "position": [
+            723.578125,
+            308
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "ae09ad80",
+          "catalogue": "FadeOut",
+          "values": {},
+          "label": null,
+          "position": [
+            720.578125,
+            539
+          ],
+          "collapsed": true,
+          "parent": null
+        }
+      ],
+      "edges": [
+        {
+          "source": "6a168a44",
+          "target": "a6b31a03",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "f8ead07c",
+          "target": "9140a470",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "20e0371c",
+          "target": "9140a470",
+          "port": "angle",
+          "live": false
+        },
+        {
+          "source": "9140a470",
+          "target": "7c2793df",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "9140a470",
+          "target": "28264251",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "a6b31a03",
+          "target": "28264251",
+          "port": "target_mobject",
+          "live": false
+        },
+        {
+          "source": "9140a470",
+          "target": "ae09ad80",
+          "port": "mobjects",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "play",
+          "animations": [
+            "7c2793df"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "28264251"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "ae09ad80"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

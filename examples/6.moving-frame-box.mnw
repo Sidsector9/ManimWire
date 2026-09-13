@@ -1,0 +1,258 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "MovingFrameBox",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "text",
+          "catalogue": "MathTex",
+          "values": {
+            "tex_strings": [
+              "\\frac{d}{dx}f(x)g(x)=",
+              "f(x)\\frac{d}{dx}g(x)",
+              "+",
+              "g(x)\\frac{d}{dx}f(x)"
+            ]
+          },
+          "label": "the product rule",
+          "position": [
+            60,
+            80
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "write",
+          "catalogue": "Write",
+          "values": {},
+          "label": "write it",
+          "position": [
+            460,
+            80
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "part1",
+          "catalogue": "Submobject",
+          "values": {
+            "index": 1
+          },
+          "label": "text[1]",
+          "position": [
+            460,
+            260
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "part3",
+          "catalogue": "Submobject",
+          "values": {
+            "index": 3
+          },
+          "label": "text[3]",
+          "position": [
+            460,
+            400
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "box1",
+          "catalogue": "SurroundingRectangle",
+          "values": {
+            "buff": 0.1
+          },
+          "label": "framebox1",
+          "position": [
+            720,
+            260
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "box2",
+          "catalogue": "SurroundingRectangle",
+          "values": {
+            "buff": 0.1
+          },
+          "label": "framebox2",
+          "position": [
+            720,
+            400
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "draw",
+          "catalogue": "Create",
+          "values": {},
+          "label": "draw the first box",
+          "position": [
+            980,
+            260
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "move",
+          "catalogue": "ReplacementTransform",
+          "values": {},
+          "label": "move it to the other half",
+          "position": [
+            980,
+            400
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "text",
+          "target": "write",
+          "port": "vmobject",
+          "live": false
+        },
+        {
+          "source": "text",
+          "target": "part1",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "text",
+          "target": "part3",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "part1",
+          "target": "box1",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "part3",
+          "target": "box2",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "box1",
+          "target": "draw",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "box1",
+          "target": "move",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "box2",
+          "target": "move",
+          "port": "target_mobject",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "play",
+          "animations": [
+            "write"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "draw"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "move"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

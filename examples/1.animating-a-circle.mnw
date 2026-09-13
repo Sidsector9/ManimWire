@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "Scene1",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "19051bbf",
+          "catalogue": "Circle",
+          "values": {},
+          "label": null,
+          "position": [
+            25.578125,
+            148
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "6bb9587a",
+          "catalogue": "VMobject.set_fill",
+          "values": {
+            "opacity": 0.5,
+            "color": "PINK"
+          },
+          "label": null,
+          "position": [
+            245.578125,
+            149
+          ],
+          "collapsed": false,
+          "parent": null
+        },
+        {
+          "id": "e749733c",
+          "catalogue": "Create",
+          "values": {},
+          "label": null,
+          "position": [
+            468.578125,
+            149
+          ],
+          "collapsed": true,
+          "parent": null
+        }
+      ],
+      "edges": [
+        {
+          "source": "19051bbf",
+          "target": "6bb9587a",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "6bb9587a",
+          "target": "e749733c",
+          "port": "mobject",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "play",
+          "animations": [
+            "e749733c"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

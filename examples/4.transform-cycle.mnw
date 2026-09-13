@@ -1,0 +1,170 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "TransformCycle",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "a1c0f3d2",
+          "catalogue": "Circle",
+          "values": {},
+          "label": "a",
+          "position": [
+            160,
+            140
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "b2d41e57",
+          "catalogue": "Square",
+          "values": {},
+          "label": "t1",
+          "position": [
+            160,
+            300
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "c3e52f68",
+          "catalogue": "Triangle",
+          "values": {},
+          "label": "t2",
+          "position": [
+            160,
+            400
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "d4f63a79",
+          "catalogue": "VGroup",
+          "values": {},
+          "label": "shapes",
+          "position": [
+            400,
+            350
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "e5a74b8a",
+          "catalogue": "Map",
+          "values": {},
+          "label": "each shape",
+          "position": [
+            640,
+            160
+          ],
+          "collapsed": true,
+          "size": [
+            629,
+            350
+          ]
+        },
+        {
+          "id": "f6b85c9b",
+          "catalogue": "Item",
+          "values": {},
+          "label": "t",
+          "position": [
+            30,
+            70
+          ],
+          "collapsed": true,
+          "parent": "e5a74b8a"
+        },
+        {
+          "id": "07c96dac",
+          "catalogue": "Transform",
+          "values": {},
+          "label": null,
+          "position": [
+            233,
+            103
+          ],
+          "collapsed": true,
+          "parent": "e5a74b8a"
+        },
+        {
+          "id": "18da7ebd",
+          "catalogue": "Result",
+          "values": {},
+          "label": null,
+          "position": [
+            428,
+            205
+          ],
+          "collapsed": true,
+          "parent": "e5a74b8a"
+        }
+      ],
+      "edges": [
+        {
+          "source": "b2d41e57",
+          "target": "d4f63a79",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "c3e52f68",
+          "target": "d4f63a79",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "d4f63a79",
+          "target": "e5a74b8a",
+          "port": "items",
+          "live": false
+        },
+        {
+          "source": "a1c0f3d2",
+          "target": "07c96dac",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "f6b85c9b",
+          "target": "07c96dac",
+          "port": "target_mobject",
+          "live": false
+        },
+        {
+          "source": "07c96dac",
+          "target": "18da7ebd",
+          "port": "value",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "a1c0f3d2"
+          ]
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "e5a74b8a"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": []
+}
