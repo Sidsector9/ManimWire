@@ -146,7 +146,11 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
         const live = liveByDefault(scene, from.node, portType(descriptor, port, index), index)
         next = connect(next, target(), { source: from.node, target: id, port, live })
       }
-      if (descriptor.returns.type === 'animation') next = addStep(next, target(), { kind: 'play', animations: [id] })
+      // An animation inside a Map or Repeat plays once per run, so the container
+      // carries the step, not the node. Playing the node itself is not a valid step.
+      if (descriptor.returns.type === 'animation' && parent === null) {
+        next = addStep(next, target(), { kind: 'play', animations: [id] })
+      }
       record(next)
       set({ selected: id })
       return id

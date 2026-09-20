@@ -52,6 +52,10 @@ export function Inspector() {
   const lines = (sourceMap.nodes[node.id] ?? []).map((n) => code.split('\n')[n - 1] ?? '').map((l) => l.trim())
   const nodeIssues = issues.filter((i) => i.node === node.id)
   const inPlay = scene.steps.some((s) => s.kind === 'play' && s.animations.includes(node.id))
+  // An object put on screen with self.add, rather than by an animation.
+  const inScene = scene.steps.some((s) => s.kind === 'add' && s.mobjects.includes(node.id))
+  // A node inside a Map or Repeat runs once per item, so the container goes on the
+  // timeline, never the node. Playing the node itself is not a step the engine allows.
   // A container of animations goes on the timeline as a loop: one play per run.
   const loops = playsEachRun(scene, node, index)
   const live = isLiveSource(scene, node.id, index)
@@ -88,9 +92,14 @@ export function Inspector() {
             {issue.message}
           </div>
         ))}
-        {(descriptor.returns.type === 'animation' || loops) && !inPlay && (
+        {(descriptor.returns.type === 'animation' || loops) && !inPlay && node.parent == null && (
           <button className="button" onClick={() => store.addStep({ kind: 'play', animations: [node.id] })}>
             {loops ? 'Play this once per run' : 'Play this animation'}
+          </button>
+        )}
+        {isMobject && !inScene && !editingGroup && (
+          <button className="button" title="self.add: the object is there from this point, with no animation" onClick={() => store.addStep({ kind: 'add', mobjects: [node.id] })}>
+            Add to the scene
           </button>
         )}
         {descriptor.kind === 'method' && (

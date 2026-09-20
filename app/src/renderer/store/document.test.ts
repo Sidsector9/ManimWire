@@ -74,6 +74,17 @@ describe('document store, compound and repeated edits', () => {
     expect(currentScene(useDocumentStore.getState()).nodes).toHaveLength(1)
   })
 
+  it('does not play an animation added inside a container: the container carries the step', () => {
+    const store = useDocumentStore.getState()
+    const map = store.addNode('Map', [0, 0])
+    const inside = store.addNode('Circle', [20, 20], {}, map)
+    const id = useDocumentStore.getState().addCatalogueNode(create, [200, 0], indexDescriptors([create]), { node: inside, type: ref('mobject') })
+    const scene = currentScene(useDocumentStore.getState())
+    expect(scene.nodes.find((n) => n.id === id)!.parent).toBe(map)
+    // A step naming a node inside a loop is rejected by the engine, so none is made.
+    expect(scene.steps).toEqual([])
+  })
+
   it('merges consecutive edits of the same field into one undo step', () => {
     const id = useDocumentStore.getState().addNode('Circle', [0, 0])
     const before = useDocumentStore.getState().past.length

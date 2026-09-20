@@ -702,3 +702,26 @@ def test_an_empty_loop_leaves_the_next_step_its_own_timings(
     assert (loop_step.start, loop_step.end) == (1.0, 1.0)
     assert (fade_step.start, fade_step.end) == (1.0, 2.0)
     assert layout.total == 2.0
+
+
+def test_a_map_can_take_a_typed_list_of_items(catalogue: Catalogue) -> None:
+    """Items usually come down a connection, but a list typed on the port also runs."""
+    scene = SceneDocument(
+        name="Sizes",
+        nodes=[
+            node("m", "Map", values={"items": [0.1, 0.2, 0.3]}),
+            node("it", "Item", parent="m"),
+            node("d", "Dot", parent="m"),
+            node("res", "Result", parent="m"),
+            node("g", "VGroup"),
+        ],
+        edges=[
+            edge("it", "d", "radius"),
+            edge("d", "res", "value"),
+            edge("m", "g", "vmobjects"),
+        ],
+        steps=[AddStep(mobjects=["g"])],
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    assert "        for item in [0.1, 0.2, 0.3]:\n" in generated.code, generated.code

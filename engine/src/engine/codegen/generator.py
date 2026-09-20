@@ -368,7 +368,13 @@ class _Build:
             ]
             label = next((c.label for c in items if c.label), None)
             item = self.new_variable(label or "item") if items else "_"
-            source = self.expression(self.graph.sources(node.id, "items")[0])
+            # Items usually arrive down a connection; a typed list works too.
+            connected = self.graph.sources(node.id, "items")
+            source = (
+                self.expression(connected[0])
+                if connected
+                else self.argument(node, MAP.parameters[0]) or "[]"
+            )
             target = f"{index}, {item}" if index else item
             head = f"enumerate({source})" if index else source
         else:

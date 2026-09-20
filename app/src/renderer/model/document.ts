@@ -381,7 +381,21 @@ export function placeNode(doc: Doc, target: Target, id: string, absolute: [numbe
   const [ox, oy] = parent ? absolutePosition(scene, parent) : [0, 0]
   const position: [number, number] = [absolute[0] - ox, absolute[1] - oy]
   if (parent === (node.parent ?? null) && position[0] === node.position[0] && position[1] === node.position[1]) return doc
-  return updateNode(doc, target, id, { position, parent })
+  const moved = updateNode(doc, target, id, { position, parent })
+  // Dragged into a container: the node now runs once per item, so a play step that
+  // names it is no longer a step the engine accepts. The container carries the step.
+  if (parent !== null && (node.parent ?? null) === null) return dropFromPlaySteps(moved, target, id)
+  return moved
+}
+
+/** Take a node out of every play step, dropping the steps it leaves empty. */
+function dropFromPlaySteps(doc: Doc, target: Target, id: string): Doc {
+  return updateScene(doc, target, (scene) => ({
+    ...scene,
+    steps: scene.steps
+      .map((step) => (step.kind === 'play' ? { ...step, animations: step.animations.filter((a) => a !== id) } : step))
+      .filter((step) => step.kind !== 'play' || step.animations.length > 0)
+  }))
 }
 
 // ---- reusable groups ----------------------------------------------------------

@@ -136,6 +136,27 @@ describe('parseDocument', () => {
   })
 })
 
+describe('placeNode', () => {
+  it('drops the play step when a node is dragged into a container', () => {
+    let doc = addNode(emptyDocument(), 0, 'Map', [0, 0], {}, 'loop')
+    doc = addNode(doc, 0, 'Create', [400, 400], {}, 'anim')
+    doc = addStep(doc, 0, { kind: 'play', animations: ['anim'] })
+    // Into the frame: the step would name a node that runs once per item.
+    doc = placeNode(doc, 0, 'anim', [60, 60])
+    expect(doc.scenes[0]!.nodes.find((n) => n.id === 'anim')!.parent).toBe('loop')
+    expect(doc.scenes[0]!.steps).toEqual([])
+  })
+
+  it('keeps the step when the node stays outside', () => {
+    let doc = addNode(emptyDocument(), 0, 'Map', [0, 0], {}, 'loop')
+    doc = addNode(doc, 0, 'Create', [400, 400], {}, 'anim')
+    doc = addStep(doc, 0, { kind: 'play', animations: ['anim'] })
+    doc = placeNode(doc, 0, 'anim', [900, 900])
+    expect(doc.scenes[0]!.nodes.find((n) => n.id === 'anim')!.parent).toBe(null)
+    expect(doc.scenes[0]!.steps).toEqual([{ kind: 'play', animations: ['anim'] }])
+  })
+})
+
 describe('moveAnimation and moveStep', () => {
   const base = (): ReturnType<typeof emptyDocument> => {
     let doc = addNode(emptyDocument(), 0, 'Create', [0, 0], {}, 'a')
