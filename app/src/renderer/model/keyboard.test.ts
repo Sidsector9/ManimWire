@@ -14,11 +14,13 @@ describe('isTyping', () => {
     expect(isTyping(element('<textarea></textarea>'))).toBe(true)
     expect(isTyping(element('<select></select>'))).toBe(true)
     expect(isTyping(element('<div contenteditable="true"></div>'))).toBe(true)
+    expect(isTyping(element('<div contenteditable="true"><span>Text</span></div>').firstElementChild)).toBe(true)
   })
 
   it('is false for the canvas, a button, and a missing target', () => {
     expect(isTyping(element('<div class="graph"></div>'))).toBe(false)
     expect(isTyping(element('<button>Play</button>'))).toBe(false)
     expect(isTyping(null)).toBe(false)
+    expect(isTyping(element('<div contenteditable="false"></div>'))).toBe(false)
   })
 })

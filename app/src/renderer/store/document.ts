@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { pasteSelection, type GraphSelection } from '../model/clipboard'
 import type { Descriptor, TypeRef } from '../../shared/engine'
 import { liveByDefault } from '../model/live'
 import { acceptingPorts, portType, type DescriptorIndex } from '../model/types'
@@ -63,6 +64,7 @@ interface DocumentStore {
   /** Add a catalogue entry, connect it to `from` if given, and play it if it is an animation. One history entry. */
   addCatalogueNode(descriptor: Descriptor, position: [number, number], index: DescriptorIndex, from?: { node: string; type: TypeRef }): string
   removeNodes(ids: string[]): void
+  pasteNodes(selection: GraphSelection, at: [number, number]): string[]
   updateNode(id: string, change: Partial<DocNode>): void
   /** Drop a node at an absolute graph position; it joins the container found there. */
   placeNode(id: string, absolute: [number, number]): void
@@ -159,6 +161,12 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
       const { doc, selected } = get()
       record(removeNodes(doc, target(), ids))
       if (selected && ids.includes(selected)) set({ selected: null })
+    },
+    pasteNodes: (selection, at) => {
+      const pasted = pasteSelection(get().doc, target(), selection, at)
+      record(pasted.doc)
+      if (pasted.ids.length) set({ selected: pasted.ids.length === 1 ? pasted.ids[0]! : null, selectedStep: null })
+      return pasted.ids
     },
     updateNode: (id, change) => {
       const next = updateNode(get().doc, target(), id, change)

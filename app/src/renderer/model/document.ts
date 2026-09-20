@@ -148,7 +148,7 @@ export function graphOf(doc: Doc, target: Target): Scene | undefined {
 }
 
 /** All operations return a new document; the store keeps history by reference. */
-function updateScene(doc: Doc, target: Target, change: (scene: Scene) => Scene): Doc {
+export function updateScene(doc: Doc, target: Target, change: (scene: Scene) => Scene): Doc {
   const scene = graphOf(doc, target)
   if (!scene) return doc
   const changed = change(scene)

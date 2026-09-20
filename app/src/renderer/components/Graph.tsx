@@ -15,6 +15,7 @@ import {
 import '@xyflow/react/dist/style.css'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Descriptor, TypeRef } from '../../shared/engine'
+import { copySelection, GRAPH_CLIPBOARD_TYPE, parseSelection } from '../model/clipboard'
 import { absolutePosition, starterDocument } from '../model/document'
 import { toFlow, type ManimFlowNode } from '../model/flow'
 import { isTyping } from '../model/keyboard'
@@ -61,12 +62,15 @@ export function Graph() {
   // xyflow needs position changes applied while a drag is in progress; the
   // document only records the final position on drop.
   const [nodes, setNodes] = useState(derived.nodes)
+  const pastedSelection = useRef<Set<string> | null>(null)
   // xyflow owns which nodes are selected, so a document change must not wipe a
   // box selection.
   useEffect(() => {
+    const pasted = pastedSelection.current
+    pastedSelection.current = null
     setNodes((current) => {
       const live = new Map(current.map((n) => [n.id, n.selected === true]))
-      return derived.nodes.map((n) => ({ ...n, selected: live.get(n.id) ?? false }))
+      return derived.nodes.map((n) => ({ ...n, selected: pasted ? pasted.has(n.id) : live.get(n.id) ?? false }))
     })
   }, [derived.nodes])
   // A node picked outside the graph (a timeline row) highlights here too, replacing
@@ -83,6 +87,36 @@ export function Graph() {
   const { screenToFlowPosition } = useReactFlow()
   const [quickAdd, setQuickAdd] = useState<QuickAddState | null>(null)
   const mouse = useRef({ x: 200, y: 120 })
+  const lastPaste = useRef<{ text: string; x: number; y: number; count: number } | null>(null)
+
+  const onCopy = (event: React.ClipboardEvent<HTMLDivElement>): void => {
+    if (isTyping(event.target)) return
+    const selection = copySelection(scene, nodes.filter((node) => node.selected).map((node) => node.id))
+    if (!selection) return
+    const text = JSON.stringify(selection)
+    event.clipboardData.setData(GRAPH_CLIPBOARD_TYPE, text)
+    event.clipboardData.setData('text/plain', text)
+    event.preventDefault()
+    lastPaste.current = null
+  }
+
+  const onPaste = (event: React.ClipboardEvent<HTMLDivElement>): void => {
+    if (isTyping(event.target)) return
+    const text = event.clipboardData.getData(GRAPH_CLIPBOARD_TYPE) || event.clipboardData.getData('text/plain')
+    const selection = parseSelection(text)
+    if (!selection) return
+    event.preventDefault()
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const cursor = mouse.current
+    const screen = cursor.x >= bounds.left && cursor.x <= bounds.right && cursor.y >= bounds.top && cursor.y <= bounds.bottom
+      ? cursor : { x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 }
+    const { x, y } = screenToFlowPosition(screen)
+    const previous = lastPaste.current
+    const count = previous?.text === text && previous.x === x && previous.y === y ? previous.count + 1 : 0
+    lastPaste.current = { text, x, y, count }
+    const ids = store.pasteNodes(selection, [x + count * 24, y + count * 24])
+    pastedSelection.current = new Set(ids)
+  }
 
   const onNodesChange = useCallback(
     (changes: NodeChange<ManimFlowNode>[]) => {
@@ -219,8 +253,11 @@ export function Graph() {
   return (
     <div
       className="graph"
+      onCopy={onCopy}
+      onPaste={onPaste}
       onMouseMove={(e) => (mouse.current = { x: e.clientX, y: e.clientY })}
       onKeyDown={(e) => {
+        if (isTyping(e.target)) return
         if (e.key === 'Tab' && !quickAdd) {
           e.preventDefault()
           setQuickAdd({ screen: mouse.current, flow: screenToFlowPosition(mouse.current) })
@@ -233,7 +270,7 @@ export function Graph() {
     >
       <div className="graph-head">
         <span>{editingGroup ? `GROUP ${editingGroup}` : 'GRAPH'}</span>
-        <span className="meta">{scene.nodes.length} nodes · Tab to add</span>
+        <span className="meta" title="Copy selected nodes with Cmd/Ctrl+C; paste with Cmd/Ctrl+V. Connections between copied nodes are included.">{scene.nodes.length} nodes · Tab to add</span>
       </div>
       <ReactFlow<ManimFlowNode>
         nodes={nodes}

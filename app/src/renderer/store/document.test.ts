@@ -3,6 +3,7 @@ import type { Descriptor, TypeRef } from '../../shared/engine'
 import { emptyDocument, starterDocument } from '../model/document'
 import { indexDescriptors } from '../model/types'
 import { currentScene, useDocumentStore } from './document'
+import { copySelection } from '../model/clipboard'
 
 describe('document store', () => {
   beforeEach(() => useDocumentStore.getState().replace(emptyDocument(), null))
@@ -61,6 +62,25 @@ const create: Descriptor = {
 
 describe('document store, compound and repeated edits', () => {
   beforeEach(() => useDocumentStore.getState().replace(emptyDocument(), null))
+
+  it('pastes a connected selection as one undoable edit and updates the engine revision', () => {
+    const doc = starterDocument()
+    useDocumentStore.getState().replace(doc, null)
+    const copied = copySelection(doc.scenes[0]!, ['circle', 'fill', 'create'])!
+    const revision = useDocumentStore.getState().revision
+    const ids = useDocumentStore.getState().pasteNodes(copied, [800, 200])
+    expect(ids).toHaveLength(3)
+    expect(useDocumentStore.getState().past).toHaveLength(1)
+    expect(useDocumentStore.getState().revision).toBe(revision + 1)
+    const pasted = useDocumentStore.getState().doc
+    expect(pasted.scenes[0]!.nodes).toHaveLength(6)
+    expect(pasted.scenes[0]!.edges).toHaveLength(4)
+    expect(pasted.scenes[0]!.steps).toEqual(doc.scenes[0]!.steps)
+    useDocumentStore.getState().undo()
+    expect(useDocumentStore.getState().doc).toEqual(doc)
+    useDocumentStore.getState().redo()
+    expect(useDocumentStore.getState().doc).toEqual(pasted)
+  })
 
   it('adds, connects, and plays an animation as one history entry', () => {
     const circle = useDocumentStore.getState().addNode('Circle', [0, 0])

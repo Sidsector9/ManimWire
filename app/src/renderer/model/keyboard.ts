@@ -6,5 +6,5 @@ const TYPING_TAGS = new Set(['INPUT', 'SELECT', 'TEXTAREA'])
 /** Whether a key event came from somewhere text is being entered. */
 export function isTyping(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
-  return TYPING_TAGS.has(target.tagName) || target.hasAttribute('contenteditable')
+  return TYPING_TAGS.has(target.tagName) || target.closest('[contenteditable]:not([contenteditable="false"])') !== null
 }
