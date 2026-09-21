@@ -27,6 +27,9 @@ export function usePlayback(): void {
     const total = layout.total
     const key = cacheKey(results.code, results.previewWidth)
     const from = results.previewTime !== null && results.previewTime < total - 1e-6 ? results.previewTime : 0
+    // Wait for new frames at this pass's start, including after scrubbing or a loop.
+    // A zero limit would pull a scrubbed playhead back to the beginning.
+    useEngineResults.setState({ rendered: from, queued: [] })
 
     const finish = (): void => {
       if (cancelled) return
@@ -85,11 +88,15 @@ export function usePlayback(): void {
       for (const step of steps) {
         if (cancelled) return stopClock()
         const ok = await store.sequence(doc, sceneIndex, Math.max(step.start, from), step.end)
+        if (cancelled) return stopClock()
         if (!ok) {
           stopClock()
           useEngineResults.getState().setPlaying(false)
           return
         }
+        // The interval is complete even when frame sampling or floating-point
+        // rounding leaves its last timestamp just short of the step's end.
+        useEngineResults.setState({ rendered: Math.max(useEngineResults.getState().rendered, step.end) })
       }
       if (cancelled) return stopClock()
       // Only a pass from the start covers every frame; a pass from a scrubbed time does not.

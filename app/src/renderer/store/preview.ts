@@ -46,7 +46,7 @@ interface PreviewStore {
   prerendered: string | null
   /** Frames the engine has finished during a first pass, waiting for their moment. */
   queued: FrameResult[]
-  /** The latest scene time rendered in this pass; the playhead never runs past it. */
+  /** Playback can advance through this time: the latest frame or a completed render interval's end. */
   rendered: number
   setPreviewTime(time: number | null): void
   setPreviewWidth(width: number): void
