@@ -63,6 +63,44 @@ const create: Descriptor = {
 describe('document store, compound and repeated edits', () => {
   beforeEach(() => useDocumentStore.getState().replace(emptyDocument(), null))
 
+  it.each([
+    { name: 'all nodes and their edges', ids: ['circle', 'fill', 'create'], edgeIndices: [0, 1], nodes: 0, steps: 0 },
+    { name: 'edges only', ids: [], edgeIndices: [0, 1], nodes: 3, steps: 1 },
+    { name: 'a node and an independently selected edge', ids: ['create'], edgeIndices: [0, 1], nodes: 2, steps: 0 }
+  ])('deletes $name in one undoable edit', ({ ids, edgeIndices, nodes, steps }) => {
+    const original = starterDocument()
+    const store = useDocumentStore.getState()
+    store.replace(original, null)
+    const revision = useDocumentStore.getState().revision
+    store.removeElements(ids, edgeIndices.map((i) => original.scenes[0]!.edges[i]!))
+    const deleted = useDocumentStore.getState().doc
+    expect(deleted.scenes[0]!.nodes).toHaveLength(nodes)
+    expect(deleted.scenes[0]!.edges).toHaveLength(0)
+    expect(deleted.scenes[0]!.steps).toHaveLength(steps)
+    expect(useDocumentStore.getState().past).toHaveLength(1)
+    expect(useDocumentStore.getState().revision).toBe(revision + 1)
+    store.undo()
+    expect(useDocumentStore.getState().doc).toEqual(original)
+    store.redo()
+    expect(useDocumentStore.getState().doc).toEqual(deleted)
+  })
+
+  it('restores a deleted container and its descendants inside a reusable group together', () => {
+    const store = useDocumentStore.getState()
+    store.addGroup('Example')
+    store.editGroup('Example')
+    const parent = store.addNode('Map', [0, 0])
+    const child = store.addNode('Circle', [20, 60], {}, parent)
+    const original = useDocumentStore.getState().doc
+    const before = useDocumentStore.getState().past.length
+    store.removeElements([parent], [])
+    expect(currentScene(useDocumentStore.getState()).nodes.some((node) => node.id === parent || node.id === child)).toBe(false)
+    expect(useDocumentStore.getState().selected).toBeNull()
+    expect(useDocumentStore.getState().past).toHaveLength(before + 1)
+    store.undo()
+    expect(useDocumentStore.getState().doc).toEqual(original)
+  })
+
   it('pastes a connected selection as one undoable edit and updates the engine revision', () => {
     const doc = starterDocument()
     useDocumentStore.getState().replace(doc, null)

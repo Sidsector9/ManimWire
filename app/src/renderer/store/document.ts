@@ -64,6 +64,8 @@ interface DocumentStore {
   /** Add a catalogue entry, connect it to `from` if given, and play it if it is an animation. One history entry. */
   addCatalogueNode(descriptor: Descriptor, position: [number, number], index: DescriptorIndex, from?: { node: string; type: TypeRef }): string
   removeNodes(ids: string[]): void
+  /** Delete selected nodes and edges, including dependent steps, as one history entry. */
+  removeElements(ids: string[], edges: Pick<DocEdge, 'source' | 'target' | 'port'>[]): void
   pasteNodes(selection: GraphSelection, at: [number, number]): string[]
   updateNode(id: string, change: Partial<DocNode>): void
   /** Drop a node at an absolute graph position; it joins the container found there. */
@@ -157,10 +159,14 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
       set({ selected: id })
       return id
     },
-    removeNodes: (ids) => {
+    removeNodes: (ids) => get().removeElements(ids, []),
+    removeElements: (ids, edges) => {
       const { doc, selected } = get()
-      record(removeNodes(doc, target(), ids))
-      if (selected && ids.includes(selected)) set({ selected: null })
+      const at = target()
+      let next = ids.length ? removeNodes(doc, at, ids) : doc
+      for (const edge of edges) next = disconnect(next, at, edge)
+      record(next)
+      if (selected && !graphOf(next, at)?.nodes.some((node) => node.id === selected)) set({ selected: null })
     },
     pasteNodes: (selection, at) => {
       const pasted = pasteSelection(get().doc, target(), selection, at)

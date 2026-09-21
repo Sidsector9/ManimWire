@@ -127,8 +127,6 @@ export function Graph() {
           const parent = scene.nodes.find((n) => n.id === change.id)?.parent
           const [ox, oy] = parent ? absolutePosition(scene, parent) : [0, 0]
           store.placeNode(change.id, [change.position.x + ox, change.position.y + oy])
-        } else if (change.type === 'remove') {
-          store.removeNodes([change.id])
         }
       }
     },
@@ -278,7 +276,10 @@ export function Graph() {
         nodeTypes={nodeTypes}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onEdgesDelete={(deleted) => deleted.forEach(disconnect)}
+        onDelete={({ nodes: deletedNodes, edges: deletedEdges }) => store.removeElements(
+          deletedNodes.map((node) => node.id),
+          deletedEdges.flatMap((edge) => edge.targetHandle ? [{ source: edge.source, target: edge.target, port: edge.targetHandle }] : [])
+        )}
         onConnect={onConnect}
         onConnectEnd={onConnectEnd}
         edgesReconnectable

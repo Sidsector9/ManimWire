@@ -109,3 +109,42 @@ test('select all takes every node while the graph has focus, and nothing outside
     await app.close()
   }
 })
+
+test('one undo restores a deleted selection with its edges and timeline steps', async () => {
+  const app = await electron.launch({ args: [path.resolve('.')], env: { ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-e2e-')) } })
+  const window = await app.firstWindow()
+  const all = process.platform === 'darwin' ? 'Meta+a' : 'Control+a'
+  // Invoke the renderer command used by Edit's native Cmd/Ctrl+Z accelerator.
+  const edit = (action: 'undo' | 'redo') => app.evaluate(({ BrowserWindow }, action) => {
+    BrowserWindow.getAllWindows()[0]!.webContents.send('menu', action)
+  }, action)
+  try {
+    await expect(window.locator('.status')).toContainText('engine ready')
+    await window.getByRole('button', { name: 'Start with a circle' }).click()
+    const nodes = window.locator('.react-flow__node')
+    const edges = window.locator('.react-flow__edge')
+    const timeline = window.locator('.timeline-meta')
+    await expect(nodes).toHaveCount(3)
+    await expect(edges).toHaveCount(2)
+    await expect(timeline).toContainText('1 steps')
+    await window.locator('.react-flow__pane').click({ position: { x: 12, y: 12 } })
+    await window.keyboard.press(all)
+    await expect(window.locator('.react-flow__node.selected')).toHaveCount(3)
+    await window.keyboard.press('Backspace')
+    await expect(nodes).toHaveCount(0)
+    await expect(edges).toHaveCount(0)
+    await expect(timeline).toContainText('0 steps')
+    await edit('undo')
+    await expect(nodes).toHaveCount(3)
+    await expect(edges).toHaveCount(2)
+    await expect(timeline).toContainText('1 steps')
+    await edit('redo')
+    await expect(nodes).toHaveCount(0)
+    await expect(edges).toHaveCount(0)
+    await edit('undo')
+    await expect(nodes).toHaveCount(3)
+    await expect(edges).toHaveCount(2)
+  } finally {
+    await app.close()
+  }
+})
