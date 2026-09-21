@@ -41,10 +41,10 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
           </span>
         )}
         {issues.length > 0 && <span className="node-badge" title={issues.map((i) => i.message).join('\n')}>{issues.length}</span>}
-        {descriptor.parameters.length > 0 && (
+        {descriptor.parameters.length > 0 && (hidden > 0 || !node.collapsed) && (
           <button
             className="node-fold"
-            title={node.collapsed ? 'Show every port' : 'Show only the ports in use'}
+            title={node.collapsed ? 'Show every port' : 'Show required and used ports'}
             aria-label={node.collapsed ? 'Expand' : 'Collapse'}
             aria-expanded={!node.collapsed}
             onClick={() => updateNode(node.id, { collapsed: !node.collapsed })}

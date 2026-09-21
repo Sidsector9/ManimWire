@@ -443,13 +443,14 @@ export function starterDocument(): Doc {
   return addStep(doc, 0, { kind: 'play', animations: ['create'] })
 }
 
-/** Ports that a node shows while collapsed: connected ones and ones with a value. */
+/** Collapsed nodes keep required, variadic, connected, valued and pinned inputs visible. */
 export function visiblePorts(node: DocNode, descriptor: Descriptor, connected: Set<string>): string[] {
   const ports = descriptor.parameters.map((p) => p.name)
   if (descriptor.kind === 'method') ports.unshift(SELF_PORT)
   if (!node.collapsed) return ports
-  // Expression variables and Config keys are the node's purpose, so they stay visible while collapsed.
-  const always = new Set(descriptor.parameters.filter((p) => p.owner === 'Expression' || p.owner === 'Config').map((p) => p.name))
+  // No default means a required argument or a variadic input (e.g. FadeIn's objects).
+  // Expression variables and Config keys also stay visible while collapsed.
+  const always = new Set(descriptor.parameters.filter((p) => p.default == null || p.owner === 'Expression' || p.owner === 'Config').map((p) => p.name))
   const pinned = new Set(node.pinned ?? [])
   return ports.filter((p) => connected.has(p) || portValue(node, p) !== undefined || p === SELF_PORT || always.has(p) || pinned.has(p))
 }

@@ -284,7 +284,7 @@ describe('an Animate chain argument', () => {
     const descriptor = {
       name: 'Animate',
       kind: 'builtin',
-      parameters: [{ name: '1.set_fill.opacity', owner: 'Animate' }]
+      parameters: [{ name: '1.set_fill.opacity', owner: 'Animate', default: 'None' }]
     } as unknown as Descriptor
     expect(visiblePorts(doc.scenes[0]!.nodes[0]!, descriptor, new Set())).toContain('1.set_fill.opacity')
     doc = setValue(doc, 0, 'a', '1.set_fill.opacity', undefined)
