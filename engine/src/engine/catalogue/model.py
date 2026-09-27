@@ -45,7 +45,9 @@ def is_class_reference(type_ref: TypeRef) -> bool:
 class Parameter(BaseModel):
     name: str
     type: TypeRef
-    kind: Literal["positional", "keyword_only", "var_positional"] = "positional"
+    kind: Literal["positional", "keyword_only", "var_positional", "var_keyword"] = (
+        "positional"
+    )
     default: str | None = None
     display: str | None = None
     owner: str

@@ -568,7 +568,13 @@ class _Build:
                 positional = param.kind == "var_positional" or (
                     param.default is None and param.kind == "positional"
                 )
-                parts.append(value if positional else f"{param.name}={value}")
+                parts.append(
+                    f"**{value}"
+                    if param.kind == "var_keyword"
+                    else value
+                    if positional
+                    else f"{param.name}={value}"
+                )
             chain += f".{call.method}({', '.join(parts)})"
         return chain
 
@@ -618,7 +624,13 @@ class _Build:
             else:
                 continue
             positional = param.default is None and param.kind == "positional"
-            parts.append(value if positional else f"{param.name}={value}")
+            parts.append(
+                f"**{value}"
+                if param.kind == "var_keyword"
+                else value
+                if positional
+                else f"{param.name}={value}"
+            )
         return ", ".join(parts)
 
     def closure(self, params: str, body: str) -> str:

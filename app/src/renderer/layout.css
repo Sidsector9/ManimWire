@@ -953,11 +953,10 @@ body,
 
 .quick-add-row {
   display: grid;
-  grid-template-columns: 8px minmax(80px, auto) auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: 8px minmax(0, 1fr);
+  gap: 3px 8px;
   align-items: center;
-  height: 24px;
-  padding: 0 10px;
+  padding: 8px 10px;
   cursor: pointer;
 }
 
@@ -980,17 +979,24 @@ body,
 }
 
 .quick-add-row .dot {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: start;
+  margin-top: 5px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
 }
 
 .quick-add-row .cat {
+  grid-column: 2;
+  overflow-wrap: anywhere;
   font-size: 10px;
   color: var(--text-muted);
 }
 
 .quick-add-row .desc {
+  grid-column: 2;
   overflow: hidden;
   font-size: 11px;
   color: var(--text-muted);
@@ -2203,9 +2209,10 @@ body,
   color: var(--text);
 }
 
-/* Quick add (handoff section 7): 300px, 28px rows. */
+/* Separate names and metadata so long method names remain readable. */
 .quick-add {
-  width: 300px;
+  width: 380px;
+  max-width: calc(100vw - 16px);
   background: var(--row-selected);
   border-radius: 4px;
 }
@@ -2216,7 +2223,8 @@ body,
 
 .quick-add-section {
   display: flex;
-  justify-content: space-between;
+  flex-direction: column;
+  gap: 3px;
   padding: 4px 10px;
   font: 600 10px var(--font-ui);
   letter-spacing: 0.3px;
@@ -2231,8 +2239,11 @@ body,
   color: var(--text-dim);
 }
 
-.quick-add-row {
-  height: 28px;
+.quick-add-row .name {
+  grid-column: 2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
 }
 
 .quick-add-hint {

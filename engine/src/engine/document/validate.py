@@ -209,6 +209,7 @@ def validate_scene(
                 issues.append(_issue("bad_literal", problem, node.id, port))
         if descriptor.name == ANIMATE.name:
             issues.extend(_animate_issues(node, graph, colors, functions, classes))
+        issues.extend(_keyword_issues(node, graph))
         issues.extend(_placement_issues(node, descriptor, graph, scene, in_group))
 
     connected: dict[tuple[str, str], list[str]] = {}
@@ -711,6 +712,45 @@ def _mismatch(
     )
 
 
+def _keyword_issues(node: Node, graph: Graph) -> list[Issue]:
+    """Catch duplicate kwargs before Python rejects the generated call."""
+    issues = []
+    params = graph.parameters(node.id)
+    explicit = {
+        param.name
+        for param in params
+        if param.kind != "var_keyword"
+        and (param.name in node.values or graph.sources(node.id, param.name))
+    }
+    for param in params:
+        if param.kind != "var_keyword":
+            continue
+        keys: set[str] = set()
+        literal = node.values.get(param.name)
+        if isinstance(literal, dict):
+            keys.update(literal)
+        for source in graph.sources(node.id, param.name):
+            config = graph.nodes[source]
+            if config.catalogue == CONFIG.name:
+                keys.update(
+                    p.name
+                    for p in graph.parameters(source)
+                    if p.name in config.values or graph.sources(source, p.name)
+                )
+        duplicates = keys & explicit
+        if duplicates:
+            issues.append(
+                _issue(
+                    "bad_literal",
+                    "Additional options repeat an input: "
+                    + ", ".join(sorted(duplicates)),
+                    node.id,
+                    param.name,
+                )
+            )
+    return issues
+
+
 def _literal_problem(
     value: object,
     type_ref: TypeRef,
@@ -744,6 +784,10 @@ def _literal_problem(
         )
     if kind is PortType.BOOLEAN:
         return None if isinstance(value, bool) else "expected true or false"
+    if kind is PortType.CONFIG:
+        return (
+            None if isinstance(value, dict) else "expected a configuration dictionary"
+        )
     if kind is PortType.TEXT:
         if not isinstance(value, str):
             return "expected text"

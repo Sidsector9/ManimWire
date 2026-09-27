@@ -25,7 +25,8 @@ const DESCRIPTIONS: Record<string, string> = {
   Position: 'Where the object sits; directions use Manim constants such as UP and RIGHT.',
   'Animation timing': 'Same contract on every animation class.',
   Expression: 'Each variable is a port; unconnected variables become the arguments of a function.',
-  Keys: 'Each key is a port typed as chosen here.'
+  Keys: 'Each key is a port typed as chosen here.',
+  'Additional options': 'Keyword arguments forwarded to Manim. Use a Config node for options that depend on another input, such as an animation class.'
 }
 
 export function conceptGroups(descriptor: Descriptor): ConceptGroup[] {
@@ -38,14 +39,15 @@ export function conceptGroups(descriptor: Descriptor): ConceptGroup[] {
   const object = descriptor.returns.type === 'mobject' || descriptor.returns.type === 'coordinate_system'
   for (const param of descriptor.parameters) {
     if (param.display === 'chain') continue // shown with its call in the chain editor
-    if (param.owner === 'Expression') put('Expression', param)
+    if (param.kind === 'var_keyword') put('Additional options', param)
+    else if (param.owner === 'Expression') put('Expression', param)
     else if (param.owner === 'Config') put('Keys', param)
     else if (TIMING.has(param.name)) put('Animation timing', param)
     else if (STYLE.has(param.name)) put('Style', param)
     else if (POSITION.has(param.name)) put('Position', param)
     else put(object ? 'Geometry' : descriptor.returns.type === 'animation' ? 'Animation' : 'Parameters', param)
   }
-  const order = ['Expression', 'Keys', 'Geometry', 'Parameters', 'Animation', 'Position', 'Style', 'Animation timing']
+  const order = ['Expression', 'Keys', 'Geometry', 'Parameters', 'Animation', 'Position', 'Style', 'Animation timing', 'Additional options']
   return [...groups.entries()]
     .sort(([a], [b]) => order.indexOf(a) - order.indexOf(b))
     .map(([label, params]) => ({ label, description: DESCRIPTIONS[label] ?? '', params }))

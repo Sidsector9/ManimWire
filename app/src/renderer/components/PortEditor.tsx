@@ -3,7 +3,7 @@ import type { JsonValue } from '../model/document'
 import { isMatrix } from '../model/types'
 import { selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
 import { ColorPicker, ExpressionEditor, RateFuncPicker, VectorEditor } from './editors'
-import { MatrixInput, NumberInput, NumberListInput } from './inputs'
+import { JsonInput, MatrixInput, NumberInput, NumberListInput } from './inputs'
 
 interface Props {
   param: Parameter
@@ -31,6 +31,8 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
     return <NumberListInput value={numbers} placeholder={placeholder} onChange={onChange} />
   }
   switch (kind) {
+    case 'any':
+      return <JsonInput value={value} onChange={onChange} label={param.name} />
     case 'number':
       return <NumberInput value={typeof value === 'number' ? value : undefined} placeholder={placeholder} onChange={onChange} />
     case 'boolean':
@@ -142,4 +144,3 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
       return <span className="port-connect">{compact ? '' : 'connect'}</span>
   }
 }
-

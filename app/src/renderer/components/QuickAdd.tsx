@@ -74,9 +74,12 @@ export function QuickAdd({ at, acceptType, onChoose, onClose }: Props) {
 
   useEffect(() => input.current?.focus(), [])
   useEffect(() => setCursor(0), [query])
+  useEffect(() => {
+    input.current?.parentElement?.querySelector('.quick-add-row.active')?.scrollIntoView({ block: 'nearest' })
+  }, [cursor])
 
   return (
-    <div className="quick-add" style={{ left: at.x, top: at.y }} onMouseDown={(e) => e.stopPropagation()}>
+    <div className="quick-add" style={{ left: Math.max(8, Math.min(at.x, window.innerWidth - 396)), top: Math.max(8, Math.min(at.y, window.innerHeight - 420)) }} onMouseDown={(e) => e.stopPropagation()}>
       <input
         ref={input}
         value={query}
@@ -109,7 +112,7 @@ export function QuickAdd({ at, acceptType, onChoose, onClose }: Props) {
             <span className="dot" style={{ background: TYPE_COLOR[entry.returns.type] }} />
             <span className={entry.kind === 'class' ? 'name' : 'name mono'}>{entry.kind === 'method' ? entry.qualname : entry.name}</span>
             <span className="cat mono">{groupLabel(entry.category)}</span>
-            <span className="desc">{entry.doc}</span>
+            {entry.doc && <span className="desc" title={entry.doc}>{entry.doc}</span>}
           </div>
         ))}
         {shown.length === 0 && <div className="quick-add-row muted">No match</div>}

@@ -1,4 +1,31 @@
 import { useEffect, useState } from 'react'
+import type { JsonValue } from '../model/document'
+
+/** Untyped Manim options can accept JSON literals or a typed node connection. */
+export function JsonInput({ value, onChange, label }: {
+  value: JsonValue | undefined; onChange(value: JsonValue | undefined): void; label: string
+}) {
+  const [text, setText] = useState(value === undefined ? '' : JSON.stringify(value))
+  const [focused, setFocused] = useState(false)
+  const [error, setError] = useState(false)
+  useEffect(() => {
+    if (!focused && !error) setText(value === undefined ? '' : JSON.stringify(value))
+  }, [value, focused, error])
+  const commit = (): void => {
+    try {
+      onChange(text.trim() ? JSON.parse(text) as JsonValue : undefined)
+      setError(false)
+    } catch { setError(true) }
+  }
+  return <input className="port-input mono" aria-label={label} aria-invalid={error}
+    title={error ? 'Enter valid JSON: a number, true/false, quoted text, list, or object.' : 'JSON value, or connect a node'}
+    placeholder="JSON or connect" value={text}
+    onMouseDown={(event) => event.stopPropagation()}
+    onFocus={() => setFocused(true)}
+    onChange={(event) => { setText(event.target.value); setError(false) }}
+    onBlur={() => { commit(); setFocused(false) }}
+    onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); commit() } }} />
+}
 
 // Number editors that keep their own draft text. A browser number input reports
 // an empty value for a lone "-" or "1e", and committing every keystroke sends

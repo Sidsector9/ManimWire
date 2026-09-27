@@ -141,7 +141,8 @@
           "enum": [
             "positional",
             "keyword_only",
-            "var_positional"
+            "var_positional",
+            "var_keyword"
           ],
           "title": "Kind",
           "type": "string"
