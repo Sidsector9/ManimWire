@@ -78,13 +78,14 @@ export type Kind9 = "updating";
 export type Mobjects4 = string[];
 export type Action = "suspend" | "resume" | "clear";
 export type Kind10 = "camera";
-export type Action1 = "orient" | "move";
-export type Phi = number | null;
-export type Theta = number | null;
-export type Gamma = number | null;
+export type Action1 = "orient" | "move" | "begin_illusion" | "stop_illusion";
+export type Phi = number | string | null;
+export type Theta = number | string | null;
+export type Gamma = number | string | null;
 export type Zoom = number | null;
 export type FocalDistance = number | null;
 export type RunTime1 = number | null;
+export type Rate = number | null;
 export type Kind11 = "fixed_in_frame";
 export type Mobjects5 = string[];
 export type Action2 = "add" | "remove";
@@ -243,7 +244,7 @@ export interface UpdatingStep {
   [k: string]: unknown;
 }
 /**
- * ThreeDScene camera: ``set_camera_orientation``, or ``move_camera`` over time.
+ * ThreeDScene camera orientation, movement, and illusion rotation.
  */
 export interface CameraStep {
   kind?: Kind10;
@@ -254,6 +255,7 @@ export interface CameraStep {
   zoom?: Zoom;
   focal_distance?: FocalDistance;
   run_time?: RunTime1;
+  rate?: Rate;
   [k: string]: unknown;
 }
 /**

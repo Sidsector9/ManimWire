@@ -42,7 +42,6 @@ export function Graph() {
   const scene = useDocumentStore(currentScene)
   const editingGroup = useDocumentStore((s) => s.editingGroup)
   const store = useDocumentStore()
-  const select = useDocumentStore((s) => s.select)
   const selected = useDocumentStore((s) => s.selected)
   const index = useDescriptorIndex()
   const expressionNames = useCatalogueStore(selectExpressionNames)
@@ -133,14 +132,13 @@ export function Graph() {
     [store, scene]
   )
 
-  // The inspector edits one node, so it follows a single selection only. Anything
-  // else is left alone: clicking the pane clears it, and a node picked from a
-  // timeline row must survive the graph echoing its own state back.
+  // Mirror the graph selection so the Inspector can offer batch actions.
+  const selectNodes = useDocumentStore((s) => s.selectNodes)
   const onSelectionChange = useCallback(
     ({ nodes: picked }: OnSelectionChangeParams<ManimFlowNode>) => {
-      if (picked.length === 1) select(picked[0]!.id)
+      selectNodes(picked.map((node) => node.id))
     },
-    [select]
+    [selectNodes]
   )
 
   // The edge whose end is being dragged; it must not count as an existing connection

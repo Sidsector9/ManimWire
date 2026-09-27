@@ -50,6 +50,11 @@ class ParsedExpression:
     tree: ast.expr
 
     @property
+    def vector(self) -> bool:
+        """A three-coordinate result, for a point or parametric function."""
+        return isinstance(self.tree, ast.List)
+
+    @property
     def boolean(self) -> bool:
         """Whether the value is a truth value (comparison, and, or, not)."""
         return isinstance(self.tree, ast.Compare | ast.BoolOp) or (
@@ -67,7 +72,10 @@ def parse_expression(text: str) -> ParsedExpression:
         raise ExpressionError(f"cannot read expression: {exc.msg}") from exc
     variables: list[str] = []
     for node in ast.walk(tree):
-        if isinstance(node, ast.BinOp):
+        if isinstance(node, ast.List):
+            if node is not tree or len(node.elts) != 3:
+                raise ExpressionError("a vector expression must be [x, y, z]")
+        elif isinstance(node, ast.BinOp):
             if not isinstance(node.op, _OPERATORS):
                 raise ExpressionError("only + - * / ^ % and // are allowed")
         elif isinstance(node, ast.UnaryOp):
@@ -143,12 +151,21 @@ def to_source(parsed: ParsedExpression, bindings: dict[str, str]) -> ExpressionS
     """
     rewrite = _Rewrite(bindings)
     tree = rewrite.visit(ast.parse(parsed.text.replace("^", "**"), mode="eval").body)
+    if parsed.vector:
+        tree = ast.Call(
+            func=ast.Attribute(
+                value=ast.Name(id="np", ctx=ast.Load()), attr="array", ctx=ast.Load()
+            ),
+            args=[tree],
+            keywords=[],
+        )
+        rewrite.uses_numpy = True
     body = ast.unparse(ast.fix_missing_locations(tree))
     free = [v for v in parsed.variables if v not in bindings]
     source = f"lambda {', '.join(free)}: {body}" if free else body
     return ExpressionSource(source=source, free=free, uses_numpy=rewrite.uses_numpy)
 
 
-def signature(free: list[str], boolean: bool = False) -> str:
-    result = "bool" if boolean else "float"
+def signature(free: list[str], boolean: bool = False, vector: bool = False) -> str:
+    result = "point" if vector else "bool" if boolean else "float"
     return "(" + ", ".join("float" for _ in free) + f") -> {result}"

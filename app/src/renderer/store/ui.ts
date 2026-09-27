@@ -16,6 +16,8 @@ export const SPLIT_MIN = 0.28
 export const SPLIT_MAX = 0.62
 
 interface UiStore {
+  developerMode: boolean
+  setDeveloperMode(enabled: boolean): void
   layout: Layout
   splitRatio: number
   nodeDensity: NodeDensity
@@ -35,7 +37,7 @@ const KEY = 'mnw.ui'
 
 const clampHeight = (height: number): number => Math.min(TIMELINE_MAX, Math.max(TIMELINE_MIN, Math.round(height)))
 
-function load(): Partial<Pick<UiStore, 'layout' | 'splitRatio' | 'nodeDensity' | 'tool' | 'timelineHeight'>> {
+function load(): Partial<Pick<UiStore, 'developerMode' | 'layout' | 'splitRatio' | 'nodeDensity' | 'tool' | 'timelineHeight'>> {
   try {
     const raw = localStorage.getItem(KEY)
     return raw ? (JSON.parse(raw) as Partial<UiStore>) : {}
@@ -46,7 +48,7 @@ function load(): Partial<Pick<UiStore, 'layout' | 'splitRatio' | 'nodeDensity' |
 
 function persist(state: UiStore): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ layout: state.layout, splitRatio: state.splitRatio, nodeDensity: state.nodeDensity, tool: state.tool, timelineHeight: state.timelineHeight }))
+    localStorage.setItem(KEY, JSON.stringify({ developerMode: state.developerMode, layout: state.layout, splitRatio: state.splitRatio, nodeDensity: state.nodeDensity, tool: state.tool, timelineHeight: state.timelineHeight }))
   } catch {
     // Storage can be unavailable; preferences then last for the session only.
   }
@@ -59,6 +61,8 @@ export const useUiStore = create<UiStore>((set, get) => {
     persist(get())
   }
   return {
+    developerMode: saved.developerMode === true,
+    setDeveloperMode: (developerMode) => update({ developerMode }),
     layout: saved.layout ?? 'stacked',
     splitRatio: Math.min(SPLIT_MAX, Math.max(SPLIT_MIN, saved.splitRatio ?? 0.4)),
     nodeDensity: saved.nodeDensity ?? 'compact',

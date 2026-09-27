@@ -246,7 +246,12 @@ def layout_timeline(
                 Marker(step=position, kind="subcaption", time=time, label=step.content)
             )
         elif isinstance(step, CameraStep):
-            label = "move camera" if step.action == "move" else "camera orientation"
+            label = {
+                "move": "move camera",
+                "orient": "camera orientation",
+                "begin_illusion": "begin illusion rotation",
+                "stop_illusion": "stop illusion rotation",
+            }[step.action]
             if step.action == "move":
                 bars.append(
                     Bar(

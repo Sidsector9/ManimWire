@@ -79,14 +79,23 @@ export function effectiveDescriptor(node: DocNode, descriptor: Descriptor, scene
     }))
   ]
   const free = variables.filter((v) => !(v in node.values) && !scene.edges.some((e) => e.target === node.id && e.port === v))
+  // The engine validates the coordinates; infer the output while editing.
+  const vector = text.trim().startsWith('[') && text.trim().endsWith(']')
   const returns: TypeRef = free.length
-    ? { ...NUMBER, type: 'function', annotation: 'Callable', signature: `(${free.map(() => 'float').join(', ')}) -> float` }
-    : NUMBER
+    ? { ...NUMBER, type: 'function', annotation: 'Callable', signature: `(${free.map(() => 'float').join(', ')}) -> ${vector ? 'point' : 'float'}` }
+    : vector ? { ...NUMBER, type: 'vector', annotation: 'np.ndarray' } : NUMBER
   return { ...descriptor, parameters, returns }
 }
 
 export function isObjectType(type: TypeRef): boolean {
   return OBJECT_TYPES.has(type.type)
+}
+
+/** Objects that can be referenced directly by a scene Add step. */
+export function canAddToScene(node: DocNode, descriptor: Descriptor | undefined): boolean {
+  if (node.parent != null || !descriptor) return false
+  const type = producedType(descriptor).type
+  return type === 'mobject' || type === 'coordinate_system' || type === 'live_number'
 }
 
 function isValueNode(descriptor: Descriptor | undefined): boolean {

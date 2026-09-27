@@ -263,18 +263,23 @@ class Graph:
     # ---- expressions -----------------------------------------------------------
 
     @cached_property
-    def expressions(self) -> dict[str, tuple[list[str], str | None, bool]]:
-        """Per Expression node: (variables, parse error, boolean)."""
-        result: dict[str, tuple[list[str], str | None, bool]] = {}
+    def expressions(self) -> dict[str, tuple[list[str], str | None, bool, bool]]:
+        """Per Expression node: (variables, parse error, boolean, vector)."""
+        result: dict[str, tuple[list[str], str | None, bool, bool]] = {}
         for node in self.nodes.values():
             if node.catalogue != EXPRESSION.name:
                 continue
             text = node.values.get("expr")
             try:
                 parsed = parse_expression(text if isinstance(text, str) else "")
-                result[node.id] = (parsed.variables, None, parsed.boolean)
+                result[node.id] = (
+                    parsed.variables,
+                    None,
+                    parsed.boolean,
+                    parsed.vector,
+                )
             except ExpressionError as exc:
-                result[node.id] = ([], str(exc), False)
+                result[node.id] = ([], str(exc), False, False)
         return result
 
     def free_variables(self, node_id: str) -> list[str]:
@@ -367,13 +372,17 @@ class Graph:
         name = descriptor.name
         if name == EXPRESSION.name:
             free = self.free_variables(node_id)
-            boolean = self.expressions.get(node_id, ([], None, False))[2]
+            _, _, boolean, vector = self.expressions.get(
+                node_id, ([], None, False, False)
+            )
             if free:
                 return TypeRef(
                     type=PortType.FUNCTION,
                     annotation="Callable",
-                    signature=signature(free, boolean),
+                    signature=signature(free, boolean, vector),
                 )
+            if vector:
+                return TypeRef(type=PortType.VECTOR, annotation="np.ndarray")
             if boolean:
                 return TypeRef(type=PortType.BOOLEAN, annotation="bool")
             return TypeRef(type=PortType.NUMBER, annotation="float")

@@ -1,7 +1,9 @@
+import { useEffect, useId, useState } from 'react'
+import { createPortal } from 'react-dom'
 import type { Parameter } from '../../shared/engine'
 import { GROUP_PREFIX, SELF_PORT, connectedPorts, type ConfigKey, type DocNode, type JsonValue, type MethodCall, type Scene, type UpdatingAction } from '../model/document'
 import { conceptGroups } from '../model/groups'
-import { ANIMATE, chainMethods, chainPort, effectiveDescriptor, isLiveSource, playsEachRun, rootOf } from '../model/live'
+import { ANIMATE, canAddToScene, chainMethods, chainPort, effectiveDescriptor, isLiveSource, playsEachRun, rootOf } from '../model/live'
 import type { DescriptorIndex } from '../model/types'
 import { TYPE_COLOR, selectExpressionNames, useCatalogueStore } from '../store/catalogue'
 import { useDescriptorIndex } from '../store/descriptors'
@@ -20,6 +22,7 @@ const UPDATING_ACTIONS: Array<[UpdatingAction, string]> = [
 export function Inspector() {
   const scene = useDocumentStore(currentScene)
   const selected = useDocumentStore((s) => s.selected)
+  const selectedNodes = useDocumentStore((s) => s.selectedNodes)
   const selectedStep = useDocumentStore((s) => s.selectedStep)
   const store = useDocumentStore()
   const index = useDescriptorIndex()
@@ -29,6 +32,21 @@ export function Inspector() {
   const code = useEngineResults((s) => s.code)
   const sourceMap = useEngineResults((s) => s.sourceMap)
   const issues = useEngineResults((s) => s.issues)
+
+  const picked = scene.nodes.filter((n) => selectedNodes.includes(n.id))
+  if (picked.length > 1) {
+    return (
+      <section className="panel inspector">
+        <div className="panel-head"><span>Inspector</span></div>
+        <div className="inspector-body">
+          <div className="inspector-title">{picked.length} nodes selected</div>
+          {editingGroup
+            ? <div className="inspector-doc">Add objects to the scene from the main graph.</div>
+            : <SceneActions nodes={picked} scene={scene} index={index} />}
+        </div>
+      </section>
+    )
+  }
 
   const node = scene.nodes.find((n) => n.id === selected)
   const catalogued = node ? index.get(node.catalogue) : undefined
@@ -52,8 +70,6 @@ export function Inspector() {
   const lines = (sourceMap.nodes[node.id] ?? []).map((n) => code.split('\n')[n - 1] ?? '').map((l) => l.trim())
   const nodeIssues = issues.filter((i) => i.node === node.id)
   const inPlay = scene.steps.some((s) => s.kind === 'play' && s.animations.includes(node.id))
-  // An object put on screen with self.add, rather than by an animation.
-  const inScene = scene.steps.some((s) => s.kind === 'add' && s.mobjects.includes(node.id))
   // A node inside a Map or Repeat runs once per item, so the container goes on the
   // timeline, never the node. Playing the node itself is not a step the engine allows.
   // A container of animations goes on the timeline as a loop: one play per run.
@@ -74,16 +90,26 @@ export function Inspector() {
       </div>
       <div className="inspector-body">
         <div className="inspector-title">
-          <span className="swatch-bar" style={{ background: TYPE_COLOR[descriptor.returns.type] }} />
-          <input
-            className="port-input"
-            value={node.label ?? ''}
-            placeholder={descriptor.name}
-            onChange={(e) => store.updateNode(node.id, { label: e.target.value || null })}
-          />
-          <span className="mono muted" title={descriptor.qualname}>
-            {node.id}
-          </span>
+          <div className="inspector-identity-row">
+            <span className="muted">Output type</span>
+            <span className="inspector-output-type">
+              <span className="swatch-bar" aria-hidden="true" style={{ background: TYPE_COLOR[descriptor.returns.type] }} />
+              {descriptor.returns.type.replaceAll('_', ' ')}
+            </span>
+          </div>
+          <label className="inspector-identity-row">
+            <span className="muted">Label</span>
+            <input
+              className="port-input"
+              value={node.label ?? ''}
+              placeholder={descriptor.name}
+              onChange={(e) => store.updateNode(node.id, { label: e.target.value || null })}
+            />
+          </label>
+          <div className="inspector-identity-row">
+            <span className="muted">Node ID</span>
+            <span className="mono muted">{node.id}</span>
+          </div>
         </div>
         <div className="mono inspector-path">{descriptor.qualname}</div>
         {descriptor.doc && <div className="inspector-doc">{descriptor.doc}</div>}
@@ -97,11 +123,7 @@ export function Inspector() {
             {loops ? 'Play this once per run' : 'Play this animation'}
           </button>
         )}
-        {isMobject && !inScene && !editingGroup && (
-          <button className="button" title="self.add: the object is there from this point, with no animation" onClick={() => store.addStep({ kind: 'add', mobjects: [node.id] })}>
-            Add to the scene
-          </button>
-        )}
+        {!editingGroup && <SceneActions nodes={[node]} scene={scene} index={index} />}
         {descriptor.kind === 'method' && (
           <div className="field">
             <span className="field-label">object</span>
@@ -109,8 +131,8 @@ export function Inspector() {
           </div>
         )}
         {groups.map((group) => (
-          <div key={group.label}>
-            <div className="group-head">{group.label}</div>
+          <section key={group.label} className="inspector-section" data-section={group.label.toLowerCase().replaceAll(' ', '-')} aria-label={group.label}>
+            <h3 className="group-head">{group.label}</h3>
             {group.description && <div className="group-desc">{group.description}</div>}
             {group.params.map((param) => (
               <Field
@@ -137,7 +159,7 @@ export function Inspector() {
                 }
               />
             ))}
-          </div>
+          </section>
         ))}
         {node.parent && <div className="inspector-doc">Inside a Map or Repeat: this builds one object per run. The canvas shows the last run's object.</div>}
         {descriptor.name === 'Config' && (
@@ -192,6 +214,34 @@ export function Inspector() {
         </button>
       </div>
     </section>
+  )
+}
+
+/** Edit direct scene additions without deleting the corresponding graph nodes. */
+function SceneActions({ nodes, scene, index }: { nodes: DocNode[]; scene: Scene; index: DescriptorIndex }) {
+  const add = useDocumentStore((s) => s.addToScene)
+  const remove = useDocumentStore((s) => s.removeFromScene)
+  const added = new Set(scene.steps.flatMap((step) => step.kind === 'add' ? step.mobjects : []))
+  const eligible = nodes.filter((node) => canAddToScene(node, index.get(node.catalogue)))
+  const pending = eligible.filter((node) => !added.has(node.id))
+  const included = nodes.filter((node) => added.has(node.id))
+  const count = nodes.length - eligible.length
+  return (
+    <>
+      {pending.length > 0 && (
+        <button className="button" title="Add the objects together at the end of the Timeline, without animation" onClick={() => add(pending.map((node) => node.id), index)}>
+          {nodes.length === 1 ? 'Add to the scene' : `Add ${pending.length} ${pending.length === 1 ? 'object' : 'objects'} to the scene`}
+        </button>
+      )}
+      {included.length > 0 && (
+        <button className="button danger" title="Remove the explicit scene additions. Animations can still display these objects." onClick={() => remove(included.map((node) => node.id))}>
+          {nodes.length === 1 ? 'Remove from the scene' : `Remove ${included.length} ${included.length === 1 ? 'object' : 'objects'} from the scene`}
+        </button>
+      )}
+      {nodes.length > 1 && count > 0 && (
+        <div className="inspector-doc">{count} selected {count === 1 ? 'node does' : 'nodes do'} not produce an object that can be added directly to the scene.</div>
+      )}
+    </>
   )
 }
 
@@ -323,9 +373,37 @@ function Field({
   onPin?(): void
   onTurnIntoPort?(): void
 }) {
+  const [tooltip, setTooltip] = useState<{ right: number; top: number } | null>(null)
+  const tooltipId = useId()
+  useEffect(() => {
+    if (!tooltip) return
+    const dismiss = (): void => setTooltip(null)
+    const onKey = (event: KeyboardEvent): void => { if (event.key === 'Escape') dismiss() }
+    window.addEventListener('scroll', dismiss, true)
+    window.addEventListener('resize', dismiss)
+    window.addEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('scroll', dismiss, true)
+      window.removeEventListener('resize', dismiss)
+      window.removeEventListener('keydown', onKey)
+    }
+  }, [tooltip])
   const isSet = value !== undefined
   return (
-    <div className={`field${isSet ? ' set' : ''}${onPin ? ' with-socket' : ''}`}>
+    <div className={`field${isSet ? ' set' : ''}${onPin ? ' with-socket' : ''}`}
+      aria-describedby={tooltip ? tooltipId : undefined}
+      onPointerEnter={(event) => {
+        const label = event.currentTarget.querySelector('.field-label')!.getBoundingClientRect()
+        setTooltip({ right: window.innerWidth - label.right, top: label.top - 6 })
+      }}
+      onPointerLeave={() => setTooltip(null)}
+      onPointerDown={() => setTooltip(null)}
+    >
+      {tooltip && createPortal(
+        <div id={tooltipId} role="tooltip" className="inspector-field-tooltip" style={tooltip}>
+          {param.name}
+        </div>, document.body
+      )}
       <span className="field-label" title={`${param.type.annotation}${param.display ? ` · default ${param.display}` : ''}`}>
         {param.name}
       </span>

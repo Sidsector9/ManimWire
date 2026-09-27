@@ -1,7 +1,39 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { MatrixInput, NumberInput, NumberListInput } from './inputs'
+import { AngleInput, MatrixInput, NumberInput, NumberListInput } from './inputs'
+
+describe('camera angle editor', () => {
+  afterEach(cleanup)
+
+  it('keeps partial expressions local and preserves expressions on Enter or blur', () => {
+    const onChange = vi.fn()
+    render(<AngleInput label="phi" value={1.2} onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'phi' })
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '75 *' } })
+    expect(onChange).not.toHaveBeenCalled()
+    fireEvent.change(input, { target: { value: '75 * DEGREES' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenLastCalledWith('75 * DEGREES')
+    fireEvent.change(input, { target: { value: 'PI / 2' } })
+    fireEvent.blur(input)
+    expect(onChange).toHaveBeenLastCalledWith('PI / 2')
+  })
+
+  it('keeps numeric angles compatible and supports clearing a field', () => {
+    const onChange = vi.fn()
+    render(<AngleInput label="theta" value="30 * DEGREES" onChange={onChange} />)
+    const input = screen.getByRole('textbox', { name: 'theta' })
+    fireEvent.focus(input)
+    fireEvent.change(input, { target: { value: '-0.5' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenLastCalledWith(-0.5)
+    fireEvent.change(input, { target: { value: '  ' } })
+    fireEvent.blur(input)
+    expect(onChange).toHaveBeenLastCalledWith(null)
+  })
+})
 
 describe('number editors', () => {
   afterEach(cleanup)

@@ -9,6 +9,38 @@ function formatNumber(value: number | null | undefined): string {
   return value === null || value === undefined ? '' : String(value)
 }
 
+/** Retain an angle expression verbatim; the engine validates it before rendering. */
+export function AngleInput({ value, onChange, label }: {
+  value: number | string | null | undefined
+  onChange(value: number | string | null): void
+  label: string
+}) {
+  const [text, setText] = useState(value == null ? '' : String(value))
+  const [focused, setFocused] = useState(false)
+  useEffect(() => {
+    if (!focused) setText(value == null ? '' : String(value))
+  }, [value, focused])
+  const commit = (): void => {
+    const trimmed = text.trim()
+    const next = trimmed === '' ? null : Number.isFinite(Number(trimmed)) ? Number(trimmed) : trimmed
+    if (next !== (value ?? null)) onChange(next)
+  }
+  return <input
+    className="port-input mono"
+    aria-label={label}
+    type="text"
+    placeholder="unchanged"
+    value={text}
+    onMouseDown={(e) => e.stopPropagation()}
+    onFocus={() => setFocused(true)}
+    onChange={(e) => setText(e.target.value)}
+    onBlur={() => { commit(); setFocused(false) }}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit() }
+    }}
+  />
+}
+
 export function NumberInput({
   value,
   placeholder,

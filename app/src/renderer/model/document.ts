@@ -44,7 +44,7 @@ export interface DocEdge {
 }
 
 export type UpdatingAction = 'suspend' | 'resume' | 'clear'
-export type CameraAction = 'orient' | 'move'
+export type CameraAction = 'orient' | 'move' | 'begin_illusion' | 'stop_illusion'
 export const CAMERA_FIELDS = ['phi', 'theta', 'gamma', 'zoom', 'focal_distance'] as const
 
 export type Step =
@@ -70,9 +70,10 @@ export type Step =
   | {
       kind: 'camera'
       action: CameraAction
-      phi?: number | null
-      theta?: number | null
-      gamma?: number | null
+      rate?: number | null
+      phi?: number | string | null
+      theta?: number | string | null
+      gamma?: number | string | null
       zoom?: number | null
       focal_distance?: number | null
       run_time?: number | null

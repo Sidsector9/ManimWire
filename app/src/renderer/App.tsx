@@ -1,5 +1,6 @@
 import { ReactFlowProvider } from '@xyflow/react'
 import { useEffect, useState } from 'react'
+import { DeveloperTools } from './components/DeveloperTools'
 import { Canvas } from './components/Canvas'
 import { CodeView } from './components/CodeView'
 import { Graph } from './components/Graph'
@@ -148,6 +149,7 @@ export function App() {
       <Inspector />
       <Timeline />
       <StatusBar />
+      <DeveloperTools />
       {settingsOpen && <SettingsDialog onClose={() => setSettingsOpen(false)} />}
     </div>
   )

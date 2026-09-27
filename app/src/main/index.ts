@@ -5,6 +5,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import type { EngineCallResult, MenuAction } from '../shared/engine'
+import { registerDeveloperTools } from './developer'
 import { EngineSupervisor, spawnDevelopmentEngine } from './engine'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
@@ -183,6 +184,7 @@ app.whenReady().then(() => {
       window.webContents.send('engine:notification', method, params)
     }
   })
+  registerDeveloperTools()
   buildMenu()
   supervisor.start()
   createWindow()

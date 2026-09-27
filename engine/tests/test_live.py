@@ -88,6 +88,56 @@ def test_expression_parser_accepts_math_and_rejects_python() -> None:
             parse_expression(bad)
 
 
+def test_vector_expressions_build_surface_functions(
+    catalogue: Catalogue, tmp_path: Path
+) -> None:
+    from engine.catalogue.model import PortType
+    from engine.document.analysis import Graph
+
+    text = "[u, v, exp(-(u^2 + v^2) / (2 * 0.4^2))]"
+    parsed = parse_expression(text)
+    assert parsed.vector and parsed.variables == ["u", "v"]
+    source = to_source(parsed, {})
+    assert source.uses_numpy
+    assert source.source.startswith("lambda u, v: np.array([u, v, np.exp(")
+    scene = SceneDocument(
+        scene_type="ThreeDScene",
+        nodes=[
+            Node(id="fn", catalogue="Expression", values={"expr": text}),
+            Node(
+                id="surface",
+                catalogue="Surface",
+                values={"resolution": [8, 8], "u_range": [-2, 2], "v_range": [-2, 2]},
+            ),
+        ],
+        edges=[Edge(source="fn", target="surface", port="func")],
+        steps=[AddStep(mobjects=["surface"])],
+    )
+    assert (
+        Graph(scene, catalogue).output_type("fn").signature == "(float, float) -> point"
+    )
+    generated = ManimCodeGenerator().generate(scene, catalogue)
+    assert generated.issues == []
+    frame = CairoRenderService(tmp_path).frame(
+        scene, catalogue, Settings.model_validate(SMALL), 0
+    )
+    with Image.open(frame.path) as image:
+        assert image.convert("RGB").getbbox() is not None
+    scene.nodes[0].values.update({"u": 0, "v": 0})
+    assert Graph(scene, catalogue).output_type("fn").type == PortType.VECTOR
+    assert to_source(parsed, {"u": "0", "v": "0"}).free == []
+    for invalid in (
+        "[u, v]",
+        "[u, v, 0, 1]",
+        "[u, [v, 0, 1], 0]",
+        "sum([u, v, 0])",
+        "[u for u in v]",
+        "[u, v, __import__('os')]",
+    ):
+        with pytest.raises(ExpressionError):
+            parse_expression(invalid)
+
+
 def test_live_dot_becomes_always_redraw(catalogue: Catalogue) -> None:
     generated = ManimCodeGenerator().generate(tracked_dot_scene(), catalogue)
     assert generated.issues == []

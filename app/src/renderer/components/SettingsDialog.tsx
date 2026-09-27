@@ -1,3 +1,4 @@
+import { DeveloperSettings } from './DeveloperTools'
 import { EXPORT_FORMATS, SCENE_TYPES, type ExportFormat, type SceneType } from '../model/document'
 import { selectColors, useCatalogueStore } from '../store/catalogue'
 import { previewScene, useDocumentStore } from '../store/document'
@@ -123,6 +124,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
             </button>
           ))}
         </div>
+        <DeveloperSettings />
         <div className="inspector-actions">
           <button className="button" onClick={onClose}>
             Done

@@ -7,6 +7,7 @@ from collections.abc import Iterable, Mapping
 
 from pydantic import BaseModel
 
+from engine.camera_angles import angle_source
 from engine.catalogue.builtins import (
     ANIMATE,
     CAMERA_FRAME,
@@ -354,6 +355,21 @@ def validate_scene(
 
     for position, step in enumerate(scene.steps):
         issues.extend(_step_issues(position, step, graph, descriptors, functions))
+        if isinstance(step, CameraStep) and step.action in {"orient", "move"}:
+            for field in ("phi", "theta", "gamma"):
+                value = getattr(step, field)
+                if value is not None:
+                    try:
+                        angle_source(value)
+                    except ValueError as exc:
+                        issues.append(
+                            Issue(
+                                code="bad_step",
+                                message=f"{field}: {exc}",
+                                step=position,
+                                port=field,
+                            )
+                        )
         if (
             isinstance(step, CameraStep)
             and step.action == "move"

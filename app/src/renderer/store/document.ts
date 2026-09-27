@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { pasteSelection, type GraphSelection } from '../model/clipboard'
 import type { Descriptor, TypeRef } from '../../shared/engine'
-import { liveByDefault } from '../model/live'
+import { canAddToScene, liveByDefault } from '../model/live'
 import { acceptingPorts, portType, type DescriptorIndex } from '../model/types'
 import {
   addGroup,
@@ -22,6 +22,7 @@ import {
   setSettings,
   setValue,
   updateNode,
+  updateScene,
   type AnimationDrop,
   type Doc,
   type DocEdge,
@@ -52,6 +53,8 @@ interface DocumentStore {
   past: Doc[]
   future: Doc[]
   selected: string | null
+  /** The graph's current selection, mirrored for batch Inspector actions. */
+  selectedNodes: string[]
   selectedStep: number | null
   lastEdit: { key: string; at: number } | null
   /** Counts edits that change what the engine sees. Where a node sits on the graph,
@@ -76,6 +79,8 @@ interface DocumentStore {
   /** Make every connection into a port live (an updater) or one-time. */
   setPortLive(target: string, port: string, live: boolean): void
   addStep(step: Step, at?: number): void
+  addToScene(ids: string[], index: DescriptorIndex): void
+  removeFromScene(ids: string[]): void
   removeStep(at: number): void
   updateStep(at: number, step: Step): void
   moveStep(from: number, to: number): void
@@ -88,6 +93,7 @@ interface DocumentStore {
   importGroup(group: GroupDefinition): void
   editGroup(name: string | null): void
   select(id: string | null): void
+  selectNodes(ids: string[]): void
   undo(): void
   redo(): void
   markSaved(filePath: string): void
@@ -127,16 +133,17 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     future: [],
     revision: 0,
     selected: null,
+    selectedNodes: [],
     selectedStep: null,
     lastEdit: null,
 
     replace: (doc, filePath) =>
-      set({ doc, filePath, dirty: false, past: [], future: [], selected: null, selectedStep: null, editingGroup: null, lastEdit: null, revision: get().revision + 1 }),
+      set({ doc, filePath, dirty: false, past: [], future: [], selected: null, selectedNodes: [], selectedStep: null, editingGroup: null, lastEdit: null, revision: get().revision + 1 }),
     apply: (change) => record(change(get().doc)),
     addNode: (catalogue, position, values = {}, parent = null) => {
       const id = newId()
       record(addNode(get().doc, target(), catalogue, position, values, id, parent))
-      set({ selected: id })
+      set({ selected: id, selectedNodes: [id] })
       return id
     },
     addCatalogueNode: (descriptor, position, index, from) => {
@@ -156,7 +163,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
         next = addStep(next, target(), { kind: 'play', animations: [id] })
       }
       record(next)
-      set({ selected: id })
+      set({ selected: id, selectedNodes: [id] })
       return id
     },
     removeNodes: (ids) => get().removeElements(ids, []),
@@ -171,7 +178,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     pasteNodes: (selection, at) => {
       const pasted = pasteSelection(get().doc, target(), selection, at)
       record(pasted.doc)
-      if (pasted.ids.length) set({ selected: pasted.ids.length === 1 ? pasted.ids[0]! : null, selectedStep: null })
+      if (pasted.ids.length) set({ selected: pasted.ids.length === 1 ? pasted.ids[0]! : null, selectedNodes: pasted.ids, selectedStep: null })
       return pasted.ids
     },
     updateNode: (id, change) => {
@@ -197,6 +204,30 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
       record(next)
     },
     addStep: (step, at) => record(addStep(get().doc, target(), step, at)),
+    addToScene: (ids, index) => {
+      if (get().editingGroup) return
+      const scene = currentScene(get())
+      const chosen = new Set(ids)
+      const added = new Set(scene.steps.flatMap((step) => step.kind === 'add' ? step.mobjects : []))
+      const mobjects = scene.nodes.filter((node) => chosen.has(node.id) && !added.has(node.id) && canAddToScene(node, index.get(node.catalogue))).map((node) => node.id)
+      if (mobjects.length) record(addStep(get().doc, target(), { kind: 'add', mobjects }))
+    },
+    removeFromScene: (ids) => {
+      if (get().editingGroup) return
+      const removed = new Set(ids)
+      const scene = currentScene(get())
+      if (!scene.steps.some((step) => step.kind === 'add' && step.mobjects.some((id) => removed.has(id)))) return
+      const steps: Step[] = []
+      let selectedStep: number | null = null
+      scene.steps.forEach((step, at) => {
+        const next = step.kind === 'add' ? { ...step, mobjects: step.mobjects.filter((id) => !removed.has(id)) } : step
+        if (next.kind === 'add' && next.mobjects.length === 0) return
+        if (at === get().selectedStep) selectedStep = steps.length
+        steps.push(next)
+      })
+      record(updateScene(get().doc, target(), (s) => ({ ...s, steps })))
+      set({ selectedStep })
+    },
     removeStep: (at) => {
       record(removeStep(get().doc, target(), at))
       const { selectedStep } = get()
@@ -214,21 +245,27 @@ export const useDocumentStore = create<DocumentStore>((set, get) => {
     setSceneType: (type) => record(setSceneType(get().doc, get().sceneIndex, type)),
     addGroup: (name) => {
       record(addGroup(get().doc, name))
-      if (get().doc.groups.some((g) => g.name === name)) set({ editingGroup: name, selected: null, selectedStep: null })
+      if (get().doc.groups.some((g) => g.name === name)) set({ editingGroup: name, selected: null, selectedNodes: [], selectedStep: null })
     },
     removeGroup: (name) => {
       record(removeGroup(get().doc, name))
-      if (get().editingGroup === name) set({ editingGroup: null, selected: null })
+      if (get().editingGroup === name) set({ editingGroup: null, selected: null, selectedNodes: [] })
     },
     importGroup: (group) => record(importGroup(get().doc, group)),
-    editGroup: (name) => set({ editingGroup: name, selected: null, selectedStep: null }),
+    editGroup: (name) => set({ editingGroup: name, selected: null, selectedNodes: [], selectedStep: null }),
     // Returning the state unchanged stops zustand notifying: the graph subscribes to
     // the whole store, and re-rendering it would report the selection straight back.
     select: (id) =>
       set((s) => {
-        if (s.selected === id && (id !== null || s.selectedStep === null)) return s
-        return id === null ? { selected: null, selectedStep: null } : { selected: id }
+        const selectedNodes = id === null ? [] : [id]
+        if (s.selected === id && s.selectedNodes.length === selectedNodes.length && s.selectedNodes[0] === selectedNodes[0] && (id !== null || s.selectedStep === null)) return s
+        return id === null ? { selected: null, selectedNodes, selectedStep: null } : { selected: id, selectedNodes }
       }),
+    selectNodes: (ids) => set((s) => {
+      if (s.selectedNodes.length === ids.length && s.selectedNodes.every((id, at) => id === ids[at])) return s
+      // An empty graph echo must not clear an object selected from the Timeline.
+      return { selectedNodes: ids, ...(ids.length ? { selected: ids.length === 1 ? ids[0]! : null, selectedStep: null } : {}) }
+    }),
     undo: () => {
       const { doc, past, future } = get()
       const previous = past.at(-1)

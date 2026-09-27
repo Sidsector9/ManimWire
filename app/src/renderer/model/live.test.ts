@@ -37,6 +37,16 @@ const node = (id: string, catalogue: string, values: DocNode['values'] = {}): Do
 const RESERVED = ['sin', 'pi']
 
 describe('expression ports', () => {
+  it('recognizes point-returning functions and fully bound vectors', () => {
+    const expression = node('e', 'Expression', { expr: '[u, v, exp(-(u^2 + v^2))]' })
+    const scene: Scene = { name: 'S', scene_type: 'ThreeDScene', nodes: [expression], edges: [], steps: [] }
+    const describe = () => effectiveDescriptor(expression, index.get('Expression')!, scene, ['exp'], index)
+    expect(describe().returns).toMatchObject({ type: 'function', signature: '(float, float) -> point' })
+    expression.values['u'] = 0
+    expression.values['v'] = 0
+    expect(describe().returns.type).toBe('vector')
+  })
+
   it('lists variables sorted, ignoring functions and constants', () => {
     expect(expressionVariables('k / t + sin(pi * x)^2', RESERVED)).toEqual(['k', 't', 'x'])
     expect(expressionVariables('', RESERVED)).toEqual([])

@@ -1,7 +1,7 @@
 import { CAMERA_FIELDS, type Step } from '../model/document'
 import { selectEntries, useCatalogueStore } from '../store/catalogue'
 import { previewScene, useDocumentStore } from '../store/document'
-import { NumberInput } from './inputs'
+import { AngleInput, NumberInput } from './inputs'
 
 /** Fields of the selected timeline step. */
 export function StepInspector({ index }: { index: number }) {
@@ -103,7 +103,12 @@ export function StepInspector({ index }: { index: number }) {
         {step.kind === 'camera' && (
           <>
             <div className="inspector-doc">
-              {step.action === 'orient' ? 'set_camera_orientation: jump to these angles.' : 'move_camera: animate the camera to these angles over run_time.'} Empty fields keep their current value.
+              {{
+                orient: 'set_camera_orientation: jump to these angles. Empty fields keep their current value.',
+                move: 'move_camera: animate the camera to these angles over run_time. Empty fields keep their current value.',
+                begin_illusion: 'Begin illusion rotation around the current camera orientation. Add a wait or animation afterward to let it run.',
+                stop_illusion: 'Stop illusion rotation, keeping the current camera orientation.'
+              }[step.action]}
             </div>
             <div className="field">
               <span className="field-label">action</span>
@@ -111,13 +116,22 @@ export function StepInspector({ index }: { index: number }) {
                 <select className="port-select mono" value={step.action} onChange={(e) => update({ action: e.target.value as typeof step.action })}>
                   <option value="orient">set_camera_orientation</option>
                   <option value="move">move_camera</option>
+                  <option value="begin_illusion">begin_3dillusion_camera_rotation</option>
+                  <option value="stop_illusion">stop_3dillusion_camera_rotation</option>
                 </select>
               </span>
             </div>
-            {CAMERA_FIELDS.map((field) => (
-              <NumberField key={field} label={field} value={step[field]} placeholder="unchanged" onChange={(v) => update({ [field]: v })} />
+            {(step.action === 'orient' || step.action === 'move') && CAMERA_FIELDS.map((field) => (
+              field === 'phi' || field === 'theta' || field === 'gamma'
+                ? <div className="field" key={field}>
+                    <span className="field-label">{field}</span>
+                    <span className="field-value"><AngleInput label={field} value={step[field]} onChange={(v) => update({ [field]: v })} /></span>
+                  </div>
+                : <NumberField key={field} label={field} value={step[field]} placeholder="unchanged" onChange={(v) => update({ [field]: v })} />
             ))}
+            {(step.action === 'orient' || step.action === 'move') && <div className="inspector-doc">Angles accept radians or expressions such as 75 * DEGREES and PI / 2. Press Enter or leave the field to apply.</div>}
             {step.action === 'move' && <NumberField label="run_time" value={step.run_time} placeholder="1" onChange={(v) => update({ run_time: v })} />}
+            {step.action === 'begin_illusion' && <NumberField label="rate" value={step.rate} placeholder="1" onChange={(v) => update({ rate: v })} />}
           </>
         )}
         {step.kind === 'fixed_in_frame' && (

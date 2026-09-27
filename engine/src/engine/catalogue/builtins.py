@@ -58,7 +58,8 @@ def _node(
 EXPRESSION = _node(
     "Expression",
     "logic",
-    "A mathematical expression such as x^2 or k / t. Each variable is a port; "
+    "A mathematical expression such as x^2, k / t, or [u, v, u^2 + v^2]. "
+    "Each variable is a port; "
     "unconnected variables become the arguments of a function.",
     [_param("expr", PortType.TEXT, None, "str")],
     TypeRef(type=PortType.ANY, annotation="Expression"),

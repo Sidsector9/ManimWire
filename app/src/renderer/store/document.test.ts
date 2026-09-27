@@ -193,3 +193,65 @@ describe('step selection follows step edits', () => {
     expect(currentScene(useDocumentStore.getState()).steps[0]).toEqual({ kind: 'wait', duration: 2 })
   })
 })
+
+describe('direct scene additions', () => {
+  const object: Descriptor = { ...create, name: 'Circle', qualname: 'Circle', returns: ref('mobject'), parameters: [] }
+  const index = indexDescriptors([object, create, { ...object, name: 'Number', qualname: 'Number', kind: 'builtin', returns: ref('number') }])
+  beforeEach(() => useDocumentStore.getState().replace(emptyDocument(), null))
+
+  it('adds eligible selected objects together once and undoes the batch in one step', () => {
+    const store = useDocumentStore.getState()
+    const a = store.addNode('Circle', [0, 0])
+    const b = store.addNode('Circle', [200, 0])
+    const animation = store.addNode('Create', [400, 0])
+    const number = store.addNode('Number', [600, 0])
+    const container = store.addNode('Map', [0, 300])
+    const child = store.addNode('Circle', [20, 60], {}, container)
+    const before = useDocumentStore.getState().doc
+    const history = useDocumentStore.getState().past.length
+    store.addToScene([a, b, a, animation, number, child, 'missing'], index)
+    expect(currentScene(useDocumentStore.getState()).steps).toEqual([{ kind: 'add', mobjects: [a, b] }])
+    expect(useDocumentStore.getState().past).toHaveLength(history + 1)
+    store.addToScene([a, b], index)
+    expect(useDocumentStore.getState().past).toHaveLength(history + 1)
+    store.undo()
+    expect(useDocumentStore.getState().doc).toEqual(before)
+    store.redo()
+    expect(currentScene(useDocumentStore.getState()).steps).toEqual([{ kind: 'add', mobjects: [a, b] }])
+  })
+
+  it('removes only the chosen Add references, keeping nodes, edges, animations and other objects', () => {
+    const store = useDocumentStore.getState()
+    const original = starterDocument()
+    original.scenes[0]!.steps = [
+      { kind: 'add', mobjects: ['circle', 'fill'] },
+      { kind: 'add', mobjects: ['circle'] },
+      { kind: 'play', animations: ['create'] }
+    ]
+    store.replace(original, null)
+    store.selectStep(2)
+    store.removeFromScene(['circle'])
+    const result = currentScene(useDocumentStore.getState())
+    expect(result.nodes).toEqual(original.scenes[0]!.nodes)
+    expect(result.edges).toEqual(original.scenes[0]!.edges)
+    expect(result.steps).toEqual([{ kind: 'add', mobjects: ['fill'] }, { kind: 'play', animations: ['create'] }])
+    expect(useDocumentStore.getState().selectedStep).toBe(1)
+    expect(useDocumentStore.getState().past).toHaveLength(1)
+    store.removeFromScene(['circle'])
+    expect(useDocumentStore.getState().past).toHaveLength(1)
+    store.undo()
+    expect(useDocumentStore.getState().doc).toEqual(original)
+    store.removeFromScene(['circle', 'fill'])
+    expect(currentScene(useDocumentStore.getState()).steps).toEqual([{ kind: 'play', animations: ['create'] }])
+  })
+
+  it('does not add scene steps while editing a reusable group', () => {
+    const store = useDocumentStore.getState()
+    store.addGroup('Example')
+    const id = store.addNode('Circle', [0, 0])
+    const before = useDocumentStore.getState().doc
+    store.addToScene([id], index)
+    store.removeFromScene([id])
+    expect(useDocumentStore.getState().doc).toBe(before)
+  })
+})

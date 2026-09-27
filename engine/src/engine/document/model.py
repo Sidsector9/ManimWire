@@ -136,16 +136,17 @@ class UpdatingStep(BaseModel):
 
 
 class CameraStep(BaseModel):
-    """ThreeDScene camera: ``set_camera_orientation``, or ``move_camera`` over time."""
+    """ThreeDScene camera orientation, movement, and illusion rotation."""
 
     kind: Literal["camera"] = "camera"
-    action: Literal["orient", "move"] = "orient"
-    phi: float | None = None
-    theta: float | None = None
-    gamma: float | None = None
+    action: Literal["orient", "move", "begin_illusion", "stop_illusion"] = "orient"
+    phi: float | str | None = None
+    theta: float | str | None = None
+    gamma: float | str | None = None
     zoom: float | None = None
     focal_distance: float | None = None
     run_time: float | None = None
+    rate: float | None = None
 
 
 class FixedInFrameStep(BaseModel):
@@ -172,7 +173,12 @@ Step = Annotated[
     Field(discriminator="kind"),
 ]
 
-CAMERA_METHODS = {"orient": "set_camera_orientation", "move": "move_camera"}
+CAMERA_METHODS = {
+    "orient": "set_camera_orientation",
+    "move": "move_camera",
+    "begin_illusion": "begin_3dillusion_camera_rotation",
+    "stop_illusion": "stop_3dillusion_camera_rotation",
+}
 FIXED_IN_FRAME_METHODS = {
     "add": "add_fixed_in_frame_mobjects",
     "remove": "remove_fixed_in_frame_mobjects",

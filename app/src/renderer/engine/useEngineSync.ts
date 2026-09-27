@@ -18,6 +18,16 @@ export function useEngineSync(): void {
   const sync = useEngineResults((s) => s.sync)
 
   useEffect(() => {
+    // A new engine may have different capabilities and an empty frame cache.
+    // Revalidate even when the open document has not changed.
+    useEngineResults.setState({
+      synced: null,
+      prerendered: null,
+      ...(!ready ? { playing: false, queued: [] } : {})
+    })
+  }, [ready])
+
+  useEffect(() => {
     if (!ready) return
     const timer = setTimeout(() => void sync(useDocumentStore.getState().doc, sceneIndex, revision), DEBOUNCE_MS)
     return () => clearTimeout(timer)

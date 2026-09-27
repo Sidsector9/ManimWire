@@ -19,6 +19,7 @@ from typing import Protocol
 
 from pydantic import BaseModel
 
+from engine.camera_angles import angle_source
 from engine.catalogue.builtins import (
     ANIMATE,
     CAMERA_FRAME,
@@ -681,11 +682,19 @@ class _Build:
                     self.line(f"{self.expression(mobject)}.{method}()", step=position)
             return
         elif isinstance(step, CameraStep):
-            parts = [
-                f"{field}={getattr(step, field)!r}"
-                for field in CAMERA_FIELDS
-                if getattr(step, field) is not None
-            ]
+            fields: tuple[str, ...] = (
+                CAMERA_FIELDS if step.action in {"orient", "move"} else ()
+            )
+            if step.action == "begin_illusion":
+                fields = ("rate",)
+            parts = []
+            for field in fields:
+                value = getattr(step, field)
+                if value is not None:
+                    source = (
+                        angle_source(value) if isinstance(value, str) else repr(value)
+                    )
+                    parts.append(f"{field}={source}")
             if step.action == "move" and step.run_time is not None:
                 parts.append(f"run_time={step.run_time!r}")
             text = f"self.{CAMERA_METHODS[step.action]}({', '.join(parts)})"

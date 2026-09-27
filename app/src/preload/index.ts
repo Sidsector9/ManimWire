@@ -1,3 +1,4 @@
+import type { DeveloperApi } from '../shared/developer'
 import { contextBridge, ipcRenderer } from 'electron'
 import type { EngineApi, EngineStatus, FilesApi, MenuAction } from '../shared/engine'
 
@@ -39,3 +40,14 @@ const files: FilesApi = {
 
 contextBridge.exposeInMainWorld('engine', engine)
 contextBridge.exposeInMainWorld('files', files)
+
+const developer: DeveloperApi = {
+  setEnabled: (enabled) => ipcRenderer.invoke('developer:enabled', enabled),
+  resize: (width, height) => ipcRenderer.invoke('developer:resize', width, height),
+  begin: () => ipcRenderer.invoke('developer:begin'),
+  append: (chunk) => ipcRenderer.invoke('developer:append', chunk),
+  finish: () => ipcRenderer.invoke('developer:finish'),
+  save: () => ipcRenderer.invoke('developer:save'),
+  discard: () => ipcRenderer.invoke('developer:discard')
+}
+contextBridge.exposeInMainWorld('developer', developer)

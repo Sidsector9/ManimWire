@@ -67,7 +67,7 @@
       "type": "object"
     },
     "CameraStep": {
-      "description": "ThreeDScene camera: ``set_camera_orientation``, or ``move_camera`` over time.",
+      "description": "ThreeDScene camera orientation, movement, and illusion rotation.",
       "properties": {
         "kind": {
           "const": "camera",
@@ -79,7 +79,9 @@
           "default": "orient",
           "enum": [
             "orient",
-            "move"
+            "move",
+            "begin_illusion",
+            "stop_illusion"
           ],
           "title": "Action",
           "type": "string"
@@ -88,6 +90,9 @@
           "anyOf": [
             {
               "type": "number"
+            },
+            {
+              "type": "string"
             },
             {
               "type": "null"
@@ -102,6 +107,9 @@
               "type": "number"
             },
             {
+              "type": "string"
+            },
+            {
               "type": "null"
             }
           ],
@@ -112,6 +120,9 @@
           "anyOf": [
             {
               "type": "number"
+            },
+            {
+              "type": "string"
             },
             {
               "type": "null"
@@ -155,6 +166,18 @@
           ],
           "default": null,
           "title": "Run Time"
+        },
+        "rate": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rate"
         }
       },
       "title": "CameraStep",
