@@ -1,0 +1,281 @@
+{
+  "before": {
+    "revision": "0a62efb",
+    "device": {
+      "renderer": "opengl",
+      "acceleration": "hardware",
+      "device": "Apple M3 Pro",
+      "vendor": "Apple",
+      "version": "4.1 Metal - 90.5",
+      "backend": null,
+      "reason": null
+    },
+    "width": 960,
+    "height": 540,
+    "fps": 60.0,
+    "method": "Three samples by default; warm text/shader caches; engine request latency, excluding HTTP/UI. After-open pairs: wall ms, reported render ms. Cold seek explicitly clears frames and live scene. Drag advances by one frame per request.",
+    "rows": [
+      {
+        "sample": 0,
+        "opening_ms": 167.23591700429097,
+        "after_open_ms": {
+          "8": [
+            1728.439291997347,
+            1726.6259579919279
+          ],
+          "4": [
+            906.7525420105085,
+            905.0879169953987
+          ],
+          "1": [
+            242.91137501131743,
+            241.3580829743296
+          ]
+        },
+        "uncached_8s_ms": 1714.9600840057246,
+        "forward_drag_ms": [
+          875.8913329802454,
+          930.5840419838205,
+          882.6467909966595,
+          894.5626670029014,
+          898.37141596945,
+          902.6625420083292,
+          905.5027920403518,
+          930.337583005894,
+          950.9890840272419,
+          910.7565830345266
+        ],
+        "forward_drag_median_ms": 904.0826670243405
+      },
+      {
+        "sample": 1,
+        "opening_ms": 37.853875022847205,
+        "after_open_ms": {
+          "8": [
+            1742.9757499485277,
+            1741.549208003562
+          ],
+          "4": [
+            948.0962920351885,
+            946.5827090316452
+          ],
+          "1": [
+            249.72224998055026,
+            248.16379096591845
+          ]
+        },
+        "uncached_8s_ms": 2240.4377920320258,
+        "forward_drag_ms": [
+          1311.3772500073537,
+          1216.6698750224896,
+          1007.5749999959953,
+          1022.3866669693962,
+          1013.3507500286214,
+          1261.7029580287635,
+          1110.759874980431,
+          1313.9479999663308,
+          1027.1814999869093,
+          994.9470409774221
+        ],
+        "forward_drag_median_ms": 1068.9706874836702
+      },
+      {
+        "sample": 2,
+        "opening_ms": 73.15870898310095,
+        "after_open_ms": {
+          "8": [
+            1898.0689579620957,
+            1895.9103749948554
+          ],
+          "4": [
+            986.6555419866927,
+            985.1429580012336
+          ],
+          "1": [
+            250.22249994799495,
+            248.66741598816589
+          ]
+        },
+        "uncached_8s_ms": 1923.0377079802565,
+        "forward_drag_ms": [
+          968.7550829839893,
+          1216.7661670246162,
+          1124.8297079582699,
+          993.1820410420187,
+          970.770874992013,
+          939.2671250388958,
+          942.4342080019414,
+          1018.1538340402767,
+          1188.634207996074,
+          1281.8350000306964
+        ],
+        "forward_drag_median_ms": 1005.6679375411477
+      }
+    ],
+    "medians": {
+      "opening_ms": 73.15870898310095,
+      "uncached_8s_ms": 1923.0377079802565,
+      "forward_drag_ms": 1005.6679375411477,
+      "after_open_ms": {
+        "8": 1742.9757499485277,
+        "4": 948.0962920351885,
+        "1": 249.72224998055026
+      }
+    }
+  },
+  "after": {
+    "revision": "working tree",
+    "device": {
+      "renderer": "opengl",
+      "acceleration": "hardware",
+      "device": "Apple M3 Pro",
+      "vendor": "Apple",
+      "version": "4.1 Metal - 90.5",
+      "backend": null,
+      "reason": null
+    },
+    "width": 960,
+    "height": 540,
+    "fps": 60.0,
+    "method": "Three samples by default; warm text/shader caches; engine request latency, excluding HTTP/UI. After-open pairs: wall ms, reported render ms. Cold seek explicitly clears frames and live scene. Drag advances by one frame per request.",
+    "rows": [
+      {
+        "sample": 0,
+        "opening_ms": 713.6890409747139,
+        "background_warm_ms": 3491.6850840090774,
+        "after_open_ms": {
+          "8": [
+            1.7208339995704591,
+            0.0
+          ],
+          "4": [
+            1.3057080213911831,
+            0.0
+          ],
+          "1": [
+            1.259958022274077,
+            0.0
+          ]
+        },
+        "uncached_8s_ms": 458.92441604519263,
+        "forward_drag_ms": [
+          14.203791972249746,
+          14.099417021498084,
+          15.350916015449911,
+          13.861917017493397,
+          14.246333041228354,
+          15.549707983154804,
+          15.345457999501377,
+          13.217916944995522,
+          13.056666008196771,
+          12.935584003571421
+        ],
+        "forward_drag_median_ms": 14.151604496873915
+      },
+      {
+        "sample": 1,
+        "opening_ms": 570.6956250360236,
+        "background_warm_ms": 3438.2986670243554,
+        "after_open_ms": {
+          "8": [
+            1.5522500034421682,
+            0.0
+          ],
+          "4": [
+            1.2358340318314731,
+            0.0
+          ],
+          "1": [
+            1.156874990556389,
+            0.0
+          ]
+        },
+        "uncached_8s_ms": 450.8215829846449,
+        "forward_drag_ms": [
+          15.258874977007508,
+          14.737333985976875,
+          14.269917039200664,
+          13.605749991256744,
+          13.740624999627471,
+          13.218291976954788,
+          15.011917043011636,
+          13.406375015620142,
+          13.758541957940906,
+          14.070792007260025
+        ],
+        "forward_drag_median_ms": 13.914666982600465
+      },
+      {
+        "sample": 2,
+        "opening_ms": 565.8442080020905,
+        "background_warm_ms": 4568.525207985658,
+        "after_open_ms": {
+          "8": [
+            1.5579999890178442,
+            0.0
+          ],
+          "4": [
+            1.2131250114180148,
+            0.0
+          ],
+          "1": [
+            1.1646249913610518,
+            0.0
+          ]
+        },
+        "uncached_8s_ms": 460.428457998205,
+        "forward_drag_ms": [
+          14.795750030316412,
+          13.881459017284214,
+          14.139415987301618,
+          15.155249973759055,
+          13.847291993442923,
+          16.18729199981317,
+          14.978584018535912,
+          13.989874976687133,
+          13.74516700161621,
+          13.398375012911856
+        ],
+        "forward_drag_median_ms": 14.064645481994376
+      }
+    ],
+    "medians": {
+      "opening_ms": 570.6956250360236,
+      "uncached_8s_ms": 458.92441604519263,
+      "forward_drag_ms": 14.064645481994376,
+      "after_open_ms": {
+        "8": 1.5579999890178442,
+        "4": 1.2358340318314731,
+        "1": 1.1646249913610518
+      }
+    }
+  },
+  "electron_cached_clicks": {
+    "method": "Electron pointerdown to requested canvas pixel update after idle preparation; checks frame URL matches requested time. Includes UI, RPC, HTTP and canvas write; excludes physical display scanout. Each click starts with an idle engine and verified cached frame.",
+    "times": [
+      8,
+      4,
+      1,
+      7,
+      3,
+      2,
+      6,
+      5,
+      8.5,
+      4.5
+    ],
+    "latencies_ms": [
+      10.600000023841858,
+      14,
+      11,
+      9.699999988079071,
+      13.699999988079071,
+      9.399999976158142,
+      8.600000023841858,
+      8.699999988079071,
+      8.899999976158142,
+      8.5
+    ],
+    "median_ms": 9.549999982118607
+  }
+}

@@ -33,6 +33,7 @@ from engine.render.runner import (
     TimingRenderer,
     run_scene,
 )
+from engine.render.seeking import SeekSession
 
 RENDER_ERROR = -32000
 _QUIET = QUIET
@@ -189,11 +190,40 @@ class RenderService:
         self.timings: dict[str, list[tuple[float, float]]] = {}
         self.binary = binary
         self.frames: BinaryFrames | None = None
+        self.seek: SeekSession | None = None
+        self.seek_key = ""
+
+    def close_seek(self) -> None:
+        if self.seek is not None:
+            self.seek.close()
+            self.seek = None
+        self.seek_key = ""
 
     def close(self) -> None:
+        self.close_seek()
         if self.frames is not None:
             self.frames.close()
             self.frames = None
+
+    def clear_cache(self) -> dict[str, bool]:
+        """Run between render RPCs, releasing open handles before deleting caches."""
+        self.close()
+        self.timings.clear()
+        # Only these cache directories belong to this operation. In particular,
+        # never delete media/videos, source images, or the user's export folder.
+        for directory in (
+            self.cache_dir,
+            config.get_dir("text_dir"),
+            config.get_dir("tex_dir"),
+        ):
+            if not directory.exists() or directory.is_symlink():
+                continue
+            for child in directory.iterdir():
+                if child.is_dir() and not child.is_symlink():
+                    shutil.rmtree(child)
+                else:
+                    child.unlink()
+        return {"cleared": True}
 
     def _cached(self, path: Path) -> FrameResult | None:
         if self.binary:
@@ -226,6 +256,7 @@ class RenderService:
         time: float,
         width: int | None = None,
         groups: Iterable[GroupDefinition] = (),
+        on_start: Callable[[str], None] | None = None,
     ) -> FrameResult:
         generated = self._generate(scene, catalogue, groups)
         overrides = {**_config_for(settings, width), "renderer": self.device.renderer}
@@ -235,6 +266,8 @@ class RenderService:
             return cached
         started = perf_counter()
         target = index / settings.frame_rate
+        if self.binary and self.device.renderer == "opengl":
+            return self._seek_frame(generated, scene.name, overrides, target, on_start)
         instance, locals_, renderer = run_scene(
             generated,
             scene.name,
@@ -276,6 +309,80 @@ class RenderService:
         result.render_ms = (perf_counter() - started) * 1000
         return result
 
+    def _seek_frame(
+        self,
+        generated: GeneratedCode,
+        name: str,
+        overrides: dict[str, Any],
+        target: float,
+        on_start: Callable[[str], None] | None,
+    ) -> FrameResult:
+        started = perf_counter()
+        if self.frames is None:
+            self.frames = BinaryFrames(self.cache_dir / "frames")
+        frames = self.frames
+        url = frames.begin_seek(target)
+        if on_start is not None:
+            on_start(url)
+        fps = float(overrides["frame_rate"])
+        key = self._frame_path(name, generated.code, 0, overrides).stem
+
+        def requested() -> float:
+            return frame_index(frames.seek_time, fps) / fps
+
+        bounds: list[Bounds] = []
+
+        def snapshot(instance: Any, locals_: dict[str, Any]) -> None:
+            nonlocal bounds
+            # Capture while the session's OpenGL configuration is active rather
+            # than converting all Manim classes twice more for selection bounds.
+            bounds = _bounds(instance, locals_, generated.source_map)
+
+        try:
+            while True:
+                target = requested()
+                path = self._frame_path(
+                    name, generated.code, frame_index(target, fps), overrides
+                )
+                if (cached := self._cached(path)) is not None:
+                    return cached
+                if self.seek_key != key or (
+                    self.seek is not None and self.seek.time > target + 1e-6
+                ):
+                    self.close_seek()
+                if self.seek is None:
+                    self.seek = SeekSession(
+                        generated, name, overrides, self.device.backend
+                    )
+                    self.seek_key = key
+                    self.render_count += 1
+                _, _, pixels = self.seek.advance(requested, snapshot)
+                latest = requested()
+                if self.seek.time > latest + 1e-6 or (
+                    self.seek.time < latest - 1e-6 and not self.seek.task.dead
+                ):
+                    continue  # The playhead changed while the old seek was running.
+                path = self._frame_path(
+                    name, generated.code, frame_index(latest, fps), overrides
+                )
+                result = self._store(
+                    path,
+                    FrameResult(
+                        path=str(path),
+                        stream=key,
+                        time=self.seek.time,
+                        bounds=bounds,
+                    ),
+                    pixels,
+                )
+                result.render_ms = (perf_counter() - started) * 1000
+                return result
+        except BaseException:
+            self.close_seek()
+            raise
+        finally:
+            frames.end_seek()
+
     def sequence(
         self,
         scene: SceneDocument,
@@ -294,6 +401,7 @@ class RenderService:
         Later ``frame`` calls for those times are cache hits, so playback only reads
         images. ``on_frame`` is told about each frame as it is written.
         """
+        self.close_seek()
         generated = self._generate(scene, catalogue, groups)
         overrides = {**_config_for(settings, width), "renderer": self.device.renderer}
         written = 0
@@ -419,6 +527,7 @@ class RenderService:
         progress: Progress | None = None,
         groups: Iterable[GroupDefinition] = (),
     ) -> ExportResult:
+        self.close_seek()
         if fmt not in _EXPORT_FORMATS:
             raise RenderError(f"unsupported export format {fmt}", None, None, None)
         generated = self._generate(scene, catalogue, groups)

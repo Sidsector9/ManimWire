@@ -21,4 +21,5 @@ dev = [
     "pytest>=9",
     "ruff>=0.16",
     "mypy>=2",
+    "types-greenlet>=3.5.0.20260518",
 ]

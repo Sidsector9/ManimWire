@@ -38,10 +38,17 @@ selecting OpenGL does not enable hardware video encoding.
 The engine retains one OpenGL context, its compiled shaders, and reusable mesh
 buffers/vertex arrays between serial requests. Unchanged mesh data avoids upload;
 changed data updates or reallocates storage. The framebuffer is reused until the
-resolution changes; scene textures
-are released after each execution, including errors. The persistent resources
+resolution changes. Live OpenGL seek sessions retain scene state and textures
+between forward requests; sequences, exports, invalidation and shutdown release
+them. Regular render executions release textures on completion, including errors.
+The persistent resources
 are released at engine shutdown. Frame caches distinguish Cairo from OpenGL.
 Numeric-text object caches are kept separate because their representations differ.
+
+Direct scrubbing resumes scene state and simulates skipped frames without GPU
+submission. Latest-target control interrupts obsolete seeks; idle preparation
+provides cached backwards seeks without Play. See the
+[scrubbing measurements and limits](scrubbing-performance.md).
 
 ## Bundled Manim compatibility
 

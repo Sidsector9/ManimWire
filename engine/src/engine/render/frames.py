@@ -7,6 +7,7 @@ unbounded memory. Neither path uses an image codec or base64/JSON pixel payloads
 
 from __future__ import annotations
 
+import math
 import secrets
 import tempfile
 from collections import OrderedDict
@@ -41,6 +42,9 @@ class BinaryFrames:
         self.waiting_bytes = 0
         self.token = secrets.token_urlsafe(32)
         self.cancel_key = ""
+        self.seek_key = ""
+        self.seek_time = 0.0
+        self.seek_revision = -1
         self.cancelled = Event()
         owner = self
 
@@ -49,11 +53,30 @@ class BinaryFrames:
 
             def do_POST(self) -> None:
                 with owner.lock:
-                    if self.path != f"/{owner.token}/cancel/{owner.cancel_key}":
+                    seek_prefix = f"/{owner.token}/seek/{owner.seek_key}/"
+                    if owner.seek_key and self.path.startswith(seek_prefix):
+                        try:
+                            raw_time, raw_revision = self.path[
+                                len(seek_prefix) :
+                            ].split("/")
+                            target, revision = float(raw_time), int(raw_revision)
+                        except ValueError:
+                            target, revision = -1, -1
+                        if (
+                            not math.isfinite(target)
+                            or not 0 <= target <= 1e6
+                            or revision < 0
+                        ):
+                            self.send_error(400)
+                            return
+                        if revision > owner.seek_revision:
+                            owner.seek_time, owner.seek_revision = target, revision
+                    elif self.path == f"/{owner.token}/cancel/{owner.cancel_key}":
+                        owner.cancelled.set()
+                        owner.ready.notify_all()
+                    else:
                         self.send_error(404)
                         return
-                    owner.cancelled.set()
-                    owner.ready.notify_all()
                 self.send_response(204)
                 self.send_header("Access-Control-Allow-Origin", "*")
                 self.end_headers()
@@ -83,6 +106,17 @@ class BinaryFrames:
         self.thread = Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.base_url = f"http://127.0.0.1:{self.server.server_port}/{self.token}/"
+
+    def begin_seek(self, time: float) -> str:
+        with self.lock:
+            self.seek_time = time
+            self.seek_revision = -1
+            self.seek_key = secrets.token_urlsafe(16)
+            return self.base_url + "seek/" + self.seek_key + "/"
+
+    def end_seek(self) -> None:
+        with self.lock:
+            self.seek_key = ""
 
     def begin_sequence(self, paced: bool = False) -> str:
         with self.lock:

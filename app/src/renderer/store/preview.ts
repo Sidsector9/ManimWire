@@ -36,9 +36,14 @@ interface PreviewStore {
   loop: boolean
   /** True while the engine renders a run of frames into its cache (render.sequence). */
   sequencing: boolean
+  warming: boolean
+  clearingCache: boolean
+  warmSuppressed: string | null
+  clearDiskCache(): Promise<void>
   /** Counts sequence calls, so a cancelled run's completion cannot clear a newer run's flag. */
   sequenceRun: number
   cancelUrl: string | null
+  seekUrl: string | null
   sequenceCached: boolean
   cancelSequence(): void
   /** The edit last validated and laid out; a frame-only sync skips those two calls. */
@@ -57,7 +62,7 @@ interface PreviewStore {
   setLoop(loop: boolean): void
   sync(doc: Doc, sceneIndex: number, revision: number): Promise<void>
   /** Render every frame between two times into the cache, queueing them for playback. */
-  sequence(doc: Doc, sceneIndex: number, start: number, end: number): Promise<boolean>
+  sequence(doc: Doc, sceneIndex: number, start: number, end: number, background?: boolean): Promise<boolean>
   /** Show the newest queued frame due by `time`, dropping the ones it passed. */
   showQueued(time: number): void
   /** Show the frame at a time from the cache, dropping the request when one is in flight. */
@@ -85,8 +90,25 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   playing: false,
   loop: false,
   sequencing: false,
+  warming: false,
+  clearingCache: false,
+  warmSuppressed: null,
+  clearDiskCache: async () => {
+    if (get().inFlight || get().sequencing || get().playing || get().clearingCache) {
+      throw new Error('Wait for rendering and playback to finish before clearing the cache.')
+    }
+    set({ clearingCache: true, inFlight: true, warmSuppressed: cacheKey(get().code, get().previewWidth), prerendered: null, sequenceCached: false, queued: [], rendered: 0 })
+    try {
+      await call('cache.clear')
+    } finally {
+      const next = get().pending
+      set({ clearingCache: false, inFlight: false, pending: null })
+      if (next) void get().sync(next.doc, next.sceneIndex, next.revision)
+    }
+  },
   sequenceRun: 0,
   cancelUrl: null,
+  seekUrl: null,
   sequenceCached: false,
   cancelSequence: () => {
     const url = get().cancelUrl
@@ -100,7 +122,8 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   setPreviewTime: (previewTime) => set({ previewTime }),
   setPreviewWidth: (previewWidth) => set({ previewWidth }),
   setPlaying: (playing) => {
-    if (!playing) get().cancelSequence()
+    if (playing && get().clearingCache) return
+    if (!playing || get().warming) get().cancelSequence()
     set({ playing, ...(playing ? { rendered: 0 } : { queued: [] }) })
   },
   setLoop: (loop) => set({ loop }),
@@ -112,6 +135,11 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
    */
   sync: async (doc, sceneIndex, revision) => {
     if (get().inFlight || get().sequencing) {
+      if (get().warming) get().cancelSequence()
+      if (get().seekUrl) {
+        const unchanged = get().synced?.revision === revision && get().synced?.sceneIndex === sceneIndex
+        retargetSeek(get().seekUrl!, unchanged ? get().previewTime ?? END_OF_SCENE : 0)
+      }
       if (get().sequencing && (get().synced?.revision !== revision || get().synced?.sceneIndex !== sceneIndex)) {
         get().setPlaying(false)
       }
@@ -128,17 +156,18 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
     }
   },
 
-  sequence: async (doc, sceneIndex, start, end) => {
+  sequence: async (doc, sceneIndex, start, end, background = false) => {
+    if (get().clearingCache) return false
     const scene = doc.scenes[sceneIndex]!.name
     const { previewWidth } = get()
     const run = get().sequenceRun + 1
-    set({ sequencing: true, sequenceRun: run, cancelUrl: null, rendering: true, failure: null })
+    set({ sequencing: true, warming: background, sequenceRun: run, cancelUrl: null, rendering: !background, failure: null })
     const off = window.engine.onNotification((method, params) => {
       const message = params as { request_id?: number | null; cancel_url?: string }
       if (message.request_id != null && message.request_id !== run) return
       if (method === 'render.sequence_started' && message.cancel_url && get().sequenceRun === run) {
         set({ cancelUrl: message.cancel_url })
-        if (!get().playing) get().cancelSequence()
+        if ((!get().playing && !background) || (background && get().pending)) get().cancelSequence()
         return
       }
       if (method !== 'render.frame_ready') return
@@ -146,13 +175,16 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
       // Rendering usually outruns the scene, so frames wait their turn rather than
       // being shown the moment they arrive. Ignore frames arriving after Stop
       // while the engine handles cancellation at its next frame boundary.
-      if (frame.scene === scene && get().playing && get().sequenceRun === run) {
+      if (!background && frame.scene === scene && get().playing && get().sequenceRun === run) {
         set({ queued: [...get().queued, frame], rendered: Math.max(get().rendered, frame.time) })
       }
     })
     try {
-      const result = await call<{ cache_complete?: boolean; cancelled?: boolean }>('render.sequence', { document: doc, scene, start, end, width: previewWidth, request_id: run, paced: true })
-      if (get().sequenceRun === run) set({ sequenceCached: result.cache_complete !== false })
+      const result = await call<{ cache_complete?: boolean; cancelled?: boolean }>('render.sequence', { document: doc, scene, start, end, width: previewWidth, request_id: run, paced: !background })
+      if (get().sequenceRun === run) {
+        set({ sequenceCached: result.cache_complete !== false })
+        if (background && !result.cancelled && result.cache_complete && end >= (get().layout?.total ?? Infinity)) set({ prerendered: cacheKey(get().code, previewWidth) })
+      }
       return !result.cancelled
     } catch (error) {
       set({ failure: describeFailure(error) })
@@ -161,7 +193,7 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
       off()
       if (get().sequenceRun === run) {
         const next = get().pending
-        set({ sequencing: false, cancelUrl: null, rendering: next !== null, pending: null })
+        set({ sequencing: false, warming: false, cancelUrl: null, rendering: next !== null, pending: null })
         if (next) void get().sync(next.doc, next.sceneIndex, next.revision)
       }
     }
@@ -179,7 +211,7 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
     const scene = doc.scenes[sceneIndex]!.name
     set({ inFlight: true, previewTime: time })
     try {
-      const frame = await call<FrameResult>('render.frame', { document: doc, scene, time, width: get().previewWidth })
+      const frame = await requestFrame({ document: doc, scene, time, width: get().previewWidth }, set, get)
       set({ frame })
     } catch (error) {
       set({ failure: describeFailure(error), playing: false })
@@ -193,6 +225,31 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
 
 type Set = (partial: Partial<PreviewStore>) => void
 type Get = () => PreviewStore
+
+let seekRequest = 0
+let seekRevision = 0
+
+function retargetSeek(url: string, time: number): void {
+  void fetch(`${url}${time}/${++seekRevision}`, { method: 'POST' }).catch(() => {})
+}
+
+async function requestFrame(params: Record<string, unknown>, set: Set, get: Get): Promise<FrameResult> {
+  const requestId = ++seekRequest
+  const off = window.engine.onNotification((method, value) => {
+    const message = value as { request_id?: number; seek_url?: string }
+    if (method !== 'render.seek_started' || message.request_id !== requestId || !message.seek_url) return
+    set({ seekUrl: message.seek_url })
+    const pending = get().pending
+    const changed = pending && (pending.revision !== get().synced?.revision || pending.sceneIndex !== get().synced?.sceneIndex)
+    retargetSeek(message.seek_url, changed ? 0 : get().previewTime ?? END_OF_SCENE)
+  })
+  try {
+    return await call<FrameResult>('render.frame', { ...params, request_id: requestId })
+  } finally {
+    off()
+    set({ seekUrl: null })
+  }
+}
 
 async function run(doc: Doc, sceneIndex: number, revision: number, set: Set, get: Get): Promise<void> {
   const scene = doc.scenes[sceneIndex]!.name
@@ -214,12 +271,12 @@ async function run(doc: Doc, sceneIndex: number, revision: number, set: Set, get
       return
     }
     const { previewTime, previewWidth } = get()
-    const frame = await call<FrameResult>('render.frame', {
+    const frame = await requestFrame({
       document: doc,
       scene,
       time: previewTime ?? END_OF_SCENE,
       width: previewWidth
-    })
+    }, set, get)
     set({ frame, failure: null })
   } catch (error) {
     set({ failure: describeFailure(error) })

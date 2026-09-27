@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { DeveloperSettings } from './DeveloperTools'
 import { EXPORT_FORMATS, SCENE_TYPES, type ExportFormat, type SceneType } from '../model/document'
 import { selectColors, useCatalogueStore } from '../store/catalogue'
 import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
+import { useEngineStore } from '../store/engine'
 import { useUiStore, type NodeDensity } from '../store/ui'
 
 /** Manim's quality presets: name, width, height, frame rate. */
@@ -125,6 +127,7 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
           ))}
         </div>
         <DeveloperSettings />
+        <DiskCacheSettings />
         <div className="inspector-actions">
           <button className="button" onClick={onClose}>
             Done
@@ -133,4 +136,32 @@ export function SettingsDialog({ onClose }: { onClose(): void }) {
       </div>
     </div>
   )
+}
+
+function DiskCacheSettings() {
+  const ready = useEngineStore((s) => s.status.state === 'ready')
+  const busy = useEngineResults((s) => s.inFlight || s.sequencing || s.playing)
+  const clearing = useEngineResults((s) => s.clearingCache)
+  const [message, setMessage] = useState('')
+  const [failed, setFailed] = useState(false)
+  const clear = async () => {
+    setMessage('')
+    setFailed(false)
+    try {
+      await useEngineResults.getState().clearDiskCache()
+      setMessage('Disk cache cleared. Previews and text assets will rebuild as needed.')
+    } catch (error) {
+      setFailed(true)
+      setMessage(`Could not clear disk cache: ${error instanceof Error ? error.message : String(error)}`)
+    }
+  }
+  return <>
+    <div className="dialog-section">Disk cache</div>
+    <p className="inspector-doc">Clear cached previews and generated text and LaTeX assets. Saved projects and exported videos are kept.</p>
+    <button className="button" disabled={!ready || busy || clearing} onClick={() => void clear()}>
+      {clearing ? 'Clearing…' : 'Clear disk cache'}
+    </button>
+    {message ? <p className="inspector-doc" role={failed ? 'alert' : 'status'}>{message}</p> :
+      <p className="inspector-doc">{!ready ? 'Start the engine to clear the cache.' : busy && !clearing ? 'Available when rendering and playback finish.' : ''}</p>}
+  </>
 }

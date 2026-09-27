@@ -32,13 +32,14 @@ def build_dispatcher(cache_dir: Path | None = None) -> Dispatcher:
     dispatcher = Dispatcher()
     dispatcher.register("ping", lambda: "pong")
     dispatcher.register("engine.info", _info)
+    dispatcher.register("cache.clear", service.clear_cache)
     dispatcher.register("catalogue.list", _catalogue_list)
     dispatcher.register("catalogue.get", _catalogue_get)
     dispatcher.register("catalogue.coverage", _catalogue_coverage)
     dispatcher.register("document.validate", _document_validate)
     dispatcher.register("document.generate", _document_generate)
     dispatcher.register("timeline.layout", _timeline_layout)
-    dispatcher.register("render.frame", render.frame)
+    dispatcher.register("render.frame", render.frame, notifies=True)
     dispatcher.register("render.export", render.export, notifies=True)
     dispatcher.register("render.sequence", render.sequence, notifies=True)
     return dispatcher
@@ -106,6 +107,8 @@ class _RenderMethods:
         scene: str,
         time: float,
         width: int | None = None,
+        request_id: int | None = None,
+        notify: Notify = lambda method, params: None,
     ) -> dict[str, Any]:
         parsed = Document.model_validate(document)
         try:
@@ -116,6 +119,10 @@ class _RenderMethods:
                 time,
                 width,
                 parsed.groups,
+                on_start=lambda url: notify(
+                    "render.seek_started",
+                    {"scene": scene, "request_id": request_id, "seek_url": url},
+                ),
             )
         except RenderError as exc:
             raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc

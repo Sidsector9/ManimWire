@@ -1,5 +1,10 @@
 # Preview pipeline redesign — 2026-09-28
 
+Follow-up: the [scrubbing redesign](scrubbing-performance.md) fixes the direct
+seeking path left unchanged by this earlier playback/transport work. It adds
+resumable scenes, simulation without intermediate drawing, latest-target control
+and interruptible background preparation.
+
 The production app now renders a playback pass in one continuous Manim execution,
 serves binary pixels to Electron, and reuses OpenGL mesh buffers. Switching the
 renderer alone did not remove these surrounding costs.

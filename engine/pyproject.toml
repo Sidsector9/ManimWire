@@ -4,6 +4,7 @@ version = "0.0.0"
 description = "Python engine host: catalogue, document, code generation, and rendering through Manim CE."
 requires-python = ">=3.12"
 dependencies = [
+    "greenlet>=3.1,<4",
     "manim",
     "pydantic>=2.13",
 ]

@@ -57,6 +57,26 @@ def test_cancel_control_is_scoped_to_one_sequence(tmp_path: Path) -> None:
         cache.close()
 
 
+def test_seek_control_ignores_out_of_order_and_expired_updates(tmp_path: Path) -> None:
+    cache = BinaryFrames(tmp_path)
+    try:
+        url = cache.begin_seek(8)
+        for suffix in ("2/2", "7/1"):
+            with urlopen(Request(url + suffix, method="POST")):
+                pass
+        assert cache.seek_time == 2
+        for suffix in ("nan/3", "-1/3", "bad", "inf/3"):
+            with pytest.raises(HTTPError) as error:
+                urlopen(Request(url + suffix, method="POST"))
+            assert error.value.code == 400
+        cache.end_seek()
+        with pytest.raises(HTTPError) as error:
+            urlopen(Request(url + "4/4", method="POST"))
+        assert error.value.code == 404
+    finally:
+        cache.close()
+
+
 def test_playback_backpressure_waits_for_reader_and_can_cancel(tmp_path: Path) -> None:
     cache = BinaryFrames(tmp_path, memory_limit=8, disk_limit=24)
     blocked = [Event(), Event()]
