@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "Scene1",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "0adaa314",
+          "catalogue": "Text",
+          "values": {
+            "text": "(0,0)"
+          },
+          "label": null,
+          "position": [
+            464.4004844136376,
+            467.89990235009464
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "7e588b67",
+          "catalogue": "Dot",
+          "values": {},
+          "label": null,
+          "position": [
+            463.47076463956745,
+            604.4284934801008
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "57d294db",
+          "catalogue": "Mobject.next_to",
+          "values": {
+            "direction": "DOWN"
+          },
+          "label": null,
+          "position": [
+            789.4945096830983,
+            524.0390768940247
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "ab524de4",
+          "catalogue": "Text",
+          "values": {
+            "text": "(2,2)"
+          },
+          "label": null,
+          "position": [
+            464.58728431437396,
+            732.8282560828612
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "013cca2b",
+          "catalogue": "Arrow",
+          "values": {
+            "buff": 0,
+            "start": "ORIGIN",
+            "end": [
+              2,
+              2,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            460.1212056151475,
+            873.5097351084944
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "f0441fe4",
+          "catalogue": "Mobject.next_to",
+          "values": {
+            "direction": "RIGHT"
+          },
+          "label": null,
+          "position": [
+            940.224665781991,
+            780.8386020995456
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "610a2850",
+          "catalogue": "Mobject.get_end",
+          "values": {},
+          "label": null,
+          "position": [
+            673.3764635032106,
+            903.655766328273
+          ],
+          "collapsed": true
+        },
+        {
+          "id": "30834ade",
+          "catalogue": "NumberPlane",
+          "values": {},
+          "label": null,
+          "position": [
+            1191.4415926134793,
+            624.5258476266197
+          ],
+          "collapsed": true,
+          "parent": null
+        }
+      ],
+      "edges": [
+        {
+          "source": "0adaa314",
+          "target": "57d294db",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "7e588b67",
+          "target": "57d294db",
+          "port": "mobject_or_point",
+          "live": false
+        },
+        {
+          "source": "ab524de4",
+          "target": "f0441fe4",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "013cca2b",
+          "target": "610a2850",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "610a2850",
+          "target": "f0441fe4",
+          "port": "mobject_or_point",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "0adaa314",
+            "7e588b67",
+            "57d294db",
+            "ab524de4",
+            "013cca2b",
+            "f0441fe4",
+            "30834ade"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

@@ -1,0 +1,249 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "ThreeDSurfacePlot",
+      "scene_type": "ThreeDScene",
+      "nodes": [
+        {
+          "id": "gaussian",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "[u, v, exp(-(u^2 + v^2) / (2 * 0.4^2))]"
+          },
+          "label": "Gaussian function",
+          "position": [
+            60,
+            240
+          ],
+          "collapsed": false,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "surface",
+          "catalogue": "Surface",
+          "values": {
+            "resolution": [
+              24,
+              24
+            ],
+            "u_range": [
+              -2,
+              2
+            ],
+            "v_range": [
+              -2,
+              2
+            ]
+          },
+          "label": null,
+          "position": [
+            400,
+            240
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": [
+            "resolution",
+            "u_range",
+            "v_range"
+          ]
+        },
+        {
+          "id": "scale",
+          "catalogue": "Mobject.scale",
+          "values": {
+            "scale_factor": 2,
+            "about_point": "ORIGIN"
+          },
+          "label": null,
+          "position": [
+            730,
+            240
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": [
+            "scale_factor",
+            "about_point"
+          ]
+        },
+        {
+          "id": "style",
+          "catalogue": "VMobject.set_style",
+          "values": {
+            "fill_opacity": 1,
+            "stroke_color": "GREEN"
+          },
+          "label": null,
+          "position": [
+            1040,
+            240
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": [
+            "fill_opacity",
+            "stroke_color"
+          ]
+        },
+        {
+          "id": "checkerboard",
+          "catalogue": "Surface.set_fill_by_checkerboard",
+          "values": {
+            "opacity": 0.5
+          },
+          "label": null,
+          "position": [
+            1350,
+            240
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": [
+            "colors",
+            "opacity"
+          ]
+        },
+        {
+          "id": "orange",
+          "catalogue": "Color",
+          "values": {
+            "color": "ORANGE"
+          },
+          "label": null,
+          "position": [
+            1040,
+            -80
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": [
+            "color"
+          ]
+        },
+        {
+          "id": "blue",
+          "catalogue": "Color",
+          "values": {
+            "color": "BLUE"
+          },
+          "label": null,
+          "position": [
+            1040,
+            70
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": [
+            "color"
+          ]
+        },
+        {
+          "id": "axes",
+          "catalogue": "ThreeDAxes",
+          "values": {},
+          "label": null,
+          "position": [
+            458,
+            578
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "gaussian",
+          "target": "surface",
+          "port": "func",
+          "live": false
+        },
+        {
+          "source": "surface",
+          "target": "scale",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "scale",
+          "target": "style",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "style",
+          "target": "checkerboard",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "orange",
+          "target": "checkerboard",
+          "port": "colors",
+          "live": false
+        },
+        {
+          "source": "blue",
+          "target": "checkerboard",
+          "port": "colors",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "camera",
+          "action": "orient",
+          "phi": "75 * DEGREES",
+          "theta": "-30 * DEGREES",
+          "gamma": null,
+          "zoom": null,
+          "focal_distance": null,
+          "run_time": null,
+          "rate": null
+        },
+        {
+          "kind": "add",
+          "mobjects": [
+            "axes",
+            "checkerboard"
+          ]
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

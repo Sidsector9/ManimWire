@@ -1,0 +1,245 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "Scene1",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "241e1713",
+          "catalogue": "Circle",
+          "values": {
+            "radius": 1,
+            "color": "BLUE"
+          },
+          "label": null,
+          "position": [
+            126.79736328125,
+            325.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "db03a120",
+          "catalogue": "Dot",
+          "values": {},
+          "label": null,
+          "position": [
+            131.79736328125,
+            555.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "fb83baee",
+          "catalogue": "Mobject.copy",
+          "values": {},
+          "label": null,
+          "position": [
+            465.79736328125,
+            534.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "b0d20a90",
+          "catalogue": "Mobject.shift",
+          "values": {
+            "vectors": "RIGHT"
+          },
+          "label": null,
+          "position": [
+            723.79736328125,
+            529.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "ec692dcf",
+          "catalogue": "Line",
+          "values": {
+            "start": [
+              3,
+              0,
+              0
+            ],
+            "end": [
+              5,
+              0,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            133.79736328125,
+            764.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "e92f78d7",
+          "catalogue": "GrowFromCenter",
+          "values": {},
+          "label": null,
+          "position": [
+            469.79736328125,
+            301.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "2b65b31e",
+          "catalogue": "Transform",
+          "values": {},
+          "label": null,
+          "position": [
+            738.79736328125,
+            700.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "ae998193",
+          "catalogue": "MoveAlongPath",
+          "values": {
+            "run_time": 2,
+            "rate_func": "linear"
+          },
+          "label": null,
+          "position": [
+            722.79736328125,
+            881.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        },
+        {
+          "id": "7b77b7bb",
+          "catalogue": "Rotating",
+          "values": {
+            "about_point": [
+              2,
+              0,
+              0
+            ],
+            "run_time": 1.5
+          },
+          "label": null,
+          "position": [
+            722.79736328125,
+            374.0024642944336
+          ],
+          "collapsed": true,
+          "parent": null
+        }
+      ],
+      "edges": [
+        {
+          "source": "db03a120",
+          "target": "fb83baee",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "fb83baee",
+          "target": "b0d20a90",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "241e1713",
+          "target": "e92f78d7",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "db03a120",
+          "target": "2b65b31e",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "fb83baee",
+          "target": "2b65b31e",
+          "port": "target_mobject",
+          "live": false
+        },
+        {
+          "source": "db03a120",
+          "target": "ae998193",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "241e1713",
+          "target": "ae998193",
+          "port": "path",
+          "live": false
+        },
+        {
+          "source": "db03a120",
+          "target": "7b77b7bb",
+          "port": "mobject",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "db03a120"
+          ]
+        },
+        {
+          "kind": "add",
+          "mobjects": [
+            "ec692dcf"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "e92f78d7"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "2b65b31e"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "ae998193"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "7b77b7bb"
+          ]
+        },
+        {
+          "kind": "wait",
+          "duration": 1
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

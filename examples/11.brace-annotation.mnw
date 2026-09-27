@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "BraceAnnotation",
+      "scene_type": "Scene",
+      "nodes": [],
+      "edges": [],
+      "steps": []
+    }
+  ],
+  "groups": []
+}

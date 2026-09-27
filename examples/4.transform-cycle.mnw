@@ -18,10 +18,11 @@
           "values": {},
           "label": "a",
           "position": [
-            160,
-            140
+            15,
+            275
           ],
-          "collapsed": true
+          "collapsed": true,
+          "parent": null
         },
         {
           "id": "b2d41e57",
@@ -29,10 +30,11 @@
           "values": {},
           "label": "t1",
           "position": [
-            160,
-            300
+            15,
+            435
           ],
-          "collapsed": true
+          "collapsed": true,
+          "parent": null
         },
         {
           "id": "c3e52f68",
@@ -40,10 +42,11 @@
           "values": {},
           "label": "t2",
           "position": [
-            160,
-            400
+            15,
+            535
           ],
-          "collapsed": true
+          "collapsed": true,
+          "parent": null
         },
         {
           "id": "d4f63a79",
@@ -51,10 +54,11 @@
           "values": {},
           "label": "shapes",
           "position": [
-            400,
-            350
+            255,
+            485
           ],
-          "collapsed": true
+          "collapsed": true,
+          "parent": null
         },
         {
           "id": "e5a74b8a",
@@ -62,14 +66,15 @@
           "values": {},
           "label": "each shape",
           "position": [
-            640,
-            160
+            529,
+            304
           ],
           "collapsed": true,
           "size": [
             629,
             350
-          ]
+          ],
+          "parent": null
         },
         {
           "id": "f6b85c9b",

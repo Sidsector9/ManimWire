@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 60,
+    "background_color": "BLACK",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "CircleDrawBorderThenFill",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "55b2289d",
+          "catalogue": "Circle",
+          "values": {
+            "color": "GOLD",
+            "fill_opacity": 0.5
+          },
+          "label": null,
+          "position": [
+            -112.22731272852954,
+            249.24819386081631
+          ],
+          "collapsed": true,
+          "parent": null
+        }
+      ],
+      "edges": [],
+      "steps": [
+        {
+          "kind": "wait",
+          "duration": 1
+        }
+      ]
+    }
+  ],
+  "groups": []
+}
