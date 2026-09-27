@@ -1,5 +1,5 @@
 import { _electron as electron, expect, test } from '@playwright/test'
-import { mkdtempSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 
@@ -47,5 +47,79 @@ test('expression completions follow the caret and preserve text', async () => {
     await expect(page.getByRole('listbox')).toBeVisible()
     await input.evaluate((el: HTMLTextAreaElement) => { el.scrollTop = 0 })
     await expect(page.getByRole('listbox')).toBeHidden()
+  } finally { await app.close() }
+})
+
+test('MathTex uses a resizable LaTeX editor with command completion in the graph and inspector', async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'mnw-mathtex-'))
+  const file = path.join(directory, 'mathtex.mnw')
+  writeFileSync(file, JSON.stringify({ version: 1,
+    settings: { pixel_width: 640, pixel_height: 360, frame_rate: 15, background_color: 'BLACK', output_format: 'mp4' },
+    scenes: [{ name: 'Scene', scene_type: 'Scene', nodes: [{ id: 'tex', catalogue: 'MathTex', position: [100, 100], values: { tex_strings: ['x', '=', '1'] } }], edges: [], steps: [] }], groups: [] }))
+  const app = await electron.launch({ args: [path.resolve('.')], env: { ...process.env, MNW_USER_DATA: directory, MNW_OPEN: file } })
+  const page = await app.firstWindow()
+  try {
+    await expect(page.locator('.status')).toContainText('engine ready')
+    const trigger = page.locator('.node').getByRole('textbox', { name: 'Edit LaTeX' })
+    await expect(trigger).toHaveAttribute('readonly', '')
+    await trigger.click()
+    const dialog = page.getByRole('dialog', { name: 'Edit LaTeX' })
+    const input = dialog.getByRole('textbox', { name: 'LaTeX', exact: true })
+    await expect(input).toHaveAttribute('rows', '8')
+    await expect(input).toHaveCSS('resize', 'both')
+    await expect(input).toHaveValue('x\n=\n1')
+    await input.fill('x + \\fr{1}{2}')
+    await input.evaluate((el: HTMLTextAreaElement) => el.setSelectionRange(7, 7))
+    await input.press('Control+Space')
+    await expect(page.getByRole('option', { name: '\\frac', exact: true })).toBeVisible()
+    await input.press('Tab')
+    await expect(input).toHaveValue('x + \\frac{1}{2}')
+    await input.fill('\\alpha\n+ \\sq')
+    await expect(page.getByRole('option', { name: '\\sqrt', exact: true })).toBeVisible()
+    await input.press('Tab')
+    await expect(input).toHaveValue('\\alpha\n+ \\sqrt')
+    await input.fill('\\alpha\n+ \\sqrt{2}')
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    // Select the node and open the same field in the inspector.
+    await page.locator('.node-head').filter({ hasText: 'MathTex' }).click()
+    await page.locator('.inspector').getByRole('textbox', { name: 'Edit LaTeX' }).click()
+    const inspectorInput = page.getByRole('dialog', { name: 'Edit LaTeX' }).getByRole('textbox', { name: 'LaTeX', exact: true })
+    await expect(inspectorInput).toHaveValue('\\alpha\n+ \\sqrt{2}')
+    await inspectorInput.fill('\\\\')
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await inspectorInput.fill('PI')
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await inspectorInput.fill('\\alpha\n+ \\sqrt{2}')
+    await page.getByRole('dialog', { name: 'Edit LaTeX' }).getByRole('button', { name: 'Done' }).click()
+    await expect.poll(() => JSON.parse(readFileSync(file, 'utf8')).scenes[0].nodes[0].values.tex_strings).toEqual(['\\alpha', '+ \\sqrt{2}'])
+  } finally { await app.close() }
+})
+
+test('Text preserves multiline content through its expanded editor', async () => {
+  const directory = mkdtempSync(path.join(tmpdir(), 'mnw-text-'))
+  const file = path.join(directory, 'text.mnw')
+  writeFileSync(file, JSON.stringify({ version: 1,
+    settings: { pixel_width: 640, pixel_height: 360, frame_rate: 15, background_color: 'BLACK', output_format: 'mp4' },
+    scenes: [{ name: 'Scene', scene_type: 'Scene', nodes: [{ id: 'text', catalogue: 'Text', position: [100, 100], values: { text: 'Hello' } }], edges: [], steps: [] }], groups: [] }))
+  const app = await electron.launch({ args: [path.resolve('.')], env: { ...process.env, MNW_USER_DATA: directory, MNW_OPEN: file } })
+  const page = await app.firstWindow()
+  try {
+    await expect(page.locator('.status')).toContainText('engine ready')
+    const trigger = page.locator('.node').getByRole('textbox', { name: 'Edit text', exact: true })
+    await expect(trigger).toHaveAttribute('readonly', '')
+    await trigger.click()
+    const dialog = page.getByRole('dialog', { name: 'Edit text', exact: true })
+    const input = dialog.getByRole('textbox', { name: 'Text', exact: true })
+    await expect(input).toHaveAttribute('rows', '8')
+    await expect(input).toHaveCSS('resize', 'both')
+    const content = 'Hello world\n\nPI and \\sqrt are ordinary text here.'
+    await input.fill(content)
+    await input.press('Control+Space')
+    await expect(page.getByRole('listbox')).toHaveCount(0)
+    await dialog.getByRole('button', { name: 'Done' }).click()
+    await page.locator('.node-head').filter({ hasText: 'Text' }).click()
+    await page.locator('.inspector').getByRole('textbox', { name: 'Edit text', exact: true }).click()
+    await expect(page.getByRole('dialog', { name: 'Edit text', exact: true }).getByRole('textbox', { name: 'Text', exact: true })).toHaveValue(content)
+    await expect.poll(() => JSON.parse(readFileSync(file, 'utf8')).scenes[0].nodes[0].values.text).toBe(content)
   } finally { await app.close() }
 })

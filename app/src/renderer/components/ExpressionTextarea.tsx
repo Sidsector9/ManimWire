@@ -1,6 +1,18 @@
 import { useId, useLayoutEffect, useRef, useState } from 'react'
 import { selectExpressionNames, useCatalogueStore } from '../store/catalogue'
 
+const LATEX_COMMANDS = [
+  'alpha', 'beta', 'gamma', 'delta', 'epsilon', 'theta', 'lambda', 'mu', 'pi', 'sigma', 'phi', 'omega',
+  'Gamma', 'Delta', 'Theta', 'Lambda', 'Pi', 'Sigma', 'Phi', 'Omega',
+  'frac', 'sqrt', 'sum', 'prod', 'int', 'iint', 'lim', 'infty', 'partial', 'nabla',
+  'sin', 'cos', 'tan', 'log', 'ln', 'exp', 'left', 'right', 'cdot', 'times', 'div',
+  'pm', 'mp', 'leq', 'geq', 'neq', 'approx', 'equiv', 'in', 'notin', 'subset', 'cup', 'cap',
+  'to', 'rightarrow', 'Rightarrow', 'leftrightarrow', 'Leftrightarrow',
+  'text', 'mathrm', 'mathbf', 'mathit', 'mathbb', 'mathcal', 'operatorname',
+  'overline', 'underline', 'underbrace', 'overbrace', 'hat', 'vec', 'dot', 'ddot',
+  'begin', 'end', 'quad', 'qquad', 'ldots', 'cdots'
+].map((command) => `\\${command}`)
+
 /** Mirror textarea wrapping and typography to locate its insertion caret. */
 function caretPosition(input: HTMLTextAreaElement): { left: number; top: number; height: number } {
   const style = getComputedStyle(input)
@@ -29,24 +41,31 @@ function caretPosition(input: HTMLTextAreaElement): { left: number; top: number;
   return position
 }
 
-export function ExpressionTextarea({ value, placeholder, onChange }: {
-  value: string; placeholder: string; onChange(value: string | undefined): void
+export function ExpressionTextarea({ value, placeholder, onChange, language = 'python' }: {
+  value: string; placeholder: string; onChange(value: string | undefined): void; language?: 'python' | 'latex' | 'text'
 }) {
-  const names = useCatalogueStore(selectExpressionNames)
+  const expressionNames = useCatalogueStore(selectExpressionNames)
+  const names = language === 'latex' ? LATEX_COMMANDS : expressionNames
+  const label = language === 'text' ? 'Text' : language === 'latex' ? 'LaTeX' : 'Expression'
   const input = useRef<HTMLTextAreaElement>(null)
   const list = useRef<HTMLDivElement>(null)
   const listId = useId()
   const [token, setToken] = useState<{ start: number; end: number; prefix: string } | null>(null)
   const [active, setActive] = useState(0)
   const [position, setPosition] = useState({ left: 0, top: 0, visible: false })
-  const matches = token ? names.filter((name) => name.toLowerCase().startsWith(token.prefix.toLowerCase())) : []
+  const matches = token ? names.filter((name) => language === 'latex'
+    ? name.startsWith(token.prefix) : name.toLowerCase().startsWith(token.prefix.toLowerCase())) : []
   const suggest = (): void => {
+    if (language === 'text') return
     const el = input.current!
     const caret = el.selectionStart
-    const prefix = el.value.slice(0, caret).match(/[A-Za-z_][A-Za-z_0-9]*$/)?.[0]
+    const before = el.value.slice(0, caret)
+    const prefix = language === 'latex'
+      ? before.match(/(?:^|[^\\])(?:\\\\)*(\\[A-Za-z]*)$/)?.[1]
+      : before.match(/[A-Za-z_][A-Za-z_0-9]*$/)?.[0]
     setToken(prefix && caret === el.selectionEnd ? {
       start: caret - prefix.length,
-      end: caret + (el.value.slice(caret).match(/^[A-Za-z_0-9]*/)?.[0].length ?? 0), prefix
+      end: caret + (el.value.slice(caret).match(language === 'latex' ? /^[A-Za-z]*/ : /^[A-Za-z_0-9]*/)?.[0].length ?? 0), prefix
     } : null)
     setActive(0)
   }
@@ -91,8 +110,8 @@ export function ExpressionTextarea({ value, placeholder, onChange }: {
     })
   }
   return <>
-    <textarea ref={input} className="expression-textarea nodrag nowheel" aria-label="Expression"
-      aria-autocomplete="list" aria-controls={matches.length ? listId : undefined}
+    <textarea ref={input} className="expression-textarea nodrag nowheel" aria-label={label}
+      aria-autocomplete={language === 'text' ? undefined : 'list'} aria-controls={matches.length ? listId : undefined}
       aria-activedescendant={matches.length ? `${listId}-${active}` : undefined}
       rows={8} autoFocus spellCheck={false} value={value} placeholder={placeholder}
       onChange={(event) => { onChange(event.target.value || undefined); suggest() }}
@@ -108,7 +127,7 @@ export function ExpressionTextarea({ value, placeholder, onChange }: {
         } else if (['Enter', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) setToken(null)
       }}
     />
-    {matches.length > 0 && <div ref={list} id={listId} role="listbox" aria-label="Expression suggestions"
+    {matches.length > 0 && <div ref={list} id={listId} role="listbox" aria-label={`${label} suggestions`}
       className="expression-completions" style={{ left: position.left, top: position.top, visibility: position.visible ? 'visible' : 'hidden' }}>
       {matches.map((name, index) => <div key={name} id={`${listId}-${index}`} role="option" aria-selected={index === active}
         className={index === active ? 'selected' : ''} onMouseDown={(event) => event.preventDefault()} onClick={() => insert(name)}>{name}</div>)}

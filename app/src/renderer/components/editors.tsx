@@ -10,13 +10,18 @@ import { ExpressionTextarea } from './ExpressionTextarea'
 
 const POPOVER_WIDTH = 264
 
-/** A full-size editor for expressions, shared by the graph and inspector. */
-export function ExpressionEditor({ value, placeholder, onChange }: { value: string; placeholder: string; onChange(value: string | undefined): void }) {
+/** A full-size editor for expressions and text, shared by the graph and inspector. */
+export function ExpressionEditor({ value, placeholder, onChange, language = 'python', multiple = false }: {
+  value: string; placeholder: string; onChange(value: string | undefined): void
+  language?: 'python' | 'latex' | 'text'; multiple?: boolean
+}) {
   const dialog = useRef<HTMLDialogElement>(null)
+  const label = language === 'text' ? 'Text' : language === 'latex' ? 'LaTeX' : 'Expression'
+  const editLabel = language === 'text' ? 'Edit text' : language === 'latex' ? 'Edit LaTeX' : 'Edit expression'
   return <>
     <input
       className="port-input mono expression-trigger"
-      aria-label="Edit expression"
+      aria-label={editLabel}
       aria-haspopup="dialog"
       readOnly
       value={value}
@@ -31,15 +36,16 @@ export function ExpressionEditor({ value, placeholder, onChange }: { value: stri
         }
       }}
     />
-    {createPortal(<dialog ref={dialog} className="expression-dialog" aria-label="Edit expression"
+    {createPortal(<dialog ref={dialog} className="expression-dialog" aria-label={editLabel}
       onPointerDown={(event) => event.stopPropagation()}
       onKeyDown={(event) => event.stopPropagation()}
     >
       <div className="expression-editor-heading">
-        <strong>Expression</strong>
+        <strong>{label}</strong>
         <button className="button small" onClick={() => dialog.current?.close()}>Done</button>
       </div>
-      <ExpressionTextarea value={value} placeholder={placeholder} onChange={onChange} />
+      {multiple && <p className="muted">One TeX string per line. Use \\ for a LaTeX line break.</p>}
+      <ExpressionTextarea value={value} placeholder={placeholder} onChange={onChange} language={language} />
     </dialog>, document.body)}
   </>
 }

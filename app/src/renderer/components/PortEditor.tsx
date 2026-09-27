@@ -64,6 +64,19 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
       )
     case 'text':
       if (param.name === 'expr') return <ExpressionEditor value={typeof value === 'string' ? value : ''} placeholder={placeholder} onChange={onChange} />
+      if (param.name === 'text' && param.kind !== 'var_positional' && !type.choices) {
+        return <ExpressionEditor language="text" value={typeof value === 'string' ? value : ''}
+          placeholder={placeholder.replace(/^'|'$/g, '')} onChange={onChange} />
+      }
+      if (param.name === 'tex_strings' || param.name === 'tex_string') {
+        const multiple = param.kind === 'var_positional'
+        const text = Array.isArray(value) ? value.map(String).join('\n') : typeof value === 'string' ? value : ''
+        return <ExpressionEditor language="latex" multiple={multiple} value={text}
+          placeholder={multiple ? 'one TeX string per line' : placeholder} onChange={(next) => {
+            const items = next?.split('\n')
+            onChange(multiple && items && items.length > 1 ? items : next)
+          }} />
+      }
       if (param.kind === 'var_positional') {
         // Several strings for one *args port (Tex takes one string per part): one per line.
         const lines = Array.isArray(value) ? value.map(String).join('\n') : typeof value === 'string' ? value : ''
