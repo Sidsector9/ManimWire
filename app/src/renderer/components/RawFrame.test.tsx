@@ -36,3 +36,23 @@ it('rejects old graphs and coalesces transfers without starving playback', async
   await act(async () => pending[3]!(new Response(new Uint8Array([255, 255, 0, 255]))))
   expect(view.getByRole('img').dataset['frame']).toBe('/five')
 })
+
+it('decodes compact frames, releases bitmaps and avoids duplicate transfers', async () => {
+  const fetch = vi.fn(async () => new Response(new Uint8Array([1, 2, 3]), { headers: { 'Content-Type': 'image/png' } }))
+  vi.stubGlobal('fetch', fetch)
+  const bitmap = { width: 2, height: 1, close: vi.fn() }
+  vi.stubGlobal('createImageBitmap', vi.fn(async () => bitmap))
+  const context = { clearRect: vi.fn(), drawImage: vi.fn() }
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(context as unknown as CanvasRenderingContext2D)
+  const frame: FrameResult = { path: '/compact', stream: 'scene', format: 'rgba', width: 2, height: 1, time: 0, bounds: [] }
+  const onExpired = vi.fn()
+  const view = render(<RawFrame frame={frame} onExpired={onExpired} />)
+  await act(async () => {})
+  expect(context.clearRect).toHaveBeenCalledWith(0, 0, 2, 1)
+  expect(context.drawImage).toHaveBeenCalledWith(bitmap, 0, 0)
+  expect(bitmap.close).toHaveBeenCalledOnce()
+  expect(view.getByRole('img').dataset['frame']).toBe('/compact')
+  view.rerender(<RawFrame frame={{ ...frame }} onExpired={onExpired} />)
+  expect(fetch).toHaveBeenCalledOnce()
+  expect(onExpired).not.toHaveBeenCalled()
+})

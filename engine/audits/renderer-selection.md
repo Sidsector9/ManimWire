@@ -35,6 +35,12 @@ execution per pass, with bounded producer lookahead and cancellation independent
 of the rendering RPC loop. Video encoding still uses Manim's file writer;
 selecting OpenGL does not enable hardware video encoding.
 
+For browser delivery, a background worker prepares lossless PNG variants in a
+separate 32 MiB RAM cache, falling back immediately to raw RGBA when unavailable
+or not worthwhile. Playback requests source frames at the scene's frame rate,
+independent of monitor refresh rate. See the measured
+[external-display regression and fix](display-playback.md).
+
 The engine retains one OpenGL context, its compiled shaders, and reusable mesh
 buffers/vertex arrays between serial requests. Unchanged mesh data avoids upload;
 changed data updates or reallocates storage. The framebuffer is reused until the

@@ -5,6 +5,10 @@ seeking path left unchanged by this earlier playback/transport work. It adds
 resumable scenes, simulation without intermediate drawing, latest-target control
 and interruptible background preparation.
 
+The later [external-display playback fix](display-playback.md) addresses the
+raw-transfer bandwidth cost measured below: source-rate scheduling and a bounded,
+asynchronously prepared PNG delivery cache. Raw rendering/storage remain intact.
+
 The production app now renders a playback pass in one continuous Manim execution,
 serves binary pixels to Electron, and reuses OpenGL mesh buffers. Switching the
 renderer alone did not remove these surrounding costs.

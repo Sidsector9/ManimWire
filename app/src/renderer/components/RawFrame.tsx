@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { FrameResult } from '../../shared/engine'
 
-/** Coalesced binary transfers; no image codec or unbounded browser frame queue. */
+/** Coalesced transfers: lossless browser-decoded images or raw RGBA fallback. */
 export function RawFrame({ frame, onExpired }: { frame: FrameResult; onExpired(): void }) {
   const canvas = useRef<HTMLCanvasElement>(null)
   const expired = useRef(onExpired)
@@ -19,6 +19,7 @@ export function RawFrame({ frame, onExpired }: { frame: FrameResult; onExpired()
   }, [])
   useEffect(() => {
     latest.current = frame
+    if (canvas.current?.dataset['frame'] === frame.path && !busy.current) return
     pending.current = frame
     if (busy.current) return
     busy.current = true
@@ -30,23 +31,32 @@ export function RawFrame({ frame, onExpired }: { frame: FrameResult; onExpired()
           const transfer = new AbortController()
           controller.current = transfer
           try {
-            const response = await fetch(next.path, { signal: transfer.signal })
+            const response = await fetch(next.path, { signal: transfer.signal, headers: { Accept: 'image/png, application/octet-stream' } })
             if (!response.ok) throw new Error(`Frame unavailable: ${response.status}`)
-            const bytes = await response.arrayBuffer()
-            // A new graph, size or renderer invalidates an older in-flight frame.
-            if (!alive.current || transfer.signal.aborted || latest.current.stream !== next.stream) continue
-            const element = canvas.current!
-            const width = next.width ?? 0
-            const height = next.height ?? 0
-            if (width <= 0 || height <= 0 || bytes.byteLength !== width * height * 4) throw new Error('Invalid frame size')
-            const context = element.getContext('2d')
-            if (!context) throw new Error('Canvas unavailable')
-            if (element.width !== width) element.width = width
-            if (element.height !== height) element.height = height
-            context.putImageData(new ImageData(new Uint8ClampedArray(bytes), width, height), 0, 0)
-            element.dataset['frame'] = next.path
-            retried.current = null
-            setUnavailable(false)
+            const bitmap = response.headers.get('Content-Type') === 'image/png'
+              ? await createImageBitmap(await response.blob(), { colorSpaceConversion: 'none' }) : null
+            try {
+              const bytes = bitmap ? null : await response.arrayBuffer()
+              // A new graph, size or renderer invalidates an older in-flight frame.
+              if (!alive.current || transfer.signal.aborted || latest.current.stream !== next.stream) continue
+              const element = canvas.current!
+              const width = next.width ?? 0
+              const height = next.height ?? 0
+              if (width <= 0 || height <= 0 || (bitmap ? bitmap.width !== width || bitmap.height !== height : bytes!.byteLength !== width * height * 4)) throw new Error('Invalid frame size')
+              const context = element.getContext('2d')
+              if (!context) throw new Error('Canvas unavailable')
+              if (element.width !== width) element.width = width
+              if (element.height !== height) element.height = height
+              if (bitmap) {
+                context.clearRect(0, 0, width, height)
+                context.drawImage(bitmap, 0, 0)
+              } else context.putImageData(new ImageData(new Uint8ClampedArray(bytes!), width, height), 0, 0)
+              element.dataset['frame'] = next.path
+              retried.current = null
+              setUnavailable(false)
+            } finally {
+              bitmap?.close()
+            }
           } catch {
             if (alive.current && !transfer.signal.aborted && latest.current.stream === next.stream) {
               setUnavailable(true)

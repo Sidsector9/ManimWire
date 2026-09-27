@@ -53,6 +53,7 @@ export function usePlayback(): void {
       let at = from
       let last = performance.now()
       let stopped = false
+      let shown = -1
       const tick = (): void => {
         if (cancelled || stopped) return
         const now = performance.now()
@@ -63,8 +64,14 @@ export function usePlayback(): void {
           done()
           return
         }
-        useEngineResults.getState().setPreviewTime(at)
-        show(at)
+        // A 120/144 Hz display must not fetch and repaint the same 60 fps
+        // source frame twice. Match the engine's frame_index rounding.
+        const index = Math.max(1, Math.ceil(at * doc.settings.frame_rate - 1e-6))
+        if (index !== shown) {
+          shown = index
+          useEngineResults.getState().setPreviewTime(at)
+          show(at)
+        }
         requestAnimationFrame(tick)
       }
       requestAnimationFrame(tick)

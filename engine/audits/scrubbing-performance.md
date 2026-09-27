@@ -30,7 +30,9 @@ shutdown dispose of the appropriate live session.
 The requested opening image appears first. After 300 ms idle, the app starts an
 interruptible cache-preparation pass without Play. Work is capped at ten seconds
 and approximately 1.5 GiB of frame payload, whichever is smaller. The existing
-cache stays capped at 128 MiB RAM plus a 2 GiB temporary spool. Scrubbing, editing
+raw cache stays capped at 128 MiB RAM plus a 2 GiB temporary spool. The later
+[display-delivery fix](display-playback.md) adds a separate 32 MiB encoded-image
+cache. Scrubbing, editing
 or starting playback cancels preparation at its next frame boundary. Partial
 preparation never marks the entire scene cached. It is attempted once per
 code/resolution for an idle end preview, so scrubbing does not repeatedly start

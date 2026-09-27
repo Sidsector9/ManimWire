@@ -21,6 +21,21 @@ test('reports the selected Python renderer and renders a scene', async () => {
     await page.getByRole('button', { name: 'Start with a circle' }).click()
     await expect(page.locator('.frame canvas')).toBeVisible()
     await expect(page.locator('.frame canvas')).toHaveAttribute('data-frame', /^http:\/\/127\.0\.0\.1:/)
+    // Revisit a prepared frame to exercise browser PNG decoding, not just the
+    // immediate raw fallback used before background encoding finishes.
+    const zero = (await page.locator('.timeline-ticks .tick').filter({ hasText: /^0s$/ }).boundingBox())!
+    const one = (await page.locator('.timeline-ticks .tick').filter({ hasText: /^1s$/ }).boundingBox())!
+    const ruler = (await page.locator('.timeline-ticks').boundingBox())!
+    await page.mouse.click(one.x, ruler.y + ruler.height / 2)
+    await expect(page.locator('.canvas-chip.time')).toContainText('1.00')
+    const prepared = (await page.locator('.frame canvas').getAttribute('data-frame'))!
+    await expect.poll(() => page.evaluate(async (url) => (await fetch(url, { headers: { Accept: 'image/png' } })).headers.get('Content-Type'), prepared)).toBe('image/png')
+    await page.mouse.click(zero.x + (one.x - zero.x) / 2, ruler.y + ruler.height / 2)
+    await expect(page.locator('.frame canvas')).not.toHaveAttribute('data-frame', prepared)
+    const delivery = page.waitForResponse((response) => response.url() === prepared && response.headers()['content-type'] === 'image/png')
+    await page.mouse.click(one.x, ruler.y + ruler.height / 2)
+    await delivery
+    await expect(page.locator('.frame canvas')).toHaveAttribute('data-frame', prepared)
     // The browser displays the engine's actual RGBA bytes, with correct row and
     // channel ordering, rather than merely mounting a blank canvas.
     expect(await page.evaluate(async () => {

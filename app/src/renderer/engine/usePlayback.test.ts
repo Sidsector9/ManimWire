@@ -180,4 +180,24 @@ describe('playback from the playhead', () => {
     tick(200)
     expect(useEngineResults.getState().previewTime).toBe(0)
   })
+  it.each([[60, 120], [24, 144]])('requests only %i source frames on a %i Hz display', async (fps, hz) => {
+    const doc = emptyDocument()
+    doc.settings.frame_rate = fps
+    useDocumentStore.setState({ doc })
+    const state = useEngineResults.getState()
+    useEngineResults.setState({ previewTime: 0, prerendered: cacheKey(state.code, state.previewWidth) })
+    renderHook(usePlayback)
+    act(() => useEngineResults.getState().setPlaying(true))
+    for (let i = 0; i < hz; i++) {
+      const before = requests.length
+      tick(1000 / hz)
+      if (requests.length > before) {
+        const request = requests.at(-1)!
+        await act(async () => request.resolve({ ok: true, result: { path: `/frame-${i}`, time: request.params.time, bounds: [] } }))
+      }
+    }
+    expect(requests).toHaveLength(fps)
+    expect(useEngineResults.getState().previewTime).toBeGreaterThan(.95)
+  })
+
 })

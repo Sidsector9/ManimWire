@@ -184,3 +184,111 @@ def test_binary_sequence_can_cancel_while_render_rpc_is_busy(
         assert len(received) == 3
     finally:
         service.close()
+
+
+def test_compact_delivery_is_lossless_bounded_and_invalidated(tmp_path: Path) -> None:
+    import io
+
+    pixels = np.zeros((48, 64, 4), dtype=np.uint8)
+    pixels[:, :, 3] = 255
+    pixels[10:30, 10:20] = [255, 64, 32, 128]
+    raw = pixels.tobytes()
+    cache = BinaryFrames(
+        tmp_path, memory_limit=len(raw), disk_limit=0, delivery_limit=4096
+    )
+    try:
+        record = cache.put("one", raw, {"width": 64, "height": 48})
+        with urlopen(
+            Request(record["path"], headers={"Accept": "image/png"})
+        ) as response:
+            initial = response.read()
+            assert response.headers["Content-Type"] == "application/octet-stream"
+            assert initial == raw
+        with cache.ready:
+            assert cache.ready.wait_for(lambda: "one" in cache.delivery, timeout=3)
+        with urlopen(
+            Request(record["path"], headers={"Accept": "image/png"})
+        ) as response:
+            assert response.headers["Content-Type"] == "image/png"
+            assert np.array_equal(
+                np.asarray(Image.open(io.BytesIO(response.read()))), pixels
+            )
+        # Raw consumers still receive exactly RGBA, regardless of PNG preparation.
+        with urlopen(record["path"]) as response:
+            assert response.read() == raw
+        assert 0 < cache.delivery_bytes <= cache.delivery_limit
+        cache.put("two", raw, {"width": 64, "height": 48})
+        assert "one" not in cache.delivery  # Raw eviction invalidates its variant.
+        assert cache.response("one", True) is None
+    finally:
+        cache.close()
+    assert cache.delivery_bytes == 0
+    assert not cache.encoder.is_alive()
+
+
+def test_delivery_preparation_never_blocks_requests_or_acknowledges_future_frames(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    entered, release = Event(), Event()
+    save = Image.Image.save
+
+    def slow_save(*args: object, **kwargs: object) -> None:
+        entered.set()
+        assert release.wait(3)
+        save(*args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(Image.Image, "save", slow_save)
+    cache = BinaryFrames(tmp_path)
+    raw = bytes([0, 0, 0, 255]) * 64 * 48
+    try:
+        cache.put("first", raw, {"width": 64, "height": 48})
+        assert cache.response("first", True) == (raw, "application/octet-stream")
+        assert entered.wait(2)
+        # Encoding is deliberately blocked, but the HTTP fallback still returns.
+        assert cache.response("first", True) == (raw, "application/octet-stream")
+        cache.begin_sequence(paced=True)
+        assert cache.reserve("future", len(raw))
+        cache.put("future", raw, {"width": 64, "height": 48})
+        release.set()
+        with cache.ready:
+            assert cache.ready.wait_for(lambda: "future" in cache.delivery, timeout=3)
+            assert "future" in cache.waiting
+        assert cache.response("future", True)[1] == "image/png"  # type: ignore[index]
+        assert not cache.waiting
+    finally:
+        release.set()
+        cache.close()
+
+
+def test_noisy_frames_keep_raw_delivery(tmp_path: Path) -> None:
+    cache = BinaryFrames(tmp_path)
+    raw = (
+        np.random.default_rng(1).integers(0, 256, (48, 64, 4), dtype=np.uint8).tobytes()
+    )
+    try:
+        cache.put("noise", raw, {"width": 64, "height": 48})
+        cache.response("noise", True)
+        with cache.ready:
+            assert cache.ready.wait_for(lambda: "noise" in cache.delivery, timeout=3)
+        assert cache.delivery["noise"] is None
+        assert cache.delivery_bytes == 0
+        assert cache.response("noise", True) == (raw, "application/octet-stream")
+    finally:
+        cache.close()
+
+
+def test_delivery_budget_does_not_retain_oversized_images(tmp_path: Path) -> None:
+    cache = BinaryFrames(tmp_path, delivery_limit=32)
+    raw = bytes([0, 0, 0, 255]) * 64 * 48
+    try:
+        cache.put("large", raw, {"width": 64, "height": 48})
+        cache.response("large", True)
+        with cache.ready:
+            assert cache.ready.wait_for(
+                lambda: cache.encoding_active is None and not cache.encoding, timeout=3
+            )
+        assert not cache.delivery
+        assert cache.delivery_bytes == 0
+        assert cache.read("large") == raw
+    finally:
+        cache.close()
