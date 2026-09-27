@@ -1,4 +1,4 @@
-import { describeEngine, describeLatex, useEngineStore } from '../store/engine'
+import { describeEngine, describeLatex, describeRenderer, useEngineStore } from '../store/engine'
 import { useEngineResults } from '../store/preview'
 
 const dotColor: Record<string, string> = {
@@ -20,6 +20,11 @@ export function StatusBar() {
         <span className="dot" style={{ background: dotColor[status.state] }} />
         {describeEngine(status)}
       </span>
+      {status.info?.rendering && (
+        <span title={status.info.rendering.reason || `${status.info.rendering.vendor} ${status.info.rendering.version}`}>
+          {describeRenderer(status)}
+        </span>
+      )}
       <span className={latexMissing ? 'warning' : ''}>{describeLatex(status)}</span>
       {status.message && <span style={{ color: 'var(--text-dim)' }}>{status.message}</span>}
       {message && <span className="status-message">{message}</span>}

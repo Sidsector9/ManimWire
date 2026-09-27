@@ -1,0 +1,37 @@
+import { _electron as electron, expect, test } from '@playwright/test'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
+import type { EngineApi } from '../src/shared/engine'
+
+test('reports the selected Python renderer and renders a scene', async () => {
+  const app = await electron.launch({ args: [path.resolve('.')], env: {
+    ...process.env, MNW_USER_DATA: mkdtempSync(path.join(tmpdir(), 'mnw-renderer-'))
+  } })
+  const page = await app.firstWindow()
+  try {
+    await expect(page.locator('.status')).toContainText('engine ready')
+    const status = await page.evaluate(() => (window as unknown as { engine: EngineApi }).engine.status())
+    const rendering = status.info?.rendering
+    expect(rendering).toBeTruthy()
+    await expect(page.locator('.status')).toContainText(rendering!.renderer === 'opengl' ? 'OpenGL' : 'Cairo · CPU')
+    if (rendering!.renderer === 'opengl') {
+      await expect(page.locator('.status')).toContainText(rendering!.device!)
+    }
+    await page.getByRole('button', { name: 'Start with a circle' }).click()
+    await expect(page.locator('.frame canvas')).toBeVisible()
+    await expect(page.locator('.frame canvas')).toHaveAttribute('data-frame', /^http:\/\/127\.0\.0\.1:/)
+    // The browser displays the engine's actual RGBA bytes, with correct row and
+    // channel ordering, rather than merely mounting a blank canvas.
+    expect(await page.evaluate(async () => {
+      const canvas = document.querySelector<HTMLCanvasElement>('.frame canvas')!
+      const displayed = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
+      const response = await fetch(canvas.dataset['frame']!)
+      const bytes = new Uint8Array(await response.arrayBuffer())
+      return bytes.length === displayed.length && bytes.every((value, i) => value === displayed[i])
+    })).toBe(true)
+    await expect(page.locator('.timeline')).not.toContainText('error')
+  } finally {
+    await app.close()
+  }
+})

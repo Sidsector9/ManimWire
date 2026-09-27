@@ -34,3 +34,12 @@ export function describeLatex(status: EngineStatus): string {
   if (!status.info) return 'checking LaTeX…'
   return status.info.latex && status.info.dvisvgm ? 'LaTeX available' : 'LaTeX not found'
 }
+
+/** The Python renderer, independently of Electron's UI graphics acceleration. */
+export function describeRenderer(status: EngineStatus): string {
+  const rendering = status.info?.rendering
+  if (!rendering) return ''
+  if (rendering.renderer === 'cairo') return 'Cairo · CPU'
+  const mode = rendering.acceleration === 'hardware' ? 'GPU' : rendering.acceleration === 'software' ? 'CPU' : 'driver'
+  return `OpenGL · ${mode} · ${rendering.device}`
+}

@@ -10,9 +10,9 @@ test('a value the engine reads reaches the preview', async () => {
   try {
     await expect(window.locator('.status')).toContainText('engine ready')
     await window.getByRole('button', { name: 'Start with a circle' }).click()
-    const image = window.locator('.frame img')
+    const image = window.locator('.frame canvas')
     await expect(image).toBeVisible()
-    const shown = async (): Promise<string> => (await image.getAttribute('src'))!
+    const shown = async (): Promise<string> => (await image.getAttribute('data-frame'))!
     // Whether a canvas-only edit skips the sync is covered by the revision unit tests:
     // the engine caches frames, so a redundant sync is invisible from here.
     // Two equal reads a beat apart mean the opening render has landed.

@@ -1,4 +1,70 @@
 {
+  "$defs": {
+    "RenderDevice": {
+      "properties": {
+        "renderer": {
+          "default": "cairo",
+          "enum": [
+            "opengl",
+            "cairo"
+          ],
+          "title": "Renderer",
+          "type": "string"
+        },
+        "acceleration": {
+          "default": "software",
+          "enum": [
+            "hardware",
+            "software",
+            "unknown"
+          ],
+          "title": "Acceleration",
+          "type": "string"
+        },
+        "device": {
+          "default": "CPU",
+          "title": "Device",
+          "type": "string"
+        },
+        "vendor": {
+          "default": "",
+          "title": "Vendor",
+          "type": "string"
+        },
+        "version": {
+          "default": "",
+          "title": "Version",
+          "type": "string"
+        },
+        "backend": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Backend"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        }
+      },
+      "title": "RenderDevice",
+      "type": "object"
+    }
+  },
   "properties": {
     "python": {
       "title": "Python",
@@ -15,6 +81,17 @@
     "dvisvgm": {
       "title": "Dvisvgm",
       "type": "boolean"
+    },
+    "rendering": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RenderDevice"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [

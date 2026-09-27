@@ -66,7 +66,10 @@ def test_repeated_frame_requests_are_served_from_the_cache(
 ) -> None:
     first = service.frame(simple_scene, catalogue, SMALL, 1.0)
     second = service.frame(simple_scene, catalogue, SMALL, 1.0)
-    assert first == second
+    assert first.model_dump(exclude={"render_ms"}) == second.model_dump(
+        exclude={"render_ms"}
+    )
+    assert second.render_ms == 0
     assert service.render_count == 1
     simple_scene.nodes[0].values["radius"] = 1.0
     changed = service.frame(simple_scene, catalogue, SMALL, 1.0)

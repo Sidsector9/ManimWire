@@ -4,6 +4,7 @@ import { useDescriptorIndex } from '../store/descriptors'
 import { previewScene, useDocumentStore } from '../store/document'
 import { useEngineStore } from '../store/engine'
 import { useEngineResults } from '../store/preview'
+import { RawFrame } from './RawFrame'
 
 export function frameUrl(path: string): string {
   return `mnw://frame${encodeURI(path)}`
@@ -61,7 +62,14 @@ export function Canvas() {
         </span>
       </div>
       <div className={`frame${failure ? ' failed' : ''}`}>
-        {frame && <img src={frameUrl(frame.path)} alt="Manim frame" draggable={false} />}
+        {frame && (frame.format === 'rgba'
+          ? <RawFrame frame={frame} onExpired={() => {
+            const { doc, sceneIndex, revision } = useDocumentStore.getState()
+            const results = useEngineResults.getState()
+            results.setPlaying(false)
+            void results.sync(doc, sceneIndex, revision)
+          }} />
+          : <img src={frameUrl(frame.path)} alt="Manim frame" draggable={false} />)}
         {frame && bounds && bounds.on_screen && (
           <div
             className="selection-box"

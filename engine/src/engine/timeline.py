@@ -37,9 +37,12 @@ from engine.document.model import (
     UpdatingStep,
     WaitStep,
 )
+from engine.render.device import detect_device
+from engine.render.opengl import EditorOpenGLRenderer
 from engine.render.runner import (
     QUIET,
     Play,
+    PreviewFileWriter,
     RenderError,
     TimingRenderer,
     run_scene,
@@ -162,12 +165,17 @@ def layout_timeline(
     generated = ManimCodeGenerator().generate(scene, catalogue, groups)
     if generated.issues:
         return _empty(generated.issues[0].message)
+    device = detect_device()
     try:
         _, _, renderer = run_scene(
             generated,
             scene.name,
-            {**QUIET, "dry_run": True},
-            lambda camera: TimingRenderer(camera_class=camera),
+            {**QUIET, "dry_run": True, "renderer": device.renderer},
+            lambda camera: (
+                EditorOpenGLRenderer(timing=True, file_writer_class=PreviewFileWriter)
+                if device.renderer == "opengl"
+                else TimingRenderer(camera_class=camera)
+            ),
         )
     except RenderError as exc:
         return _empty(str(exc))

@@ -5,10 +5,14 @@ Shared by the render service (frames, exports) and the timeline (timings).
 
 from __future__ import annotations
 
+import ast
 import sys
+import tempfile
 import traceback
 from collections.abc import Callable
 from dataclasses import dataclass
+from pathlib import Path
+from types import CodeType
 from typing import Any
 
 from manim import tempconfig
@@ -21,6 +25,9 @@ from manim.scene.scene_file_writer import SceneFileWriter
 from manim.scene.three_d_scene import ThreeDScene
 
 from engine.codegen import GeneratedCode, SourceMap
+from engine.render.compat import opengl_compatibility
+from engine.render.objects import object_aliases
+from engine.render.opengl import EditorOpenGLRenderer
 
 SOURCE_NAME = "<scene>"
 QUIET = {"disable_caching": True, "verbosity": "ERROR", "progress_bar": "none"}
@@ -76,6 +83,11 @@ class TimingRenderer(CairoRenderer):
         self.time += scene.duration
         self.num_plays += 1
 
+    def scene_finished(self, scene: Any) -> None:
+        # Cairo's implementation draws static scenes even in dry_run mode.
+        # A timing-only execution must never rasterize a frame.
+        return
+
 
 def scene_line() -> int | None:
     """The line of generated code that called into Manim, if the call came from one."""
@@ -102,7 +114,7 @@ class RenderError(Exception):
         return {"node": self.node, "step": self.step, "line": self.line}
 
 
-def run_scene[R: CairoRenderer](
+def run_scene[R: CairoRenderer | EditorOpenGLRenderer](
     generated: GeneratedCode,
     scene_name: str,
     overrides: dict[str, Any],
@@ -118,25 +130,65 @@ def run_scene[R: CairoRenderer](
     namespace: dict[str, Any] = {}
     captured: dict[str, Any] = {}
     try:
-        exec(compile(generated.code, SOURCE_NAME, "exec"), namespace)
-        construct_code = namespace[scene_name].construct.__code__
+        with (
+            tempfile.TemporaryDirectory(prefix="mnw-textures-") as textures,
+            tempconfig(overrides),
+            opengl_compatibility(overrides.get("renderer") == "opengl"),
+        ):
+            code, capture_name = compile_scene(generated.code, scene_name)
 
-        def profiler(frame: Any, event: str, arg: Any) -> None:
-            if event == "return" and frame.f_code is construct_code:
-                captured.update(frame.f_locals)
+            def capture_locals() -> None:
+                captured.update(sys._getframe(1).f_locals)
 
-        with tempconfig(overrides):
+            namespace[capture_name] = capture_locals
+            exec(code, namespace)
+            if overrides.get("renderer") == "opengl":
+                namespace.update(object_aliases(Path(textures)))
             renderer = make_renderer(camera_class_for(namespace[scene_name]))
-            instance = namespace[scene_name](renderer=renderer)
-            previous = sys.getprofile()
-            sys.setprofile(profiler)
+            success = False
             try:
+                instance = namespace[scene_name](renderer=renderer)
                 instance.render()
+                success = True
             finally:
-                sys.setprofile(previous)
+                if isinstance(renderer, EditorOpenGLRenderer):
+                    renderer.close(capture=success)
     except Exception as exc:
         raise locate(exc, generated.source_map) from exc
     return instance, captured, renderer
+
+
+def compile_scene(source: str, scene_name: str) -> tuple[CodeType, str]:
+    """Capture construct's locals once, including when a preview stops early.
+
+    A global profiling hook previously ran on every Python/C call and return in
+    Manim. A finally block has no per-call overhead, leaves debuggers/profilers
+    alone, and preserves the original source locations used by error reporting.
+    The exported Python source itself is not changed.
+    """
+    tree = ast.parse(source, filename=SOURCE_NAME)
+    capture_name = "_mnw_capture_construct_locals"
+    while capture_name in source:
+        capture_name += "_"
+    for node in tree.body:
+        if isinstance(node, ast.ClassDef) and node.name == scene_name:
+            for method in node.body:
+                if isinstance(method, ast.FunctionDef) and method.name == "construct":
+                    capture = ast.Expr(
+                        value=ast.Call(
+                            func=ast.Name(id=capture_name, ctx=ast.Load()),
+                            args=[],
+                            keywords=[],
+                        )
+                    )
+                    ast.copy_location(capture, method.body[-1])
+                    block = ast.Try(
+                        body=method.body, handlers=[], orelse=[], finalbody=[capture]
+                    )
+                    ast.copy_location(block, method.body[0])
+                    method.body = [block]
+    ast.fix_missing_locations(tree)
+    return compile(tree, SOURCE_NAME, "exec"), capture_name
 
 
 def camera_class_for(scene_class: type) -> type[Camera]:

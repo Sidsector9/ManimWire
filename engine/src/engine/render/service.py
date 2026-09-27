@@ -10,9 +10,11 @@ from collections.abc import Callable, Iterable
 from pathlib import Path
 from time import perf_counter
 from types import FrameType
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
+from manim import config, tempconfig
 from manim.mobject.mobject import Mobject
+from manim.mobject.opengl.opengl_mobject import OpenGLMobject
 from manim.renderer.cairo_renderer import CairoRenderer
 from manim.utils.exceptions import EndSceneEarlyException
 from PIL import Image
@@ -21,6 +23,9 @@ from pydantic import BaseModel
 from engine.catalogue.model import Catalogue
 from engine.codegen import GeneratedCode, ManimCodeGenerator, SourceMap
 from engine.document.model import GroupDefinition, SceneDocument, Settings
+from engine.render.device import RenderDevice, detect_device
+from engine.render.frames import BinaryFrames
+from engine.render.opengl import EditorOpenGLRenderer
 from engine.render.runner import (
     QUIET,
     PreviewFileWriter,
@@ -61,6 +66,10 @@ class Bounds(BaseModel):
 
 class FrameResult(BaseModel):
     path: str
+    format: Literal["png", "rgba"] = "png"
+    width: int = 0
+    height: int = 0
+    stream: str = ""
     time: float
     bounds: list[Bounds]
     # Wall-clock time Manim took to produce the frame; 0 when it came from the cache.
@@ -159,16 +168,55 @@ class SequenceResult(BaseModel):
     frames: int
     start: float
     end: float
+    cache_complete: bool = True
+    cancelled: bool = False
 
 
-class CairoRenderService:
-    def __init__(self, cache_dir: Path) -> None:
+class RenderService:
+    def __init__(
+        self,
+        cache_dir: Path,
+        device: RenderDevice | None = None,
+        *,
+        binary: bool = False,
+    ) -> None:
+        self.device = device if device is not None else detect_device()
         self.cache_dir = cache_dir
         cache_dir.mkdir(parents=True, exist_ok=True)
         self.generator = ManimCodeGenerator()
         self.render_count = 0
         # Play times per generated code, so a frame request can skip earlier plays.
         self.timings: dict[str, list[tuple[float, float]]] = {}
+        self.binary = binary
+        self.frames: BinaryFrames | None = None
+
+    def close(self) -> None:
+        if self.frames is not None:
+            self.frames.close()
+            self.frames = None
+
+    def _cached(self, path: Path) -> FrameResult | None:
+        if self.binary:
+            record = self.frames.record(path.stem) if self.frames is not None else None
+            return FrameResult.model_validate(record) if record else None
+        record_path = path.with_suffix(".json")
+        if path.exists() and record_path.exists():
+            return FrameResult.model_validate_json(record_path.read_text()).model_copy(
+                update={"render_ms": 0}
+            )
+        return None
+
+    def _store(self, path: Path, result: FrameResult, pixels: Any) -> FrameResult:
+        result.width, result.height = pixels.shape[1], pixels.shape[0]
+        if self.binary:
+            if self.frames is None:
+                self.frames = BinaryFrames(self.cache_dir / "frames")
+            return FrameResult.model_validate(
+                self.frames.put(path.stem, pixels.tobytes(), result.model_dump())
+            )
+        Image.fromarray(pixels, "RGBA").save(path, compress_level=1)
+        path.with_suffix(".json").write_text(result.model_dump_json())
+        return result
 
     def frame(
         self,
@@ -180,12 +228,11 @@ class CairoRenderService:
         groups: Iterable[GroupDefinition] = (),
     ) -> FrameResult:
         generated = self._generate(scene, catalogue, groups)
-        overrides = _config_for(settings, width)
+        overrides = {**_config_for(settings, width), "renderer": self.device.renderer}
         index = frame_index(time, settings.frame_rate)
         path = self._frame_path(scene.name, generated.code, index, overrides)
-        record = path.with_suffix(".json")
-        if path.exists() and record.exists():
-            return FrameResult.model_validate_json(record.read_text())
+        if (cached := self._cached(path)) is not None:
+            return cached
         started = perf_counter()
         target = index / settings.frame_rate
         instance, locals_, renderer = run_scene(
@@ -196,23 +243,37 @@ class CairoRenderService:
                 "dry_run": True,
                 # Plays that end before the target are skipped: Manim jumps each to its
                 # end state without drawing, as it does for its own -n option.
-                "from_animation_number": self._plays_before(
-                    generated, scene.name, target
+                "from_animation_number": (
+                    0
+                    if self.device.renderer == "opengl"
+                    else self._plays_before(generated, scene.name, target)
                 ),
             },
-            lambda camera: _StopAtRenderer(
-                target, None, camera_class=camera, file_writer_class=PreviewFileWriter
+            lambda camera: (
+                EditorOpenGLRenderer(
+                    backend=self.device.backend,
+                    target=target,
+                    file_writer_class=PreviewFileWriter,
+                )
+                if self.device.renderer == "opengl"
+                else _StopAtRenderer(
+                    target,
+                    None,
+                    camera_class=camera,
+                    file_writer_class=PreviewFileWriter,
+                )
             ),
         )
         self.render_count += 1
-        Image.fromarray(renderer.get_frame(), "RGBA").save(path)
         result = FrameResult(
             path=str(path),
+            stream=self._frame_path(scene.name, generated.code, 0, overrides).stem,
             time=renderer.time,
             bounds=_bounds(instance, locals_, generated.source_map),
             render_ms=(perf_counter() - started) * 1000,
         )
-        record.write_text(result.model_dump_json())
+        result = self._store(path, result, renderer.get_frame())
+        result.render_ms = (perf_counter() - started) * 1000
         return result
 
     def sequence(
@@ -225,6 +286,8 @@ class CairoRenderService:
         width: int | None = None,
         groups: Iterable[GroupDefinition] = (),
         on_frame: Callable[[FrameResult], None] | None = None,
+        on_start: Callable[[str], None] | None = None,
+        paced: bool = False,
     ) -> SequenceResult:
         """Render every frame between two times into the cache, in one run of the scene.
 
@@ -232,26 +295,46 @@ class CairoRenderService:
         images. ``on_frame`` is told about each frame as it is written.
         """
         generated = self._generate(scene, catalogue, groups)
-        overrides = _config_for(settings, width)
+        overrides = {**_config_for(settings, width), "renderer": self.device.renderer}
         written = 0
+        keys: list[str] = []
+        if self.binary:
+            if self.frames is None:
+                self.frames = BinaryFrames(self.cache_dir / "frames")
+            cancel_url = self.frames.begin_sequence(paced)
+            if on_start is not None:
+                on_start(cancel_url)
 
         def store(index: int, time: float, pixels: Any, instance: Any) -> None:
             nonlocal written
+            if self.frames is not None and self.frames.cancelled.is_set():
+                raise EndSceneEarlyException()
             path = self._frame_path(scene.name, generated.code, index, overrides)
-            record = path.with_suffix(".json")
-            if not (path.exists() and record.exists()):
-                Image.fromarray(pixels, "RGBA").save(path)
+            if self.frames is not None and not self.frames.reserve(
+                path.stem, pixels.nbytes
+            ):
+                raise EndSceneEarlyException()
+            keys.append(path.stem)
+            result = self._cached(path)
+            if result is None:
                 bounds = _bounds(
                     instance, construct_locals(instance), generated.source_map
                 )
-                record.write_text(
+                result = self._store(
+                    path,
                     FrameResult(
-                        path=str(path), time=time, bounds=bounds
-                    ).model_dump_json()
+                        path=str(path),
+                        time=time,
+                        bounds=bounds,
+                        stream=self._frame_path(
+                            scene.name, generated.code, 0, overrides
+                        ).stem,
+                    ),
+                    pixels,
                 )
             written += 1
             if on_frame is not None:
-                on_frame(FrameResult.model_validate_json(record.read_text()))
+                on_frame(result)
 
         first = max(1, frame_index(start, settings.frame_rate)) / settings.frame_rate
         run_scene(
@@ -260,20 +343,43 @@ class CairoRenderService:
             {
                 **overrides,
                 "dry_run": True,
-                "from_animation_number": self._plays_before(
-                    generated, scene.name, first
+                "from_animation_number": (
+                    0
+                    if self.device.renderer == "opengl"
+                    else self._plays_before(generated, scene.name, first)
                 ),
             },
-            lambda camera: _SequenceRenderer(
-                first,
-                end,
-                store,
-                camera_class=camera,
-                file_writer_class=PreviewFileWriter,
+            lambda camera: (
+                EditorOpenGLRenderer(
+                    backend=self.device.backend,
+                    start=first,
+                    target=end,
+                    on_frame=store,
+                    file_writer_class=PreviewFileWriter,
+                )
+                if self.device.renderer == "opengl"
+                else _SequenceRenderer(
+                    first,
+                    end,
+                    store,
+                    camera_class=camera,
+                    file_writer_class=PreviewFileWriter,
+                )
             ),
         )
         self.render_count += 1
-        return SequenceResult(frames=written, start=first, end=end)
+        cancelled = self.frames is not None and self.frames.cancelled.is_set()
+        return SequenceResult(
+            frames=written,
+            start=first,
+            end=end,
+            cancelled=cancelled,
+            cache_complete=not cancelled
+            and (
+                self.frames is None
+                or all(self.frames.record(key) is not None for key in keys)
+            ),
+        )
 
     def _frame_path(
         self, name: str, code: str, index: int, overrides: dict[str, Any]
@@ -290,8 +396,14 @@ class CairoRenderService:
             _, _, timing = run_scene(
                 generated,
                 name,
-                {**_QUIET, "dry_run": True},
-                lambda camera: TimingRenderer(camera_class=camera),
+                {**_QUIET, "dry_run": True, "renderer": self.device.renderer},
+                lambda camera: (
+                    EditorOpenGLRenderer(
+                        timing=True, file_writer_class=PreviewFileWriter
+                    )
+                    if self.device.renderer == "opengl"
+                    else TimingRenderer(camera_class=camera)
+                ),
             )
             self.timings[key] = [(p.start, p.start + p.duration) for p in timing.plays]
         # Play ends are sums of floating durations; stay well clear of that error.
@@ -314,6 +426,7 @@ class CairoRenderService:
         shutil.rmtree(work, ignore_errors=True)
         overrides = {
             **_config_for(settings, None),
+            "renderer": self.device.renderer,
             **_EXPORT_FORMATS[fmt],
             "format": fmt,
             "media_dir": str(work),
@@ -324,7 +437,11 @@ class CairoRenderService:
             generated,
             scene.name,
             overrides,
-            lambda camera: _StopAtRenderer(float("inf"), progress, camera_class=camera),
+            lambda camera: (
+                EditorOpenGLRenderer(backend=self.device.backend, progress=progress)
+                if self.device.renderer == "opengl"
+                else _StopAtRenderer(float("inf"), progress, camera_class=camera)
+            ),
         )
         produced = Path(getattr(instance.renderer.file_writer, _OUTPUT_ATTRIBUTE[fmt]))
         directory.mkdir(parents=True, exist_ok=True)
@@ -355,6 +472,13 @@ class CairoRenderService:
         return generated
 
 
+class CairoRenderService(RenderService):
+    """Explicit CPU renderer retained for fallback and reference comparisons."""
+
+    def __init__(self, cache_dir: Path) -> None:
+        super().__init__(cache_dir, RenderDevice())
+
+
 def construct_locals(scene: Any) -> dict[str, Any]:
     """The local variables of the running ``construct``, which draws the frame."""
     code = type(scene).construct.__code__
@@ -377,6 +501,8 @@ def _config_for(settings: Settings, width: int | None) -> dict[str, Any]:
         pixel_width = width
     return {
         **_QUIET,
+        "preview": False,
+        "force_window": False,
         "pixel_width": pixel_width,
         "pixel_height": pixel_height,
         "frame_rate": settings.frame_rate,
@@ -385,11 +511,24 @@ def _config_for(settings: Settings, width: int | None) -> dict[str, Any]:
 
 
 def _bounds(scene: Any, locals_: dict[str, Any], source_map: SourceMap) -> list[Bounds]:
+    renderer = "opengl" if isinstance(scene.renderer, EditorOpenGLRenderer) else "cairo"
+    # Sequence callbacks already run inside the correct renderer configuration.
+    # Reapplying it rewrites every converted Manim class's bases, even when the
+    # renderer hasn't changed. Do that only for captures read after run_scene.
+    if config.renderer.value == renderer:
+        return _bounds_for_renderer(scene, locals_, source_map)
+    with tempconfig({"renderer": renderer}):
+        return _bounds_for_renderer(scene, locals_, source_map)
+
+
+def _bounds_for_renderer(
+    scene: Any, locals_: dict[str, Any], source_map: SourceMap
+) -> list[Bounds]:
     on_screen = set(map(id, scene.get_mobject_family_members()))
     result: list[Bounds] = []
     for node, name in source_map.variables.items():
         value = locals_.get(name)
-        if not isinstance(value, Mobject):
+        if not isinstance(value, (Mobject, OpenGLMobject)):
             continue
         center = value.get_center()
         result.append(

@@ -49,6 +49,30 @@
       "title": "Path",
       "type": "string"
     },
+    "format": {
+      "default": "png",
+      "enum": [
+        "png",
+        "rgba"
+      ],
+      "title": "Format",
+      "type": "string"
+    },
+    "width": {
+      "default": 0,
+      "title": "Width",
+      "type": "integer"
+    },
+    "height": {
+      "default": 0,
+      "title": "Height",
+      "type": "integer"
+    },
+    "stream": {
+      "default": "",
+      "title": "Stream",
+      "type": "string"
+    },
     "time": {
       "title": "Time",
       "type": "number"

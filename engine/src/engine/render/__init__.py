@@ -6,6 +6,7 @@ from engine.render.service import (
     ExportResult,
     FrameResult,
     Renderer,
+    RenderService,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "FrameResult",
     "RenderError",
     "Renderer",
+    "RenderService",
 ]

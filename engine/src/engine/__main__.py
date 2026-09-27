@@ -17,7 +17,7 @@ from engine.document import (
     validate_document,
 )
 from engine.info import engine_info
-from engine.render import RENDER_ERROR, CairoRenderService, FrameResult, RenderError
+from engine.render import RENDER_ERROR, FrameResult, RenderError, RenderService
 from engine.rpc import Dispatcher, Notify, RpcError, serve
 from engine.timeline import layout_timeline
 
@@ -26,7 +26,9 @@ def build_dispatcher(cache_dir: Path | None = None) -> Dispatcher:
     if cache_dir is None:
         cache_dir = Path(tempfile.mkdtemp(prefix="mnw-"))
         atexit.register(shutil.rmtree, cache_dir, True)
-    render = _RenderMethods(CairoRenderService(cache_dir))
+    service = RenderService(cache_dir, binary=True)
+    atexit.register(service.close)
+    render = _RenderMethods(service)
     dispatcher = Dispatcher()
     dispatcher.register("ping", lambda: "pong")
     dispatcher.register("engine.info", _info)
@@ -95,7 +97,7 @@ def _scene(document: Document, name: str) -> SceneDocument:
 
 
 class _RenderMethods:
-    def __init__(self, service: CairoRenderService) -> None:
+    def __init__(self, service: RenderService) -> None:
         self.service = service
 
     def frame(
@@ -126,13 +128,18 @@ class _RenderMethods:
         start: float,
         end: float,
         width: int | None = None,
+        request_id: int | None = None,
+        paced: bool = False,
         notify: Notify = lambda method, params: None,
     ) -> dict[str, Any]:
         """Render the frames from ``start`` to ``end`` into the cache."""
         parsed = Document.model_validate(document)
 
         def ready(frame: FrameResult) -> None:
-            notify("render.frame_ready", {"scene": scene, **frame.model_dump()})
+            notify(
+                "render.frame_ready",
+                {"scene": scene, "request_id": request_id, **frame.model_dump()},
+            )
 
         try:
             result = self.service.sequence(
@@ -144,6 +151,11 @@ class _RenderMethods:
                 width,
                 parsed.groups,
                 ready,
+                lambda url: notify(
+                    "render.sequence_started",
+                    {"scene": scene, "request_id": request_id, "cancel_url": url},
+                ),
+                paced=paced,
             )
         except RenderError as exc:
             raise RpcError(RENDER_ERROR, str(exc), exc.data()) from exc

@@ -90,6 +90,32 @@ describe('playback from the playhead', () => {
     expect(useEngineResults.getState().prerendered).toBeNull()
   })
 
+  it('renders multiple timeline steps in one scene execution', async () => {
+    useEngineResults.getState().setPreviewTime(0)
+    renderHook(usePlayback)
+    act(() => useEngineResults.getState().setPlaying(true))
+    expect(requests).toHaveLength(1)
+    expect(requests[0]).toMatchObject({ method: 'render.sequence', params: { start: 0, end: 2 } })
+    frameReady(2)
+    await act(async () => requests[0]!.resolve({ ok: true, result: { cache_complete: false } }))
+    tick(2500)
+    expect(useEngineResults.getState().playing).toBe(false)
+    expect(useEngineResults.getState().prerendered).toBeNull()
+    expect(requests).toHaveLength(1)
+  })
+
+  it('cancels a busy sequence through the independent control channel', () => {
+    const fetch = vi.fn(async () => new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetch)
+    renderHook(usePlayback)
+    act(() => useEngineResults.getState().setPlaying(true))
+    act(() => listeners.forEach((listener) => listener('render.sequence_started', {
+      request_id: 1, cancel_url: 'http://127.0.0.1:1234/token/cancel/run'
+    })))
+    act(() => useEngineResults.getState().setPlaying(false))
+    expect(fetch).toHaveBeenCalledWith('http://127.0.0.1:1234/token/cancel/run', { method: 'POST' })
+  })
+
   it('resumes from the paused time while the next render is pending', () => {
     renderHook(usePlayback)
     act(() => useEngineResults.getState().setPlaying(true))
@@ -150,7 +176,7 @@ describe('playback from the playhead', () => {
     tick(800)
     expect(useEngineResults.getState().previewTime).toBe(0)
     expect(useEngineResults.getState().playing).toBe(true)
-    expect(requests[1]).toMatchObject({ method: 'render.sequence', params: { start: 0, end: 1 } })
+    expect(requests[1]).toMatchObject({ method: 'render.sequence', params: { start: 0, end: 2 } })
     tick(200)
     expect(useEngineResults.getState().previewTime).toBe(0)
   })

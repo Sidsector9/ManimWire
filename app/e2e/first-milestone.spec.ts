@@ -12,9 +12,9 @@ test('start with a circle, see the preview, read the generated code', async () =
     await window.getByRole('button', { name: 'Start with a circle' }).click()
 
     await expect(window.locator('.node')).toHaveCount(3)
-    const image = window.locator('.frame img')
+    const image = window.locator('.frame canvas')
     await expect(image).toBeVisible()
-    await expect(image).toHaveJSProperty('naturalWidth', 960)
+    await expect(image).toHaveJSProperty('width', 960)
     await expect(window.locator('.canvas-chip.time')).toContainText('t = 2.00 s')
 
     await window.getByRole('button', { name: 'Code' }).click()

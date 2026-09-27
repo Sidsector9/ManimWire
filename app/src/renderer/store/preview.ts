@@ -38,6 +38,9 @@ interface PreviewStore {
   sequencing: boolean
   /** Counts sequence calls, so a cancelled run's completion cannot clear a newer run's flag. */
   sequenceRun: number
+  cancelUrl: string | null
+  sequenceCached: boolean
+  cancelSequence(): void
   /** The edit last validated and laid out; a frame-only sync skips those two calls. */
   synced: { revision: number; sceneIndex: number } | null
   /** Bumped when playback should start over (loop); the playback hook watches it. */
@@ -83,6 +86,12 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   loop: false,
   sequencing: false,
   sequenceRun: 0,
+  cancelUrl: null,
+  sequenceCached: false,
+  cancelSequence: () => {
+    const url = get().cancelUrl
+    if (url) void fetch(url, { method: 'POST' }).catch(() => {})
+  },
   synced: null,
   pass: 0,
   prerendered: null,
@@ -90,7 +99,10 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
   rendered: 0,
   setPreviewTime: (previewTime) => set({ previewTime }),
   setPreviewWidth: (previewWidth) => set({ previewWidth }),
-  setPlaying: (playing) => set({ playing, ...(playing ? { rendered: 0 } : { queued: [] }) }),
+  setPlaying: (playing) => {
+    if (!playing) get().cancelSequence()
+    set({ playing, ...(playing ? { rendered: 0 } : { queued: [] }) })
+  },
   setLoop: (loop) => set({ loop }),
 
   /**
@@ -100,6 +112,9 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
    */
   sync: async (doc, sceneIndex, revision) => {
     if (get().inFlight || get().sequencing) {
+      if (get().sequencing && (get().synced?.revision !== revision || get().synced?.sceneIndex !== sceneIndex)) {
+        get().setPlaying(false)
+      }
       set({ pending: { doc, sceneIndex, revision }, rendering: true })
       return
     }
@@ -117,20 +132,28 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
     const scene = doc.scenes[sceneIndex]!.name
     const { previewWidth } = get()
     const run = get().sequenceRun + 1
-    set({ sequencing: true, sequenceRun: run, rendering: true, failure: null })
+    set({ sequencing: true, sequenceRun: run, cancelUrl: null, rendering: true, failure: null })
     const off = window.engine.onNotification((method, params) => {
+      const message = params as { request_id?: number | null; cancel_url?: string }
+      if (message.request_id != null && message.request_id !== run) return
+      if (method === 'render.sequence_started' && message.cancel_url && get().sequenceRun === run) {
+        set({ cancelUrl: message.cancel_url })
+        if (!get().playing) get().cancelSequence()
+        return
+      }
       if (method !== 'render.frame_ready') return
       const frame = params as FrameResult & { scene: string }
       // Rendering usually outruns the scene, so frames wait their turn rather than
-      // being shown the moment they arrive. After Stop the engine still finishes the
-      // step; those frames must not be queued at all.
+      // being shown the moment they arrive. Ignore frames arriving after Stop
+      // while the engine handles cancellation at its next frame boundary.
       if (frame.scene === scene && get().playing && get().sequenceRun === run) {
         set({ queued: [...get().queued, frame], rendered: Math.max(get().rendered, frame.time) })
       }
     })
     try {
-      await call('render.sequence', { document: doc, scene, start, end, width: previewWidth })
-      return true
+      const result = await call<{ cache_complete?: boolean; cancelled?: boolean }>('render.sequence', { document: doc, scene, start, end, width: previewWidth, request_id: run, paced: true })
+      if (get().sequenceRun === run) set({ sequenceCached: result.cache_complete !== false })
+      return !result.cancelled
     } catch (error) {
       set({ failure: describeFailure(error) })
       return false
@@ -138,7 +161,7 @@ export const useEngineResults = create<PreviewStore>((set, get) => ({
       off()
       if (get().sequenceRun === run) {
         const next = get().pending
-        set({ sequencing: false, rendering: next !== null, pending: null })
+        set({ sequencing: false, cancelUrl: null, rendering: next !== null, pending: null })
         if (next) void get().sync(next.doc, next.sceneIndex, next.revision)
       }
     }

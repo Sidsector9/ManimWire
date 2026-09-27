@@ -9,7 +9,7 @@ test('scrubbing works after playing from the middle to the end', async () => {
   try {
     await expect(window.locator('.status')).toContainText('engine ready')
     await window.getByRole('button', { name: 'Start with a circle' }).click()
-    await expect(window.locator('.frame img')).toBeVisible()
+    await expect(window.locator('.frame canvas')).toBeVisible()
     const head = window.locator('.playhead-time')
     const ruler = window.locator('.timeline-ticks')
     const zero = window.locator('.timeline-ticks .tick').filter({ hasText: /^0s$/ })
@@ -26,9 +26,9 @@ test('scrubbing works after playing from the middle to the end', async () => {
     await window.getByTitle('Play', { exact: true }).click()
     await expect(head).toHaveText('2.00')
     await expect(window.getByTitle('Play', { exact: true })).toBeVisible({ timeout: 5000 })
-    const before = await window.locator('.frame img').getAttribute('src')
+    const before = await window.locator('.frame canvas').getAttribute('data-frame')
     await scrub(0.75)
-    await expect(window.locator('.frame img')).not.toHaveAttribute('src', before!)
+    await expect(window.locator('.frame canvas')).not.toHaveAttribute('data-frame', before!)
     // Let any surviving playback ticks run: they must not overwrite the scrub.
     await window.evaluate(() => new Promise<void>((resolve) => {
       requestAnimationFrame(() => requestAnimationFrame(() => resolve()))

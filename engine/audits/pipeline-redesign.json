@@ -1,0 +1,269 @@
+{
+  "device": {
+    "renderer": "opengl",
+    "acceleration": "hardware",
+    "device": "Apple M3 Pro",
+    "vendor": "Apple",
+    "version": "4.1 Metal - 90.5",
+    "backend": null,
+    "reason": null
+  },
+  "consume": false,
+  "method": "Fresh frame cache per sample; discard first; median remaining. Includes GPU readback; excludes browser presentation.",
+  "results": [
+    {
+      "scene": "1.animating-a-circle.mnw",
+      "operation": "transport",
+      "binary": false,
+      "width": 960,
+      "fps": 30,
+      "duration": 1.0,
+      "render_runs": 1,
+      "samples_ms": [
+        268.9422919647768,
+        150.09499998996034,
+        151.42000000923872,
+        151.1869590030983
+      ],
+      "median_ms": 151.1869590030983
+    },
+    {
+      "scene": "1.animating-a-circle.mnw",
+      "operation": "transport",
+      "binary": true,
+      "width": 960,
+      "fps": 30,
+      "duration": 1.0,
+      "render_runs": 1,
+      "samples_ms": [
+        63.23333299951628,
+        95.84199998062104,
+        96.21858299942687,
+        94.8093340266496
+      ],
+      "median_ms": 95.84199998062104
+    },
+    {
+      "scene": "9.opening-manim-example.mnw",
+      "operation": "transport",
+      "binary": false,
+      "width": 960,
+      "fps": 30,
+      "duration": 1.0,
+      "render_runs": 1,
+      "samples_ms": [
+        811.1778749735095,
+        789.05483399285,
+        800.0935000018217,
+        798.5659580444917
+      ],
+      "median_ms": 798.5659580444917
+    },
+    {
+      "scene": "9.opening-manim-example.mnw",
+      "operation": "transport",
+      "binary": true,
+      "width": 960,
+      "fps": 30,
+      "duration": 1.0,
+      "render_runs": 1,
+      "samples_ms": [
+        706.2110420083627,
+        747.5274160387926,
+        741.0215419949964,
+        735.0510419928469
+      ],
+      "median_ms": 741.0215419949964
+    },
+    {
+      "scene": "9.opening-manim-example.mnw",
+      "operation": "per_step",
+      "binary": true,
+      "width": 480,
+      "fps": 15,
+      "duration": 22.0,
+      "render_runs": 10,
+      "samples_ms": [
+        15598.527291032951,
+        15631.910459022038,
+        15551.931291993242,
+        15590.156499994919
+      ],
+      "median_ms": 15590.156499994919
+    },
+    {
+      "scene": "9.opening-manim-example.mnw",
+      "operation": "continuous",
+      "binary": true,
+      "width": 480,
+      "fps": 15,
+      "duration": 22.0,
+      "render_runs": 1,
+      "samples_ms": [
+        3673.4512919792905,
+        3667.3295000218786,
+        3676.7587499925867,
+        3657.0511250174604
+      ],
+      "median_ms": 3667.3295000218786
+    }
+  ],
+  "delivery_connection_per_frame": {
+    "device": {
+      "renderer": "opengl",
+      "acceleration": "hardware",
+      "device": "Apple M3 Pro",
+      "vendor": "Apple",
+      "version": "4.1 Metal - 90.5",
+      "backend": null,
+      "reason": null
+    },
+    "consume": true,
+    "method": "Fresh frame cache per sample; discard first; median remaining. Includes GPU readback; excludes browser presentation.",
+    "results": [
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "transport",
+        "binary": false,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          270.2754170168191,
+          153.59387500211596,
+          150.04491701256484,
+          156.25554200960323
+        ],
+        "median_ms": 153.59387500211596
+      },
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "transport",
+        "binary": true,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          118.23187494883314,
+          134.64712497079745,
+          155.11391701875255,
+          154.08191696042195
+        ],
+        "median_ms": 154.08191696042195
+      },
+      {
+        "scene": "9.opening-manim-example.mnw",
+        "operation": "transport",
+        "binary": false,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          903.3071249723434,
+          800.2111670211889,
+          757.6949169742875,
+          843.4502910240553
+        ],
+        "median_ms": 800.2111670211889
+      },
+      {
+        "scene": "9.opening-manim-example.mnw",
+        "operation": "transport",
+        "binary": true,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          746.5369999990799,
+          770.4249169910327,
+          799.7571669984609,
+          809.0720000327565
+        ],
+        "median_ms": 799.7571669984609
+      }
+    ]
+  },
+  "delivery_keepalive": {
+    "device": {
+      "renderer": "opengl",
+      "acceleration": "hardware",
+      "device": "Apple M3 Pro",
+      "vendor": "Apple",
+      "version": "4.1 Metal - 90.5",
+      "backend": null,
+      "reason": null
+    },
+    "consume": true,
+    "method": "Fresh frame cache per sample; discard first; median remaining. Includes GPU readback; excludes browser presentation.",
+    "results": [
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "transport",
+        "binary": false,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          273.9074159762822,
+          155.9237499604933,
+          158.77454198198393,
+          151.42187499441206
+        ],
+        "median_ms": 155.9237499604933
+      },
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "transport",
+        "binary": true,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          81.05833403533325,
+          118.70883300434798,
+          139.83933301642537,
+          128.75983398407698
+        ],
+        "median_ms": 128.75983398407698
+      },
+      {
+        "scene": "9.opening-manim-example.mnw",
+        "operation": "transport",
+        "binary": false,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          919.9011669843458,
+          797.9535409831442,
+          760.7234159950167,
+          835.7354589970782
+        ],
+        "median_ms": 797.9535409831442
+      },
+      {
+        "scene": "9.opening-manim-example.mnw",
+        "operation": "transport",
+        "binary": true,
+        "width": 960,
+        "fps": 30,
+        "duration": 1.0,
+        "render_runs": 1,
+        "samples_ms": [
+          731.6131249535829,
+          746.5235840063542,
+          767.226749972906,
+          767.4269159906544
+        ],
+        "median_ms": 767.226749972906
+      }
+    ]
+  }
+}

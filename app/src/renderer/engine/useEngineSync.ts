@@ -29,6 +29,13 @@ export function useEngineSync(): void {
 
   useEffect(() => {
     if (!ready) return
+    const synced = useEngineResults.getState().synced
+    if (synced?.revision === revision && synced.sceneIndex === sceneIndex) {
+      // Scrubbing an unchanged scene should follow the next display frame. The
+      // store already limits in-flight requests and keeps only the latest one.
+      const frame = requestAnimationFrame(() => void sync(useDocumentStore.getState().doc, sceneIndex, revision))
+      return () => cancelAnimationFrame(frame)
+    }
     const timer = setTimeout(() => void sync(useDocumentStore.getState().doc, sceneIndex, revision), DEBOUNCE_MS)
     return () => clearTimeout(timer)
   }, [revision, sceneIndex, ready, previewTime, previewWidth, sync])

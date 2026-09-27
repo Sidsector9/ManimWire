@@ -4,10 +4,10 @@ import { cacheKey, useEngineResults } from '../store/preview'
 
 /**
  * Playback. Both passes run on the same wall clock, so the scene plays at its own
- * speed either way. The first pass asks the engine to render each play step's frames
- * into its cache (render.sequence) and shows each as its moment arrives; rendering
+ * speed either way. The first pass renders the remaining scene in one execution
+ * into its cache (render.sequence) and shows each frame as its moment arrives; rendering
  * usually runs ahead, and where it falls behind the newest finished frame is shown.
- * Later passes only read images. A change to the scene or preview size starts a new
+ * Cached passes read frames. A change to the scene or preview size starts a new
  * first pass.
  */
 export function usePlayback(): void {
@@ -79,28 +79,23 @@ export function usePlayback(): void {
 
     const playSequence = async (): Promise<void> => {
       const store = useEngineResults.getState()
-      const steps = layout.steps.filter((s) => s.end > s.start + 1e-9 && s.end > from + 1e-9)
       const stopClock = clock(
         (t) => useEngineResults.getState().showQueued(t),
         finish,
         () => useEngineResults.getState().rendered
       )
-      for (const step of steps) {
-        if (cancelled) return stopClock()
-        const ok = await store.sequence(doc, sceneIndex, Math.max(step.start, from), step.end)
-        if (cancelled) return stopClock()
-        if (!ok) {
-          stopClock()
-          useEngineResults.getState().setPlaying(false)
-          return
-        }
-        // The interval is complete even when frame sampling or floating-point
-        // rounding leaves its last timestamp just short of the step's end.
-        useEngineResults.setState({ rendered: Math.max(useEngineResults.getState().rendered, step.end) })
+      // Keep one Manim scene alive across all play/wait steps in this pass.
+      const ok = await store.sequence(doc, sceneIndex, from, total)
+      if (cancelled) return stopClock()
+      if (!ok) {
+        stopClock()
+        useEngineResults.getState().setPlaying(false)
+        return
       }
+      useEngineResults.setState({ rendered: total })
       if (cancelled) return stopClock()
       // Only a pass from the start covers every frame; a pass from a scrubbed time does not.
-      if (from <= 1e-6 && cacheKey(useEngineResults.getState().code, useEngineResults.getState().previewWidth) === key) {
+      if (from <= 1e-6 && useEngineResults.getState().sequenceCached && cacheKey(useEngineResults.getState().code, useEngineResults.getState().previewWidth) === key) {
         useEngineResults.setState({ prerendered: key })
       }
       // The clock ends the pass, whether it got to the end of the scene before the
@@ -111,6 +106,7 @@ export function usePlayback(): void {
     else void playSequence()
     return () => {
       cancelled = true
+      useEngineResults.getState().cancelSequence()
     }
     // Restarts when playing flips, or when a loop rewinds and bumps the pass counter.
   }, [playing, pass])

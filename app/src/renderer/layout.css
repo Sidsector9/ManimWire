@@ -525,14 +525,14 @@ body,
   overflow: hidden;
 }
 
-.canvas .frame img {
+.canvas .frame img, .canvas .frame canvas {
   display: block;
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
-.canvas .frame.failed img {
+.canvas .frame.failed img, .canvas .frame.failed canvas {
   opacity: 0.4;
 }
 

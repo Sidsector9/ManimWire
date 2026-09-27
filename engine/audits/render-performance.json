@@ -1,0 +1,866 @@
+{
+  "device": "Apple M3 Pro",
+  "resolution": [
+    960,
+    540
+  ],
+  "frame_rate": 30,
+  "method": "Six runs per case with fresh frame caches; first run discarded; median of remaining five. Hardware probe and catalogue warmed. Unprofiled, uncontended final measurements.",
+  "before_bounds_fix": [
+    {
+      "scene": "1.animating-a-circle.mnw",
+      "operation": "sequence",
+      "renderer": "cairo",
+      "median_ms": 306.9,
+      "samples_ms": [
+        329.1,
+        307.8,
+        304.7,
+        310.2,
+        306.0,
+        306.9
+      ]
+    },
+    {
+      "scene": "1.animating-a-circle.mnw",
+      "operation": "sequence",
+      "renderer": "opengl",
+      "median_ms": 396.2,
+      "samples_ms": [
+        454.4,
+        396.6,
+        390.5,
+        396.1,
+        396.2,
+        399.8
+      ]
+    },
+    {
+      "scene": "14.three-d-surface-plot.mnw",
+      "operation": "frame",
+      "renderer": "cairo",
+      "median_ms": 793.0,
+      "samples_ms": [
+        795.1,
+        826.9,
+        789.5,
+        790.6,
+        793.0,
+        832.0
+      ]
+    },
+    {
+      "scene": "14.three-d-surface-plot.mnw",
+      "operation": "frame",
+      "renderer": "opengl",
+      "median_ms": 955.1,
+      "samples_ms": [
+        952.3,
+        955.1,
+        990.9,
+        954.0,
+        993.0,
+        948.2
+      ]
+    },
+    {
+      "scene": "8.coordinate-system.mnw",
+      "operation": "frame",
+      "renderer": "cairo",
+      "median_ms": 377.4,
+      "samples_ms": [
+        474.3,
+        377.1,
+        420.3,
+        377.4,
+        423.2,
+        377.1
+      ]
+    },
+    {
+      "scene": "8.coordinate-system.mnw",
+      "operation": "frame",
+      "renderer": "opengl",
+      "median_ms": 809.4,
+      "samples_ms": [
+        930.8,
+        809.4,
+        808.9,
+        810.8,
+        813.8,
+        808.1
+      ]
+    }
+  ],
+  "after_bounds_fix": [
+    {
+      "scene": "1.animating-a-circle.mnw",
+      "operation": "sequence",
+      "renderer": "cairo",
+      "median_ms": 128.9,
+      "samples_ms": [
+        142.0,
+        127.1,
+        130.3,
+        129.0,
+        128.9,
+        127.7
+      ]
+    },
+    {
+      "scene": "1.animating-a-circle.mnw",
+      "operation": "sequence",
+      "renderer": "opengl",
+      "median_ms": 213.0,
+      "samples_ms": [
+        271.4,
+        214.1,
+        215.8,
+        211.1,
+        213.0,
+        208.1
+      ]
+    },
+    {
+      "scene": "14.three-d-surface-plot.mnw",
+      "operation": "frame",
+      "renderer": "cairo",
+      "median_ms": 795.4,
+      "samples_ms": [
+        792.4,
+        825.0,
+        790.8,
+        792.2,
+        795.4,
+        831.0
+      ]
+    },
+    {
+      "scene": "14.three-d-surface-plot.mnw",
+      "operation": "frame",
+      "renderer": "opengl",
+      "median_ms": 958.8,
+      "samples_ms": [
+        953.3,
+        958.8,
+        1000.6,
+        957.7,
+        1003.4,
+        956.6
+      ]
+    },
+    {
+      "scene": "8.coordinate-system.mnw",
+      "operation": "frame",
+      "renderer": "cairo",
+      "median_ms": 372.1,
+      "samples_ms": [
+        471.0,
+        370.9,
+        412.7,
+        372.1,
+        415.5,
+        370.6
+      ]
+    },
+    {
+      "scene": "8.coordinate-system.mnw",
+      "operation": "frame",
+      "renderer": "opengl",
+      "median_ms": 810.1,
+      "samples_ms": [
+        932.8,
+        810.0,
+        810.1,
+        808.4,
+        812.2,
+        813.8
+      ]
+    }
+  ],
+  "deep_research_2026_09_28": {
+    "baseline": [
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "sequence",
+        "renderer": "cairo",
+        "median_ms": 128.5,
+        "samples_ms": [
+          219.7,
+          141.2,
+          130.9,
+          128.5,
+          128.1,
+          128.3
+        ]
+      },
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "sequence",
+        "renderer": "opengl",
+        "median_ms": 223.9,
+        "samples_ms": [
+          280.3,
+          221.1,
+          240.5,
+          241.1,
+          223.9,
+          214.3
+        ]
+      },
+      {
+        "scene": "14.three-d-surface-plot.mnw",
+        "operation": "frame",
+        "renderer": "cairo",
+        "median_ms": 874.9,
+        "samples_ms": [
+          842.1,
+          798.6,
+          828.7,
+          882.6,
+          874.9,
+          951.0
+        ]
+      },
+      {
+        "scene": "14.three-d-surface-plot.mnw",
+        "operation": "frame",
+        "renderer": "opengl",
+        "median_ms": 1014.2,
+        "samples_ms": [
+          1247.6,
+          1014.2,
+          1027.6,
+          939.9,
+          1010.4,
+          1031.1
+        ]
+      },
+      {
+        "scene": "8.coordinate-system.mnw",
+        "operation": "frame",
+        "renderer": "cairo",
+        "median_ms": 394.8,
+        "samples_ms": [
+          502.8,
+          394.8,
+          439.8,
+          384.1,
+          415.2,
+          368.6
+        ]
+      },
+      {
+        "scene": "8.coordinate-system.mnw",
+        "operation": "frame",
+        "renderer": "opengl",
+        "median_ms": 860.5,
+        "samples_ms": [
+          912.0,
+          821.9,
+          892.7,
+          855.2,
+          860.5,
+          860.8
+        ]
+      }
+    ],
+    "without_global_profile_hook": [
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "sequence",
+        "renderer": "cairo",
+        "median_ms": 130.2,
+        "samples_ms": [
+          151.5,
+          130.2,
+          174.4,
+          129.8,
+          130.0,
+          130.3
+        ]
+      },
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "sequence",
+        "renderer": "opengl",
+        "median_ms": 217.4,
+        "samples_ms": [
+          276.3,
+          222.3,
+          228.2,
+          215.7,
+          217.4,
+          217.0
+        ]
+      },
+      {
+        "scene": "14.three-d-surface-plot.mnw",
+        "operation": "frame",
+        "renderer": "cairo",
+        "median_ms": 469.0,
+        "samples_ms": [
+          484.6,
+          504.5,
+          467.2,
+          466.0,
+          469.0,
+          515.2
+        ]
+      },
+      {
+        "scene": "14.three-d-surface-plot.mnw",
+        "operation": "frame",
+        "renderer": "opengl",
+        "median_ms": 427.7,
+        "samples_ms": [
+          425.5,
+          468.2,
+          423.8,
+          423.3,
+          474.7,
+          427.7
+        ]
+      },
+      {
+        "scene": "8.coordinate-system.mnw",
+        "operation": "frame",
+        "renderer": "cairo",
+        "median_ms": 185.2,
+        "samples_ms": [
+          215.4,
+          142.3,
+          194.9,
+          142.4,
+          185.2,
+          190.2
+        ]
+      },
+      {
+        "scene": "8.coordinate-system.mnw",
+        "operation": "frame",
+        "renderer": "opengl",
+        "median_ms": 345.8,
+        "samples_ms": [
+          385.3,
+          345.2,
+          345.8,
+          349.6,
+          346.5,
+          337.9
+        ]
+      }
+    ],
+    "persistent_context_and_single_pass": [
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "sequence",
+        "renderer": "cairo",
+        "median_ms": 128.6,
+        "samples_ms": [
+          149.4,
+          134.5,
+          131.4,
+          128.6,
+          126.8,
+          128.6
+        ]
+      },
+      {
+        "scene": "1.animating-a-circle.mnw",
+        "operation": "sequence",
+        "renderer": "opengl",
+        "median_ms": 161.1,
+        "samples_ms": [
+          261.5,
+          162.6,
+          161.5,
+          157.7,
+          159.2,
+          161.1
+        ]
+      },
+      {
+        "scene": "14.three-d-surface-plot.mnw",
+        "operation": "frame",
+        "renderer": "cairo",
+        "median_ms": 329.6,
+        "samples_ms": [
+          331.4,
+          366.7,
+          329.6,
+          329.5,
+          329.3,
+          378.0
+        ]
+      },
+      {
+        "scene": "14.three-d-surface-plot.mnw",
+        "operation": "frame",
+        "renderer": "opengl",
+        "median_ms": 213.4,
+        "samples_ms": [
+          215.8,
+          213.4,
+          217.6,
+          261.3,
+          211.6,
+          213.3
+        ]
+      },
+      {
+        "scene": "8.coordinate-system.mnw",
+        "operation": "frame",
+        "renderer": "cairo",
+        "median_ms": 184.8,
+        "samples_ms": [
+          211.0,
+          142.6,
+          184.8,
+          188.3,
+          193.6,
+          144.4
+        ]
+      },
+      {
+        "scene": "8.coordinate-system.mnw",
+        "operation": "frame",
+        "renderer": "opengl",
+        "median_ms": 133.8,
+        "samples_ms": [
+          221.3,
+          133.8,
+          136.2,
+          179.8,
+          127.9,
+          128.2
+        ]
+      }
+    ],
+    "first_post_change_540_medians_ms": {
+      "circle_cairo": 118.8,
+      "circle_opengl": 153.5,
+      "surface_cairo": 326.5,
+      "surface_opengl": 166.6,
+      "coordinates_cairo": 140.9,
+      "coordinates_opengl": 132.6,
+      "sine_cairo": 190.1,
+      "sine_opengl": 267.2,
+      "opening_cairo": 1381.7,
+      "opening_opengl": 801.8
+    },
+    "final_540": {
+      "device": {
+        "renderer": "opengl",
+        "acceleration": "hardware",
+        "device": "Apple M3 Pro",
+        "vendor": "Apple",
+        "version": "4.1 Metal - 90.5",
+        "backend": null,
+        "reason": null
+      },
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "settings": {
+        "pixel_width": 960,
+        "pixel_height": 540,
+        "frame_rate": 30.0,
+        "background_color": "BLACK",
+        "output_format": "mp4"
+      },
+      "method": "Fresh services/frame caches; first sample separate; median of remaining samples. Hardware probe/catalogue warm; includes readback, bounds, PNG; excludes RPC/UI.",
+      "results": [
+        {
+          "scene": "1.animating-a-circle.mnw",
+          "operation": "sequence",
+          "renderer": "cairo",
+          "first_ms": 136.6,
+          "median_ms": 120.0,
+          "samples_ms": [
+            136.6,
+            122.8,
+            120.0,
+            119.6,
+            119.0,
+            124.1
+          ],
+          "png_bytes": [
+            718092,
+            718092,
+            718092,
+            718092,
+            718092,
+            718092
+          ]
+        },
+        {
+          "scene": "1.animating-a-circle.mnw",
+          "operation": "sequence",
+          "renderer": "opengl",
+          "first_ms": 418.4,
+          "median_ms": 242.6,
+          "samples_ms": [
+            418.4,
+            272.6,
+            260.8,
+            242.6,
+            199.0,
+            185.1
+          ],
+          "png_bytes": [
+            720029,
+            720029,
+            720029,
+            720029,
+            720029,
+            720029
+          ]
+        },
+        {
+          "scene": "14.three-d-surface-plot.mnw",
+          "operation": "frame",
+          "renderer": "cairo",
+          "first_ms": 345.6,
+          "median_ms": 328.9,
+          "samples_ms": [
+            345.6,
+            374.0,
+            328.7,
+            328.9,
+            328.9,
+            376.7
+          ],
+          "png_bytes": [
+            182192,
+            182192,
+            182192,
+            182192,
+            182192,
+            182192
+          ]
+        },
+        {
+          "scene": "14.three-d-surface-plot.mnw",
+          "operation": "frame",
+          "renderer": "opengl",
+          "first_ms": 169.9,
+          "median_ms": 167.0,
+          "samples_ms": [
+            169.9,
+            165.8,
+            168.1,
+            212.0,
+            165.6,
+            167.0
+          ],
+          "png_bytes": [
+            211958,
+            211958,
+            211958,
+            211958,
+            211958,
+            211958
+          ]
+        },
+        {
+          "scene": "8.coordinate-system.mnw",
+          "operation": "frame",
+          "renderer": "cairo",
+          "first_ms": 224.9,
+          "median_ms": 158.3,
+          "samples_ms": [
+            224.9,
+            141.6,
+            186.2,
+            142.3,
+            294.1,
+            158.3
+          ],
+          "png_bytes": [
+            29674,
+            29674,
+            29674,
+            29674,
+            29674,
+            29674
+          ]
+        },
+        {
+          "scene": "8.coordinate-system.mnw",
+          "operation": "frame",
+          "renderer": "opengl",
+          "first_ms": 284.9,
+          "median_ms": 152.6,
+          "samples_ms": [
+            284.9,
+            162.1,
+            152.6,
+            242.5,
+            141.4,
+            139.5
+          ],
+          "png_bytes": [
+            33051,
+            33051,
+            33051,
+            33051,
+            33051,
+            33051
+          ]
+        },
+        {
+          "scene": "7.sine-curve-unit-circle.mnw",
+          "operation": "sequence",
+          "renderer": "cairo",
+          "first_ms": 195.8,
+          "median_ms": 186.6,
+          "samples_ms": [
+            195.8,
+            187.3,
+            186.6,
+            184.1,
+            186.7,
+            181.8
+          ],
+          "png_bytes": [
+            977825,
+            977825,
+            977825,
+            977825,
+            977825,
+            977825
+          ]
+        },
+        {
+          "scene": "7.sine-curve-unit-circle.mnw",
+          "operation": "sequence",
+          "renderer": "opengl",
+          "first_ms": 336.7,
+          "median_ms": 296.2,
+          "samples_ms": [
+            336.7,
+            277.3,
+            294.5,
+            296.2,
+            301.7,
+            298.0
+          ],
+          "png_bytes": [
+            1046202,
+            1046202,
+            1046202,
+            1046202,
+            1046202,
+            1046202
+          ]
+        },
+        {
+          "scene": "9.opening-manim-example.mnw",
+          "operation": "sequence",
+          "renderer": "cairo",
+          "first_ms": 1460.7,
+          "median_ms": 1432.1,
+          "samples_ms": [
+            1460.7,
+            1432.1,
+            1468.3,
+            1427.2,
+            1431.9,
+            1486.5
+          ],
+          "png_bytes": [
+            1002035,
+            1002035,
+            1002035,
+            1002035,
+            1002035,
+            1002035
+          ]
+        },
+        {
+          "scene": "9.opening-manim-example.mnw",
+          "operation": "sequence",
+          "renderer": "opengl",
+          "first_ms": 910.5,
+          "median_ms": 877.9,
+          "samples_ms": [
+            910.5,
+            877.9,
+            827.1,
+            925.2,
+            805.0,
+            883.4
+          ],
+          "png_bytes": [
+            1022309,
+            1022309,
+            1022309,
+            1022309,
+            1022309,
+            1022309
+          ]
+        }
+      ]
+    },
+    "final_1080": {
+      "device": {
+        "renderer": "opengl",
+        "acceleration": "hardware",
+        "device": "Apple M3 Pro",
+        "vendor": "Apple",
+        "version": "4.1 Metal - 90.5",
+        "backend": null,
+        "reason": null
+      },
+      "platform": "macOS-26.6.2-arm64-arm-64bit",
+      "settings": {
+        "pixel_width": 1920,
+        "pixel_height": 1080,
+        "frame_rate": 30.0,
+        "background_color": "BLACK",
+        "output_format": "mp4"
+      },
+      "method": "Fresh services/frame caches; first sample separate; median of remaining samples. Hardware probe/catalogue warm; includes readback, bounds, PNG; excludes RPC/UI.",
+      "results": [
+        {
+          "scene": "1.animating-a-circle.mnw",
+          "operation": "sequence",
+          "renderer": "cairo",
+          "first_ms": 418.5,
+          "median_ms": 394.5,
+          "samples_ms": [
+            418.5,
+            391.3,
+            394.6,
+            394.5,
+            392.4,
+            394.9
+          ],
+          "png_bytes": [
+            2644565,
+            2644565,
+            2644565,
+            2644565,
+            2644565,
+            2644565
+          ]
+        },
+        {
+          "scene": "1.animating-a-circle.mnw",
+          "operation": "sequence",
+          "renderer": "opengl",
+          "first_ms": 580.3,
+          "median_ms": 477.1,
+          "samples_ms": [
+            580.3,
+            463.5,
+            474.6,
+            477.1,
+            512.5,
+            568.7
+          ],
+          "png_bytes": [
+            2650376,
+            2650376,
+            2650376,
+            2650376,
+            2650376,
+            2650376
+          ]
+        },
+        {
+          "scene": "14.three-d-surface-plot.mnw",
+          "operation": "frame",
+          "renderer": "cairo",
+          "first_ms": 374.1,
+          "median_ms": 372.1,
+          "samples_ms": [
+            374.1,
+            418.9,
+            372.1,
+            370.5,
+            371.4,
+            429.7
+          ],
+          "png_bytes": [
+            492705,
+            492705,
+            492705,
+            492705,
+            492705,
+            492705
+          ]
+        },
+        {
+          "scene": "14.three-d-surface-plot.mnw",
+          "operation": "frame",
+          "renderer": "opengl",
+          "first_ms": 202.7,
+          "median_ms": 194.9,
+          "samples_ms": [
+            202.7,
+            196.5,
+            188.7,
+            194.9,
+            244.6,
+            190.5
+          ],
+          "png_bytes": [
+            518625,
+            518625,
+            518625,
+            518625,
+            518625,
+            518625
+          ]
+        },
+        {
+          "scene": "8.coordinate-system.mnw",
+          "operation": "frame",
+          "renderer": "cairo",
+          "first_ms": 246.6,
+          "median_ms": 180.3,
+          "samples_ms": [
+            246.6,
+            175.2,
+            223.8,
+            180.3,
+            228.3,
+            177.0
+          ],
+          "png_bytes": [
+            101342,
+            101342,
+            101342,
+            101342,
+            101342,
+            101342
+          ]
+        },
+        {
+          "scene": "8.coordinate-system.mnw",
+          "operation": "frame",
+          "renderer": "opengl",
+          "first_ms": 251.3,
+          "median_ms": 162.4,
+          "samples_ms": [
+            251.3,
+            162.4,
+            166.8,
+            203.0,
+            161.3,
+            162.1
+          ],
+          "png_bytes": [
+            107231,
+            107231,
+            107231,
+            107231,
+            107231,
+            107231
+          ]
+        }
+      ]
+    },
+    "conditions": "Developer desktop, not an isolated lab. Final benchmark commands ran serially after tests finished. Background desktop applications remained active. Circle timings varied materially between runs; do not claim a universal speedup."
+  }
+}
