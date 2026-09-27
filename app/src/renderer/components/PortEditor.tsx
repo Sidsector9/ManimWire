@@ -1,7 +1,7 @@
 import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
 import { isMatrix } from '../model/types'
-import { selectColors, selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
+import { selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
 import { ColorPicker, ExpressionEditor, RateFuncPicker, VectorEditor } from './editors'
 import { MatrixInput, NumberInput, NumberListInput } from './inputs'
 
@@ -16,7 +16,6 @@ interface Props {
 
 /** Inline editor for one literal port, chosen by the catalogue type. */
 export function PortEditor({ param, value, onChange, compact = false, onTurnIntoPort }: Props) {
-  const colors = useCatalogueStore(selectColors)
   const entries = useCatalogueStore(selectEntries)
   const directions = useCatalogueStore(selectDirections)
   const fonts = useCatalogueStore(selectFonts)
@@ -44,20 +43,7 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
         />
       )
     case 'color':
-      if (!compact) return <ColorPicker value={typeof value === 'string' ? value : undefined} placeholder={placeholder} onChange={onChange} />
-      return (
-        <span className="port-color">
-          <span className="swatch" style={{ background: swatch(value, colors) }} />
-          <select className="port-select" value={typeof value === 'string' ? value : ''} onMouseDown={stop} onChange={(e) => onChange(e.target.value || undefined)}>
-            <option value="">{placeholder || 'default'}</option>
-            {colors.map((c) => (
-              <option key={c.name} value={c.name}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </span>
-      )
+      return <ColorPicker value={typeof value === 'string' ? value : undefined} placeholder={placeholder} onChange={onChange} />
     case 'vector':
       if (isMatrix(type)) {
         const rows = Array.isArray(value) && value.every((row) => Array.isArray(row)) ? (value as number[][]) : undefined
@@ -157,8 +143,3 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
   }
 }
 
-function swatch(value: JsonValue | undefined, colors: { name: string; hex: string }[]): string {
-  if (typeof value !== 'string') return 'transparent'
-  if (value.startsWith('#')) return value
-  return colors.find((c) => c.name === value)?.hex ?? 'transparent'
-}

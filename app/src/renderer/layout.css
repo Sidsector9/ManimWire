@@ -1927,6 +1927,13 @@ body,
 
 .expression-trigger { cursor: pointer; }
 
+.color-name { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.color-options { max-height: 230px; overflow-y: auto; margin-top: 6px; }
+.color-option { display: flex; align-items: center; gap: 8px; padding: 5px 6px; cursor: pointer; }
+.color-option:hover,
+.color-option.active { background: var(--surface-hover); }
+.color-check { margin-left: auto; color: var(--type-mobject); }
+
 .expression-completions {
   position: fixed;
   z-index: 1;

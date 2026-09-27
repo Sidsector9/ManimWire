@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { selectColors, selectDirections, selectRateCurves, useCatalogueStore } from '../store/catalogue'
 import { NumberInput } from './inputs'
@@ -82,37 +82,70 @@ export function Popover({ open, anchor, onClose, children }: { open: boolean; an
 export function ColorPicker({ value, placeholder, onChange }: { value: string | undefined; placeholder: string; onChange(value: string | undefined): void }) {
   const colors = useCatalogueStore(selectColors)
   const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [active, setActive] = useState(0)
   const anchor = useRef<HTMLButtonElement>(null)
-  const hex = value?.startsWith('#') ? value : (colors.find((c) => c.name === value)?.hex ?? null)
+  const list = useRef<HTMLDivElement>(null)
+  const listId = useId()
+  const shown = value ?? placeholder ?? 'default'
+  const hex = shown.startsWith('#') ? shown : colors.find((c) => c.name === shown)?.hex
+  const search = query.trim()
+  const options: { name: string; hex?: string; value: string | undefined }[] = [
+    { name: `Default (${placeholder || 'unset'})`, value: undefined },
+    ...colors.filter((c) => c.name.toLowerCase().includes(search.toLowerCase())).map((c) => ({ ...c, value: c.name })),
+    ...(/^#[0-9a-f]{6}$/i.test(search) ? [{ name: search.toUpperCase(), hex: search, value: search.toUpperCase() }] : [])
+  ]
+  const choose = (next: string | undefined): void => {
+    onChange(next)
+    setOpen(false)
+    anchor.current?.focus()
+  }
+  useLayoutEffect(() => {
+    if (open) list.current?.children[active]?.scrollIntoView?.({ block: 'nearest' })
+  }, [active, open])
   return (
-    <span className="editor-anchor">
-      <button ref={anchor} className="port-input color-trigger" onClick={() => setOpen((o) => !o)} title="Manim palette, then any colour">
+    <span className="editor-anchor nodrag">
+      <button ref={anchor} className="port-input color-trigger" aria-haspopup="listbox" aria-expanded={open}
+        onMouseDown={(event) => event.stopPropagation()}
+        onClick={() => { setQuery(''); setActive(0); setOpen((current) => !current) }}>
         <span className="swatch" style={{ background: hex ?? 'transparent' }} />
-        <span className="mono">{value ?? placeholder ?? 'default'}</span>
+        <span className="color-name mono">{shown}</span>
+        <span aria-hidden="true">⌄</span>
       </button>
       <Popover open={open} anchor={anchor} onClose={() => setOpen(false)}>
-        <div className="popover-title">Manim palette</div>
-        <div className="palette">
-          {colors.map((c) => (
-            <button
-              key={c.name}
-              className={`palette-swatch${value === c.name ? ' active' : ''}`}
-              style={{ background: c.hex }}
-              title={c.name}
-              onClick={() => {
-                onChange(c.name)
+        <div className="color-dropdown nodrag nowheel" onPointerDown={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+          <input className="port-input" autoFocus role="combobox" aria-label="Search colors"
+            aria-autocomplete="list" aria-expanded="true" aria-controls={listId} aria-activedescendant={`${listId}-${active}`}
+            placeholder="Search colors or enter #RRGGBB" value={query}
+            onChange={(event) => {
+              const next = event.target.value.trim()
+              setQuery(event.target.value)
+              setActive(next && (colors.some((color) => color.name.toLowerCase().includes(next.toLowerCase())) || /^#[0-9a-f]{6}$/i.test(next)) ? 1 : 0)
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                setActive((index) => (index + (event.key === 'ArrowDown' ? 1 : -1) + options.length) % options.length)
+              } else if (event.key === 'Enter') {
+                event.preventDefault()
+                const option = options[active]
+                if (option) choose(option.value)
+              } else if (event.key === 'Escape') {
+                event.preventDefault()
                 setOpen(false)
-              }}
-            />
-          ))}
-        </div>
-        <div className="popover-title">Any colour</div>
-        <div className="popover-row">
-          <input type="color" value={hex ?? '#ffffff'} onChange={(e) => onChange(e.target.value.toUpperCase())} />
-          <input className="port-input mono" value={value?.startsWith('#') ? value : ''} placeholder="#RRGGBB" onChange={(e) => /^#[0-9A-Fa-f]{6}$/.test(e.target.value) && onChange(e.target.value.toUpperCase())} />
-          <button className="link" onClick={() => onChange(undefined)}>
-            default
-          </button>
+                anchor.current?.focus()
+              }
+            }} />
+          <div ref={list} id={listId} className="color-options" role="listbox" aria-label="Colors">
+            {options.map((option, index) => <div key={option.name} id={`${listId}-${index}`} role="option"
+              aria-selected={value === option.value} className={`color-option${index === active ? ' active' : ''}`}
+              onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option.value)}>
+              <span className="swatch" style={{ background: option.hex ?? 'transparent' }} />
+              <span className="mono">{option.name}</span>
+              {value === option.value && <span className="color-check" aria-hidden="true">✓</span>}
+            </div>)}
+          </div>
+          {options.length === 1 && search && <div className="muted">No matching colors. Enter #RRGGBB for a custom color.</div>}
         </div>
       </Popover>
     </span>
