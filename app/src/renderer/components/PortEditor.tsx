@@ -2,7 +2,7 @@ import type { Parameter } from '../../shared/engine'
 import type { JsonValue } from '../model/document'
 import { isMatrix } from '../model/types'
 import { selectColors, selectDirections, selectEntries, selectFonts, useCatalogueStore } from '../store/catalogue'
-import { ColorPicker, RateFuncPicker, VectorEditor } from './editors'
+import { ColorPicker, ExpressionEditor, RateFuncPicker, VectorEditor } from './editors'
 import { MatrixInput, NumberInput, NumberListInput } from './inputs'
 
 interface Props {
@@ -75,6 +75,7 @@ export function PortEditor({ param, value, onChange, compact = false, onTurnInto
         </select>
       )
     case 'text':
+      if (param.name === 'expr') return <ExpressionEditor value={typeof value === 'string' ? value : ''} placeholder={placeholder} onChange={onChange} />
       if (param.kind === 'var_positional') {
         // Several strings for one *args port (Tex takes one string per part): one per line.
         const lines = Array.isArray(value) ? value.map(String).join('\n') : typeof value === 'string' ? value : ''

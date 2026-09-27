@@ -1,4 +1,6 @@
 import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { SELF_PORT, isContainer, portValue, visiblePorts } from '../model/document'
 import type { ManimFlowNode } from '../model/flow'
 import { ANIMATE, chainSummary, isLiveSource, isObjectType } from '../model/live'
@@ -11,6 +13,22 @@ import { PortEditor } from './PortEditor'
 
 /** One node for any catalogue descriptor. Collapsed by default; +N reveals the rest. */
 export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
+  const [tooltip, setTooltip] = useState<{ label: string; left: number; top: number } | null>(null)
+  useEffect(() => {
+    if (!tooltip) return
+    const dismiss = (): void => setTooltip(null)
+    const key = (event: KeyboardEvent): void => { if (event.key === 'Escape') dismiss() }
+    window.addEventListener('wheel', dismiss, { passive: true })
+    window.addEventListener('scroll', dismiss, true)
+    window.addEventListener('resize', dismiss)
+    window.addEventListener('keydown', key)
+    return () => {
+      window.removeEventListener('wheel', dismiss)
+      window.removeEventListener('scroll', dismiss, true)
+      window.removeEventListener('resize', dismiss)
+      window.removeEventListener('keydown', key)
+    }
+  }, [tooltip])
   const { node, descriptor, connected, live, issues } = data
   const index = useDescriptorIndex()
   const setValue = useDocumentStore((s) => s.setValue)
@@ -28,7 +46,18 @@ export function ManimNode({ id, data, selected }: NodeProps<ManimFlowNode>) {
   const needsLatex = descriptor.requires_latex && latex === false
 
   return (
-    <div className={`node${container ? ' container' : ''}${issues.length ? ' has-issue' : ''}`} style={{ borderLeftColor: category }}>
+    <div className={`node${container ? ' container' : ''}${issues.length ? ' has-issue' : ''}`} style={{ borderLeftColor: category }}
+      onPointerOver={(event) => {
+        const target = event.target as HTMLElement
+        const label = target.closest('.node-row')?.querySelector('.node-label') ?? target.closest('.node-title')
+        if (!label) { setTooltip(null); return }
+        const rect = label.getBoundingClientRect()
+        setTooltip({ label: label.textContent ?? '', left: Math.max(8, Math.min(rect.left, window.innerWidth - 320)), top: Math.max(40, rect.top - 6) })
+      }}
+      onPointerLeave={() => setTooltip(null)}
+      onPointerDown={() => setTooltip(null)}
+    >
+      {tooltip && createPortal(<div role="tooltip" className="inspector-field-tooltip" style={{ left: tooltip.left, top: tooltip.top, maxWidth: 'min(300px, calc(100vw - 16px))' }}>{tooltip.label}</div>, document.body)}
       {container && <NodeResizer isVisible={selected} minWidth={240} minHeight={140} onResizeEnd={(_, params) => updateNode(id, { size: [params.width, params.height] })} />}
       <div className="node-head">
         <span className={descriptor.kind === 'method' ? 'node-title mono' : 'node-title'}>{title}</span>

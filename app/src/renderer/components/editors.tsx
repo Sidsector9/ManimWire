@@ -2,12 +2,47 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { selectColors, selectDirections, selectRateCurves, useCatalogueStore } from '../store/catalogue'
 import { NumberInput } from './inputs'
+import { ExpressionTextarea } from './ExpressionTextarea'
 
 // The inspector's richer editors from the handoff: a colour picker that shows Manim's
 // palette first, a 3 x 3 direction grid with x y z fields, and a rate function list
 // with curve previews. Nodes keep the compact editors in PortEditor.
 
 const POPOVER_WIDTH = 264
+
+/** A full-size editor for expressions, shared by the graph and inspector. */
+export function ExpressionEditor({ value, placeholder, onChange }: { value: string; placeholder: string; onChange(value: string | undefined): void }) {
+  const dialog = useRef<HTMLDialogElement>(null)
+  return <>
+    <input
+      className="port-input mono expression-trigger"
+      aria-label="Edit expression"
+      aria-haspopup="dialog"
+      readOnly
+      value={value}
+      placeholder={placeholder}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={() => dialog.current?.showModal()}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault()
+          event.stopPropagation()
+          dialog.current?.showModal()
+        }
+      }}
+    />
+    {createPortal(<dialog ref={dialog} className="expression-dialog" aria-label="Edit expression"
+      onPointerDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
+    >
+      <div className="expression-editor-heading">
+        <strong>Expression</strong>
+        <button className="button small" onClick={() => dialog.current?.close()}>Done</button>
+      </div>
+      <ExpressionTextarea value={value} placeholder={placeholder} onChange={onChange} />
+    </dialog>, document.body)}
+  </>
+}
 
 /** A popover under its trigger, rendered at the document root so panels do not clip it. */
 export function Popover({ open, anchor, onClose, children }: { open: boolean; anchor: React.RefObject<HTMLElement | null>; onClose(): void; children: React.ReactNode }) {
