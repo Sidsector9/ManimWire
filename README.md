@@ -27,6 +27,10 @@ nodes on a canvas, connect their ports, edit values in an inspector, and arrange
 animation on a timeline. The application turns that graph into real Manim Python and
 Manim renders it.
 
+<a href="https://www.youtube.com/watch?v=xPkTGdgsYRM&t=18s" target="_blank">
+  <img width="1672" height="941" alt="Watch the ManimWire demo on YouTube" src="https://github.com/user-attachments/assets/38085f74-2aaf-4b76-a453-45b2e85ecf58" />
+</a>
+
 ## Getting started
 
 You need:
