@@ -30,7 +30,6 @@
     "@xyflow/react": "^12.11.6",
     "and": "^0.0.3",
     "dev": "^0.1.5",
-    "pnpm": "^12.3.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "vscode-jsonrpc": "^9.0.0",
