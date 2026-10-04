@@ -65,7 +65,9 @@ def detect_device() -> RenderDevice:
     for backend in ("default", "egl"):
         try:
             result = subprocess.run(
-                [sys.executable, str(Path(__file__).resolve()), backend],
+                [sys.executable, "--probe-device", backend]
+                if getattr(sys, "frozen", False)
+                else [sys.executable, str(Path(__file__).resolve()), backend],
                 capture_output=True,
                 text=True,
                 timeout=10,

@@ -1,0 +1,117 @@
+name: Build ManimWire
+run-name: Build ManimWire for ${{ inputs.target_os }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_os:
+        description: Target OS (macOS ARM64; Windows/Linux x64)
+        required: true
+        default: macos
+        type: choice
+        options:
+          - macos
+          - windows
+          - linux
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ${{ fromJSON('{"macos":"macos-15","windows":"windows-2022","linux":"ubuntu-22.04"}')[inputs.target_os] }}
+    timeout-minutes: 60
+    outputs:
+      artifact_id: ${{ steps.upload.outputs.artifact-id }}
+    env:
+      CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Fetch Manim over HTTPS
+        run: git -c submodule.manim.url=https://github.com/ManimCommunity/manim.git submodule update --init
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: '10.23.0'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v7
+        with:
+          version: '0.11.5'
+      - name: Install macOS build libraries
+        if: runner.os == 'macOS'
+        run: brew install pkg-config cairo pango
+      - name: Install Linux build libraries
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libcairo2-dev libpango1.0-dev libegl1 libgl1-mesa-dri fonts-dejavu-core
+      # Windows native dependencies are supplied by the locked Python wheels.
+      - name: Install JavaScript dependencies
+        working-directory: app
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck application
+        working-directory: app
+        run: pnpm typecheck
+      - name: Test application
+        working-directory: app
+        run: pnpm test
+      - name: Test artifact cleanup
+        run: node --test .github/scripts/expire-artifact.test.cjs
+      - name: Build macOS installer
+        if: runner.os == 'macOS'
+        run: pnpm --dir app installer:mac
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        run: pnpm --dir app installer:win
+      - name: Build Linux AppImage
+        if: runner.os == 'Linux'
+        run: pnpm --dir app installer:linux
+      # upload-artifact packages these installer files into a downloadable ZIP.
+      - name: Upload installer ZIP
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: ManimWire-${{ inputs.target_os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            app/release/*.pkg
+            app/release/*-setup.exe
+            app/release/*.AppImage
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 1 # GitHub minimum; cleanup below deletes after one hour.
+      - name: Add download details
+        shell: bash
+        env:
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          echo "Download the installer ZIP: $ARTIFACT_URL" >> "$GITHUB_STEP_SUMMARY"
+          echo "Cleanup is requested one hour after upload. The cleanup job keeps this workflow running until then. If cancelled, native retention is one day." >> "$GITHUB_STEP_SUMMARY"
+
+  expire-artifact:
+    name: Delete artifact after one hour
+    needs: build
+    if: ${{ always() && needs.build.outputs.artifact_id != '' }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 75
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Wait for expiry and delete this artifact
+        uses: actions/github-script@v7
+        env:
+          ARTIFACT_ID: ${{ needs.build.outputs.artifact_id }}
+        with:
+          retries: 3
+          script: |
+            const expire = require('./.github/scripts/expire-artifact.cjs');
+            await expire({github, context, core, artifactId: Number(process.env.ARTIFACT_ID)});

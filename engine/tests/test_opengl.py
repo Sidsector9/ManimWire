@@ -95,6 +95,19 @@ def test_probe_failure_falls_back_to_cairo() -> None:
     assert result.renderer == "cairo" and result.reason
 
 
+def test_frozen_probe_uses_engine_entry_point() -> None:
+    with (
+        patch("engine.render.device.sys.frozen", True, create=True),
+        patch(
+            "engine.render.device.subprocess.run",
+            return_value=probe_result("Apple GPU", "Apple"),
+        ) as run,
+    ):
+        result = detect_device.__wrapped__()
+    assert run.call_args.args[0][1:] == ["--probe-device", "default"]
+    assert result.acceleration == "hardware"
+
+
 def test_no_gl_fallback_still_renders(
     tmp_path: Path, catalogue: Catalogue, simple_scene: SceneDocument
 ) -> None:

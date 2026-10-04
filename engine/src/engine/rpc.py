@@ -7,7 +7,9 @@ needs no custom reader.
 from __future__ import annotations
 
 import inspect
+import errno
 import json
+import sys
 import traceback
 from collections.abc import Callable
 from typing import Any, BinaryIO
@@ -123,6 +125,13 @@ def serve(dispatcher: Dispatcher, stdin: BinaryIO, stdout: BinaryIO) -> None:
     while True:
         try:
             request = read_message(stdin)
+        except OSError as exc:
+            # A detached terminal can report EIO instead of EOF. There is no
+            # request to answer once the input transport has disappeared.
+            if exc.errno not in (errno.EIO, errno.EBADF, errno.EPIPE):
+                raise
+            print(f"Engine input closed: {exc.strerror or exc}", file=sys.stderr)
+            return
         except (ValueError, UnicodeDecodeError) as exc:
             # The stream position is unknown after a framing error; stop here.
             write_message(stdout, _error(None, PARSE_ERROR, str(exc)))

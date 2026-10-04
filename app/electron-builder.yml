@@ -1,0 +1,39 @@
+appId: org.manimwire.desktop
+productName: ManimWire
+directories:
+  output: release
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: ../build/installer/runtime
+    to: runtime
+  - from: ../LICENSE
+    to: licenses/ManimWire-LICENSE
+  - from: ../manim/LICENSE
+    to: licenses/Manim-LICENSE
+  - from: ../NOTICE
+    to: licenses/ManimWire-NOTICE
+  - from: ../manim/LICENSE.community
+    to: licenses/Manim-LICENSE.community
+asar: true
+npmRebuild: false
+mac:
+  target: pkg
+  category: public.app-category.education
+  artifactName: ManimWire-${version}-mac-${arch}.${ext}
+pkg:
+  installLocation: /Applications
+win:
+  target: nsis
+  artifactName: ManimWire-${version}-windows-${arch}-setup.${ext}
+nsis:
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  runAfterFinish: true
+linux:
+  target: AppImage
+  category: Education
+  artifactName: ManimWire-${version}-linux-${arch}.${ext}

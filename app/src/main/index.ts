@@ -6,14 +6,15 @@ import path from 'node:path'
 import { pathToFileURL, fileURLToPath } from 'node:url'
 import type { EngineCallResult, MenuAction } from '../shared/engine'
 import { registerDeveloperTools } from './developer'
-import { EngineSupervisor, spawnDevelopmentEngine } from './engine'
+import { EngineSupervisor, spawnDevelopmentEngine, spawnPackagedEngine } from './engine'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 // out/main -> app -> repository root
 const repoRoot = path.resolve(here, '..', '..', '..')
 
 const supervisor = new EngineSupervisor({
-  spawn: () => spawnDevelopmentEngine(repoRoot),
+  probeTimeoutMs: app.isPackaged ? 180_000 : 30_000,
+  spawn: () => app.isPackaged ? spawnPackagedEngine(process.resourcesPath, app.getPath('userData')) : spawnDevelopmentEngine(repoRoot),
   log: (line) => process.stderr.write(`[engine] ${line}`)
 })
 

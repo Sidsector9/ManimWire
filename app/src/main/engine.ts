@@ -1,5 +1,5 @@
 import { spawn as nodeSpawn } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 import type { Readable, Writable } from 'node:stream'
 import {
@@ -184,6 +184,38 @@ export function spawnDevelopmentEngine(repoRoot: string): EngineProcess {
     cwd: path.join(repoRoot, 'engine'),
     stdio: ['pipe', 'pipe', 'pipe']
   })
+  return {
+    stdin: child.stdin,
+    stdout: child.stdout,
+    stderr: child.stderr,
+    onExit: (listener) => child.on('exit', listener),
+    kill: () => child.kill()
+  }
+}
+
+/** GUI apps may not inherit the PATH configured by a TeX installer. */
+export function systemTexPaths(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
+  if (platform === 'darwin') return ['/Library/TeX/texbin']
+  if (platform !== 'win32') return []
+  const candidates: string[] = []
+  if (env.LOCALAPPDATA) candidates.push(path.win32.join(env.LOCALAPPDATA, 'Programs', 'MiKTeX', 'miktex', 'bin', 'x64'))
+  if (env.ProgramFiles) candidates.push(path.win32.join(env.ProgramFiles, 'MiKTeX', 'miktex', 'bin', 'x64'))
+  return candidates
+}
+
+/** Python is bundled; optional LaTeX tools come from the user's installation. */
+export function spawnPackagedEngine(resourcesPath: string, userData: string): EngineProcess {
+  const runtime = path.join(resourcesPath, 'runtime')
+  const executable = path.join(runtime, 'engine', process.platform === 'win32' ? 'manimwire-engine.exe' : 'manimwire-engine')
+  if (!existsSync(executable)) throw new Error(`Bundled engine is missing: ${executable}. Reinstall ManimWire.`)
+  const work = path.join(userData, 'engine')
+  mkdirSync(work, { recursive: true })
+  const env = { ...process.env }
+  // Windows environment keys are case insensitive. Keep only one PATH key.
+  for (const key of Object.keys(env)) if (['path', 'pythonhome', 'pythonpath'].includes(key.toLowerCase())) delete env[key]
+  env.PATH = [path.join(runtime, 'tools'), process.env.PATH ?? process.env.Path ?? '', ...systemTexPaths(process.platform, process.env).filter(existsSync)].join(path.delimiter)
+  env.FONTCONFIG_FILE = path.join(runtime, 'fonts.conf')
+  const child = nodeSpawn(executable, ['--stdio'], { cwd: work, env, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] })
   return {
     stdin: child.stdin,
     stdout: child.stdout,

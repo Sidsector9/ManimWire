@@ -23,3 +23,8 @@ dev = [
     "mypy>=2",
     "types-greenlet>=3.5.0.20260518",
 ]
+packaging = [
+    "imageio-ffmpeg>=0.6,<0.7",
+    "pyinstaller>=6.16,<7",
+    "typst>=0.14",
+]
