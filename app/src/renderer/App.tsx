@@ -6,6 +6,7 @@ import { CodeView } from './components/CodeView'
 import { Graph } from './components/Graph'
 import { Icon } from './components/Icon'
 import { Inspector } from './components/Inspector'
+import { PortHelp } from './components/PortHelp'
 import { Library } from './components/Library'
 import { SettingsDialog } from './components/SettingsDialog'
 import { QualityChip, SceneChip } from './components/ToolbarChips'
@@ -131,6 +132,7 @@ export function App() {
             <Icon name="code" />
           </button>
         </span>
+        <PortHelp />
         <button className="icon" title="Settings" onClick={() => setSettingsOpen(true)}>
           <Icon name="gear" />
         </button>

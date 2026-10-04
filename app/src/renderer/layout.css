@@ -1933,6 +1933,19 @@ body,
 
 .expression-trigger { cursor: pointer; }
 
+.port-help { padding: 0; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 48px); overflow-y: auto; color: var(--text); background: var(--panel); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 12px 40px rgb(0 0 0 / 45%); }
+.port-help::backdrop { background: rgb(0 0 0 / 50%); }
+.port-help-body { padding: 20px; }
+.port-help-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.port-help-heading h2 { margin: 0; font-size: 16px; }
+.port-help p { line-height: 1.5; }
+.port-help-types { margin: 16px 0; }
+.port-help-types > div { display: grid; grid-template-columns: 155px 1fr; gap: 12px; padding: 7px 0; }
+.port-help-types dt { display: flex; align-items: baseline; gap: 8px; }
+.port-help-types dd { margin: 0; line-height: 1.4; }
+.port-help-dot { display: inline-block; flex-shrink: 0; width: 9px; height: 9px; border-radius: 50%; }
+@media (max-width: 480px) { .port-help-types > div { grid-template-columns: 1fr; gap: 4px; } }
+
 .color-name { flex: 1; overflow: hidden; text-overflow: ellipsis; text-align: left; }
 .color-options { max-height: 230px; overflow-y: auto; margin-top: 6px; }
 .color-option { display: flex; align-items: center; gap: 8px; padding: 5px 6px; cursor: pointer; }

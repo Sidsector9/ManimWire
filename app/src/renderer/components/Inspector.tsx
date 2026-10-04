@@ -11,6 +11,7 @@ import { currentScene, previewScene, useDocumentStore } from '../store/document'
 import { useEngineResults } from '../store/preview'
 import { PortEditor } from './PortEditor'
 import { StepInspector } from './StepInspector'
+import { MethodPicker } from './MethodPicker'
 
 const UPDATING_ACTIONS: Array<[UpdatingAction, string]> = [
   ['suspend', 'suspend updating'],
@@ -301,14 +302,8 @@ function ChainEditor({
         )
       })}
       {methods.length > 0 && (
-        <select className="port-select mono" value="" onChange={(e) => e.target.value && onChange([...chain, { method: e.target.value, values: {} }])}>
-          <option value="">+ add a method call</option>
-          {methods.map((m) => (
-            <option key={m.name} value={m.name}>
-              {m.name}
-            </option>
-          ))}
-        </select>
+        <MethodPicker methods={methods.map((method) => method.name)}
+          onSelect={(method) => onChange([...chain, { method, values: {} }])} />
       )}
     </div>
   )

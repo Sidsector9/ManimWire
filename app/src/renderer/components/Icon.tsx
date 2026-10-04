@@ -1,6 +1,7 @@
 // Inline 12-13px icons from the handoff: explicit strokes, no icon font.
 
 const PATHS: Record<string, React.ReactNode> = {
+  info: <><circle cx="6.5" cy="6.5" r="5" /><path d="M6.5 6v3M6.5 3.7v.1" /></>,
   stacked: (
     <>
       <rect x="1.5" y="1.5" width="10" height="4" rx="1" />
