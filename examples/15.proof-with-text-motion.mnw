@@ -1,0 +1,598 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 30,
+    "background_color": "#10151F",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "IrrationalProof",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "title",
+          "catalogue": "Tex",
+          "values": {
+            "tex_strings": "Why $\\sqrt{2}$ is irrational",
+            "font_size": 38
+          },
+          "label": "Proof by contradiction",
+          "position": [
+            -449.8558705620338,
+            -1291.8195328685933
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "title_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              0,
+              3.4,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            -149.85587056203377,
+            -1291.8195328685933
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "history",
+          "catalogue": "Text",
+          "values": {
+            "text": "PREVIOUS STEPS",
+            "font_size": 20,
+            "color": "GREY_B"
+          },
+          "label": null,
+          "position": [
+            -449.8558705620338,
+            -1171.8195328685933
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "history_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              -4.3,
+              2.75,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            -149.85587056203377,
+            -1171.8195328685933
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "current",
+          "catalogue": "Text",
+          "values": {
+            "text": "CURRENT STEP",
+            "font_size": 20,
+            "color": "GREY_B"
+          },
+          "label": null,
+          "position": [
+            -449.8558705620338,
+            -1039.981220485382
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "current_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              3.5,
+              2.75,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            -149.85587056203377,
+            -1051.8195328685933
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "divider",
+          "catalogue": "Line",
+          "values": {
+            "start": [
+              -0.5,
+              -3.35,
+              0
+            ],
+            "end": [
+              -0.5,
+              2.45,
+              0
+            ],
+            "color": "GREY_D",
+            "stroke_width": 2
+          },
+          "label": null,
+          "position": [
+            -465.4481144890274,
+            -822.185098521885
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "narration",
+          "catalogue": "Number",
+          "values": {
+            "value": 4.8
+          },
+          "label": "Narration seconds per step",
+          "position": [
+            -142.15583489051446,
+            -822.7146674872047
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "archive_scale",
+          "catalogue": "Number",
+          "values": {
+            "value": 0.68
+          },
+          "label": "Archive scale",
+          "position": [
+            -305.9191561916057,
+            -579.9812204853818
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "row_gap",
+          "catalogue": "Number",
+          "values": {
+            "value": 0.8
+          },
+          "label": "Archive row spacing",
+          "position": [
+            -371.0298742992685,
+            -362.8974503138506
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "proof",
+          "catalogue": "Map",
+          "values": {
+            "items": [
+              "\\textbf{1. Assume a fraction exists.}\\\\ $\\sqrt{2}=a/b$, where $a,b$ are positive integers and $\\gcd(a,b)=1$.",
+              "\\textbf{2. Square and rearrange.}\\\\ $2=a^2/b^2$, so $a^2=2b^2$. Hence $a^2$ is even.",
+              "\\textbf{3. Therefore $a$ is even.}\\\\ An odd integer has an odd square: $(2k+1)^2=2(2k^2+2k)+1$.",
+              "\\textbf{4. Substitute $a=2m$.}\\\\ Then $4m^2=2b^2$. Dividing by $2$ gives $b^2=2m^2$.",
+              "\\textbf{5. Therefore $b$ is even too.}\\\\ Since $b^2$ is even, the same odd-square argument shows that $b$ is even.",
+              "\\textbf{6. A contradiction.}\\\\ Both $a$ and $b$ are divisible by $2$, contradicting $\\gcd(a,b)=1$.",
+              "\\textbf{7. Conclude.}\\\\ No fraction in lowest terms can equal $\\sqrt{2}$. Therefore $\\sqrt{2}$ is irrational."
+            ]
+          },
+          "label": "Proof steps — edit the list here",
+          "position": [
+            133,
+            -1304.517578125
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": [
+            2050,
+            950
+          ],
+          "pinned": []
+        },
+        {
+          "id": "item",
+          "catalogue": "Item",
+          "values": {},
+          "label": "Proof text",
+          "position": [
+            50,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "tex",
+          "catalogue": "Tex",
+          "values": {
+            "font_size": 36,
+            "tex_environment": "minipage}{8cm",
+            "color": "WHITE"
+          },
+          "label": "Wrapped proof step",
+          "position": [
+            300,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "fit",
+          "catalogue": "Mobject.scale",
+          "values": {
+            "scale_factor": 0.7
+          },
+          "label": "Shared text scale",
+          "position": [
+            580,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "place",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              3.25,
+              0.65,
+              0
+            ]
+          },
+          "label": "Current step position",
+          "position": [
+            850,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "write",
+          "catalogue": "Write",
+          "values": {
+            "run_time": 1.3
+          },
+          "label": "Reveal step",
+          "position": [
+            1120,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "hold",
+          "catalogue": "Wait",
+          "values": {},
+          "label": "Narrate",
+          "position": [
+            1120,
+            270
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "index",
+          "catalogue": "Index",
+          "values": {},
+          "label": null,
+          "position": [
+            58.93882399026836,
+            882.7537936804961
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "slot",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "[-6.5, 2.25 - i * gap, 0]"
+          },
+          "label": "Archive row from index",
+          "position": [
+            308.0269479361315,
+            727.3052063868569
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "archive",
+          "catalogue": "Animate",
+          "values": {
+            "run_time": 0.9
+          },
+          "label": "Shrink and archive",
+          "position": [
+            1122.9465998198916,
+            408.6216173158982
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "scale",
+              "values": {}
+            },
+            {
+              "method": "move_to",
+              "values": {
+                "aligned_edge": "UL"
+              }
+            },
+            {
+              "method": "set_color",
+              "values": {
+                "color": "GREY_B"
+              }
+            }
+          ],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "sequence",
+          "catalogue": "Succession",
+          "values": {},
+          "label": "Write → narrate → archive",
+          "position": [
+            1430,
+            250
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "result",
+          "catalogue": "Result",
+          "values": {},
+          "label": null,
+          "position": [
+            1760,
+            250
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "proof",
+          "size": null,
+          "pinned": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "title",
+          "target": "title_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "history",
+          "target": "history_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "current",
+          "target": "current_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "item",
+          "target": "tex",
+          "port": "tex_strings",
+          "live": false
+        },
+        {
+          "source": "tex",
+          "target": "fit",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "fit",
+          "target": "place",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "place",
+          "target": "write",
+          "port": "vmobject",
+          "live": false
+        },
+        {
+          "source": "narration",
+          "target": "hold",
+          "port": "run_time",
+          "live": false
+        },
+        {
+          "source": "index",
+          "target": "slot",
+          "port": "i",
+          "live": false
+        },
+        {
+          "source": "row_gap",
+          "target": "slot",
+          "port": "gap",
+          "live": false
+        },
+        {
+          "source": "place",
+          "target": "archive",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "archive_scale",
+          "target": "archive",
+          "port": "1.scale.scale_factor",
+          "live": false
+        },
+        {
+          "source": "slot",
+          "target": "archive",
+          "port": "2.move_to.point_or_mobject",
+          "live": false
+        },
+        {
+          "source": "write",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "hold",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "archive",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "sequence",
+          "target": "result",
+          "port": "value",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "title_pos",
+            "history_pos",
+            "current_pos",
+            "divider"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "proof"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 3
+        }
+      ]
+    }
+  ],
+  "groups": []
+}

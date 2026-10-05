@@ -1,0 +1,1200 @@
+{
+  "version": 1,
+  "settings": {
+    "pixel_width": 1920,
+    "pixel_height": 1080,
+    "frame_rate": 30,
+    "background_color": "#10151F",
+    "output_format": "mp4"
+  },
+  "scenes": [
+    {
+      "name": "HeineCantorScrollingProof",
+      "scene_type": "Scene",
+      "nodes": [
+        {
+          "id": "title",
+          "catalogue": "Tex",
+          "values": {
+            "tex_strings": "Heine--Cantor theorem",
+            "font_size": 38,
+            "z_index": 10
+          },
+          "label": "Heine–Cantor theorem",
+          "position": [
+            0,
+            -440
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "title_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              0,
+              3.4,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            300,
+            -440
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "history",
+          "catalogue": "Text",
+          "values": {
+            "text": "PREVIOUS STEPS",
+            "font_size": 20,
+            "color": "GREY_B",
+            "z_index": 10
+          },
+          "label": null,
+          "position": [
+            650,
+            -440
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "history_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              -4.3,
+              2.75,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            950,
+            -440
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "current",
+          "catalogue": "Text",
+          "values": {
+            "text": "CURRENT STEP",
+            "font_size": 20,
+            "color": "GREY_B",
+            "z_index": 10
+          },
+          "label": null,
+          "position": [
+            1300,
+            -440
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "current_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              3.5,
+              2.75,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            1600,
+            -440
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "divider",
+          "catalogue": "Line",
+          "values": {
+            "start": [
+              -0.5,
+              -3.35,
+              0
+            ],
+            "end": [
+              -0.5,
+              2.45,
+              0
+            ],
+            "color": "GREY_D",
+            "stroke_width": 2
+          },
+          "label": null,
+          "position": [
+            1950,
+            -440
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "build",
+          "catalogue": "Map",
+          "values": {
+            "items": [
+              "\\textbf{1. The theorem.}\\\\ Let $K$ be a compact subset of $\\mathbb{R}$ and let $f:K\\to\\mathbb{R}$ be continuous. We will prove that $f$ is uniformly continuous.",
+              "\\textbf{2. What must be shown?}\\\\ Given $\\varepsilon>0$, find a single $\\delta>0$ such that, for every $x,y\\in K$,\\[|x-y|<\\delta\\quad\\Longrightarrow\\quad |f(x)-f(y)|<\\varepsilon.\\]",
+              "\\textbf{3. Start with continuity.}\\\\ Fix $\\varepsilon>0$. At each $a\\in K$, choose $r_a>0$ so that\\[x\\in K,\\ |x-a|<r_a\\quad\\Longrightarrow\\quad |f(x)-f(a)|<\\varepsilon/2.\\]",
+              "\\textbf{4. Cover the domain.}\\\\ The intervals $B(a,r_a/2)$, for $a\\in K$, form an open cover of $K$.",
+              "\\textbf{5. Use compactness.}\\\\ If $K$ is empty, the claim is immediate. Otherwise, select a finite subcover:\\[K\\subseteq\\bigcup_{i=1}^{N} B(a_i,r_{a_i}/2).\\] This is where compactness enters.",
+              "\\textbf{6. Choose one distance.}\\\\ Set\\[\\delta=\\tfrac12\\min_{1\\le i\\le N}r_{a_i}>0.\\] A finite minimum of positive numbers stays positive.",
+              "\\textbf{7. Choose an arbitrary pair.}\\\\ Take $x,y\\in K$ with $|x-y|<\\delta$. The subcover supplies an index $i$ with $|x-a_i|<r_{a_i}/2$.",
+              "\\textbf{8. Both points are close to $a_i$.}\\\\ By the triangle inequality,\\[\\begin{aligned}|y-a_i|&\\le |y-x|+|x-a_i|\\\\ &<\\delta+r_{a_i}/2\\\\ &\\le r_{a_i}.\\end{aligned}\\]",
+              "\\textbf{9. Compare the function values.}\\\\ Continuity at $a_i$ now gives\\[\\begin{aligned}|f(x)-f(y)|&\\le |f(x)-f(a_i)|\\\\ &\\quad+|f(a_i)-f(y)|\\\\ &<\\varepsilon/2+\\varepsilon/2=\\varepsilon.\\end{aligned}\\]",
+              "\\textbf{10. Conclude.}\\\\ The chosen $\\delta$ depends on $\\varepsilon$, not on the pair $x,y$. Thus $f$ is uniformly continuous on $K$."
+            ]
+          },
+          "label": "Proof paragraphs — edit here",
+          "position": [
+            0,
+            0
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": [
+            1100,
+            430
+          ],
+          "pinned": []
+        },
+        {
+          "id": "content",
+          "catalogue": "Item",
+          "values": {},
+          "label": null,
+          "position": [
+            40,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "build",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "paragraph",
+          "catalogue": "Tex",
+          "values": {
+            "tex_environment": "minipage}{8cm",
+            "font_size": 36
+          },
+          "label": "Wrap at a fixed width",
+          "position": [
+            280,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "build",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "small",
+          "catalogue": "Mobject.scale",
+          "values": {
+            "scale_factor": 0.49
+          },
+          "label": "Readable archive size",
+          "position": [
+            570,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "build",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "built",
+          "catalogue": "Result",
+          "values": {},
+          "label": null,
+          "position": [
+            850,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "build",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "history_group",
+          "catalogue": "VGroup",
+          "values": {},
+          "label": "All paragraphs: one scrollable group",
+          "position": [
+            1200,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "layout",
+          "catalogue": "Mobject.arrange",
+          "values": {
+            "direction": "DOWN",
+            "aligned_edge": "LEFT",
+            "buff": 0.4
+          },
+          "label": "Automatic spacing from actual heights",
+          "position": [
+            1500,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "offscreen",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              -6.5,
+              2.25,
+              0
+            ],
+            "aligned_edge": "UL"
+          },
+          "label": "History starts at the top",
+          "position": [
+            1800,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "narration",
+          "catalogue": "Number",
+          "values": {
+            "value": 6
+          },
+          "label": "Narration seconds",
+          "position": [
+            985,
+            981
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "play",
+          "catalogue": "Map",
+          "values": {},
+          "label": "Present, then scroll into history",
+          "position": [
+            74,
+            1183.125
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": [
+            2500,
+            1250
+          ],
+          "pinned": []
+        },
+        {
+          "id": "item",
+          "catalogue": "Item",
+          "values": {},
+          "label": "Current paragraph",
+          "position": [
+            40,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "copy",
+          "catalogue": "Mobject.copy",
+          "values": {},
+          "label": "Separate narration copy",
+          "position": [
+            300,
+            100
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "large",
+          "catalogue": "Mobject.scale",
+          "values": {
+            "scale_factor": 1.4285714285714286
+          },
+          "label": "Current text is larger",
+          "position": [
+            617,
+            53
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "position",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              0.35,
+              1.75,
+              0
+            ],
+            "aligned_edge": "UL"
+          },
+          "label": "Right column",
+          "position": [
+            866,
+            41
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "write",
+          "catalogue": "Write",
+          "values": {
+            "run_time": 1.5
+          },
+          "label": null,
+          "position": [
+            1237,
+            53
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "hold",
+          "catalogue": "Wait",
+          "values": {},
+          "label": null,
+          "position": [
+            1274,
+            201
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "bottom",
+          "catalogue": "Mobject.get_y",
+          "values": {
+            "direction": "DOWN"
+          },
+          "label": "Measure paragraph bottom",
+          "position": [
+            300,
+            490
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "shift",
+          "catalogue": "Expression",
+          "values": {
+            "expr": "[0, max(0, -3.2 - bottom), 0]"
+          },
+          "label": "Scroll only the bottom overflow",
+          "position": [
+            600,
+            490
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "scroll",
+          "catalogue": "Animate",
+          "values": {
+            "run_time": 1.2
+          },
+          "label": "Move the entire history",
+          "position": [
+            1222,
+            408
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "shift",
+              "values": {}
+            }
+          ],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "fade",
+          "catalogue": "FadeOut",
+          "values": {
+            "run_time": 0.05
+          },
+          "label": null,
+          "position": [
+            1186,
+            605
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "transition",
+          "catalogue": "AnimationGroup",
+          "values": {
+            "lag_ratio": 0
+          },
+          "label": "Shrink into history; scroll only on overflow",
+          "position": [
+            1525,
+            377
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "breath",
+          "catalogue": "Wait",
+          "values": {
+            "run_time": 0.3
+          },
+          "label": null,
+          "position": [
+            1510,
+            525
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "sequence",
+          "catalogue": "Succession",
+          "values": {},
+          "label": "Write → narrate → archive",
+          "position": [
+            2176,
+            216
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "result",
+          "catalogue": "Result",
+          "values": {},
+          "label": null,
+          "position": [
+            2301,
+            484
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "top_mask",
+          "catalogue": "Rectangle",
+          "values": {
+            "width": 6.65,
+            "height": 1.5,
+            "fill_color": "#10151F",
+            "fill_opacity": 1,
+            "stroke_width": 0,
+            "z_index": 5
+          },
+          "label": "History viewport mask",
+          "position": [
+            2500,
+            0
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "top_mask_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              -3.825,
+              3.25,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            2800,
+            0
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "bottom_mask",
+          "catalogue": "Rectangle",
+          "values": {
+            "width": 6.65,
+            "height": 0.8,
+            "fill_color": "#10151F",
+            "fill_opacity": 1,
+            "stroke_width": 0,
+            "z_index": 5
+          },
+          "label": "History viewport mask",
+          "position": [
+            2500,
+            300
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "bottom_mask_pos",
+          "catalogue": "Mobject.move_to",
+          "values": {
+            "point_or_mobject": [
+              -3.825,
+              -3.6,
+              0
+            ]
+          },
+          "label": null,
+          "position": [
+            2800,
+            300
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "hide_history",
+          "catalogue": "VMobject.set_opacity",
+          "values": {
+            "opacity": 0
+          },
+          "label": "Hide paragraphs until archived",
+          "position": [
+            2100,
+            60
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": null,
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "show_copy",
+          "catalogue": "VMobject.set_opacity",
+          "values": {
+            "opacity": 1
+          },
+          "label": "Visible narration copy",
+          "position": [
+            550,
+            270
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "archive_copy",
+          "catalogue": "Animate",
+          "values": {
+            "run_time": 1.2
+          },
+          "label": "Shrink and move into the next slot",
+          "position": [
+            1110,
+            850
+          ],
+          "collapsed": true,
+          "chain": [
+            {
+              "method": "scale",
+              "values": {
+                "scale_factor": 0.7
+              }
+            },
+            {
+              "method": "move_to",
+              "values": {}
+            },
+            {
+              "method": "shift",
+              "values": {}
+            }
+          ],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "handoff",
+          "catalogue": "AnimationGroup",
+          "values": {
+            "lag_ratio": 0
+          },
+          "label": "Replace copy with archived paragraph",
+          "position": [
+            1908,
+            611
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "narration_group",
+          "catalogue": "VGroup",
+          "values": {},
+          "label": "Animate only the independent copy",
+          "position": [
+            791,
+            309
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "target_copy",
+          "catalogue": "Mobject.copy",
+          "values": {},
+          "label": "Archive reveal target",
+          "position": [
+            40,
+            700
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "target_visible",
+          "catalogue": "VMobject.set_opacity",
+          "values": {
+            "opacity": 1
+          },
+          "label": null,
+          "position": [
+            300,
+            700
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "target_shift",
+          "catalogue": "Mobject.shift",
+          "values": {},
+          "label": "Target after overflow scroll",
+          "position": [
+            600,
+            700
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        },
+        {
+          "id": "reveal_archive",
+          "catalogue": "Transform",
+          "values": {
+            "run_time": 0.05
+          },
+          "label": "Reveal at the scrolled position",
+          "position": [
+            1460,
+            850
+          ],
+          "collapsed": true,
+          "chain": [],
+          "config": [],
+          "parent": "play",
+          "size": null,
+          "pinned": []
+        }
+      ],
+      "edges": [
+        {
+          "source": "title",
+          "target": "title_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "history",
+          "target": "history_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "current",
+          "target": "current_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "content",
+          "target": "paragraph",
+          "port": "tex_strings",
+          "live": false
+        },
+        {
+          "source": "paragraph",
+          "target": "small",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "small",
+          "target": "built",
+          "port": "value",
+          "live": false
+        },
+        {
+          "source": "build",
+          "target": "history_group",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "history_group",
+          "target": "layout",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "layout",
+          "target": "offscreen",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "build",
+          "target": "play",
+          "port": "items",
+          "live": false
+        },
+        {
+          "source": "item",
+          "target": "copy",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "narration_group",
+          "target": "large",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "large",
+          "target": "position",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "position",
+          "target": "write",
+          "port": "vmobject",
+          "live": false
+        },
+        {
+          "source": "narration",
+          "target": "hold",
+          "port": "run_time",
+          "live": false
+        },
+        {
+          "source": "item",
+          "target": "bottom",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "bottom",
+          "target": "shift",
+          "port": "bottom",
+          "live": false
+        },
+        {
+          "source": "hide_history",
+          "target": "scroll",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "shift",
+          "target": "scroll",
+          "port": "1.shift.vectors",
+          "live": false
+        },
+        {
+          "source": "position",
+          "target": "fade",
+          "port": "mobjects",
+          "live": false
+        },
+        {
+          "source": "scroll",
+          "target": "transition",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "sequence",
+          "target": "result",
+          "port": "value",
+          "live": false
+        },
+        {
+          "source": "top_mask",
+          "target": "top_mask_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "bottom_mask",
+          "target": "bottom_mask_pos",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "hide_history",
+          "target": "sequence",
+          "port": "group",
+          "live": false
+        },
+        {
+          "source": "hide_history",
+          "target": "transition",
+          "port": "group",
+          "live": false
+        },
+        {
+          "source": "offscreen",
+          "target": "hide_history",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "copy",
+          "target": "show_copy",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "position",
+          "target": "archive_copy",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "item",
+          "target": "archive_copy",
+          "port": "2.move_to.point_or_mobject",
+          "live": false
+        },
+        {
+          "source": "shift",
+          "target": "archive_copy",
+          "port": "3.shift.vectors",
+          "live": false
+        },
+        {
+          "source": "archive_copy",
+          "target": "transition",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "fade",
+          "target": "handoff",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "reveal_archive",
+          "target": "handoff",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "hide_history",
+          "target": "handoff",
+          "port": "group",
+          "live": false
+        },
+        {
+          "source": "write",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "hold",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "transition",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "handoff",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "breath",
+          "target": "sequence",
+          "port": "animations",
+          "live": false
+        },
+        {
+          "source": "show_copy",
+          "target": "narration_group",
+          "port": "vmobjects",
+          "live": false
+        },
+        {
+          "source": "item",
+          "target": "target_copy",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "target_copy",
+          "target": "target_visible",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "target_visible",
+          "target": "target_shift",
+          "port": "self",
+          "live": false
+        },
+        {
+          "source": "shift",
+          "target": "target_shift",
+          "port": "vectors",
+          "live": false
+        },
+        {
+          "source": "item",
+          "target": "reveal_archive",
+          "port": "mobject",
+          "live": false
+        },
+        {
+          "source": "target_shift",
+          "target": "reveal_archive",
+          "port": "target_mobject",
+          "live": false
+        }
+      ],
+      "steps": [
+        {
+          "kind": "add",
+          "mobjects": [
+            "hide_history",
+            "top_mask_pos",
+            "bottom_mask_pos",
+            "title_pos",
+            "history_pos",
+            "current_pos",
+            "divider"
+          ]
+        },
+        {
+          "kind": "play",
+          "animations": [
+            "play"
+          ],
+          "run_time": null,
+          "rate_func": null,
+          "lag_ratio": null,
+          "subcaption": null,
+          "subcaption_duration": null,
+          "subcaption_offset": 0
+        },
+        {
+          "kind": "wait",
+          "duration": 3
+        }
+      ]
+    }
+  ],
+  "groups": []
+}
