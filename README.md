@@ -31,6 +31,15 @@ Manim renders it.
   <img width="1672" height="941" alt="Watch the ManimWire demo on YouTube" src="https://github.com/user-attachments/assets/38085f74-2aaf-4b76-a453-45b2e85ecf58" />
 </a>
 
+## Download
+
+- [Download for macOS](https://shiftabit.com/wp-content/uploads/2026/10/ManimWire-macos.zip)
+  - SHA-256: `a014d5202209b4cfe1533e09424f4ac8c5ee910c60e8f8ae4f5523f943ca1bea`
+- [Download for Windows](https://shiftabit.com/wp-content/uploads/2026/10/ManimWire-windows.zip)
+  - SHA-256: `e0884d17c48698f6b2e33845c71c9235baa778ee2643b86118ee47fb4ab1bb1d`
+
+The installers bundle Python, Manim, and the required runtime dependencies. LaTeX is installed separately if you need LaTeX-backed text or equations such as `Tex` and `MathTex`.
+
 ## Getting started
 
 You need:
@@ -40,7 +49,7 @@ You need:
 | Python 3.12 or newer | Runs the engine and Manim |
 | [uv](https://docs.astral.sh/uv/) | Installs the Python workspace |
 | Node.js 20.19 or newer, with pnpm | Builds and runs the desktop application |
-| A LaTeX installation | Only for MathTex and Tex. Everything else works without it |
+| A LaTeX installation | Optional; needed for LaTeX-backed objects such as MathTex, Tex, and some numeric labels |
 
 Then:
 
@@ -67,6 +76,12 @@ Python version and whether LaTeX was found.
 Open any file from `examples/` to see a finished project.
 
 For LaTeX on macOS, `brew install --cask mactex-no-gui` installs the full distribution.
+
+### Build desktop installers
+
+From `app/`, run `pnpm installer:mac` on macOS, `pnpm installer:win` on Windows x64, or `pnpm installer:linux` on Linux x64. You can also use **Actions → Build ManimWire → Run workflow** on GitHub to select an OS and download an installer ZIP.
+The installers bundle the Python engine, Manim, and native dependencies. LaTeX is optional and installed separately: [MacTeX for macOS](https://tug.org/mactex/mactex-download.html) or [MiKTeX for Windows](https://miktex.org/howto/install-miktex). Restart ManimWire after installing LaTeX and `dvisvgm`.
+See [installer build and signing instructions](packaging/README.md) for prerequisites, output files, and release validation.
 
 ### Node editor
 
